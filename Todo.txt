@@ -1,0 +1,50 @@
+DIGITALER NOTENTISCH - TODO LIST
+=================================
+
+Version 1.0.0 - FERTIG ✓
+- [x] 2-Seiten-PDF-Viewer
+- [x] Rollende Navigation
+- [x] Card-System mit Quadranten
+- [x] OneDrive-Integration
+- [x] Batch-Starter
+- [x] Dokumentation
+
+Version 1.1 - IN PLANUNG
+========================
+- [ ] Zoom-Funktion (+/- Buttons)
+- [ ] Tastatur-Navigation für PDF
+- [ ] Vollbild-Modus (F11)
+- [ ] Lesezeichen für Seiten
+- [ ] Theme-Switcher (Dark/Light)
+
+Version 1.2 - IDEEN
+===================
+- [ ] PDF-Annotationen/Markierungen
+- [ ] Übungsmodus mit Timer
+- [ ] Statistik-Dashboard
+- [ ] Export als Print-PDF
+- [ ] Metronom-Integration
+
+BUGS ZU FIXEN
+=============
+- [ ] Keine bekannten Bugs
+
+VERBESSERUNGEN
+==============
+- [ ] Performance: Lazy Loading für Karten
+- [ ] UX: Drag-Vorschau verbessern
+- [ ] Mobile: Responsive Design
+- [ ] Audio: MP3-Playback für Übungen
+
+TECHNISCHE SCHULDEN
+===================
+- [ ] Code-Splitting (board.html zu groß)
+- [ ] CSS in separate Datei auslagern
+- [ ] JavaScript modularisieren
+- [ ] Unit Tests schreiben
+
+DOKUMENTATION
+=============
+- [ ] Video-Tutorial erstellen
+- [ ] FAQ-Seite
+- [ ] Keyboard-Shortcuts Übersicht (PDF)

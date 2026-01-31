@@ -1,0 +1,9 @@
+Copyright (c) 2026 Notentisch Development
+
+Alle Rechte vorbehalten.
+
+Diese Software ist privat und darf nicht ohne ausdrückliche
+Genehmigung des Urhebers verbreitet, kopiert oder modifiziert werden.
+
+DIE SOFTWARE WIRD "WIE BESEHEN" BEREITGESTELLT, OHNE JEGLICHE
+AUSDRÜCKLICHE ODER STILLSCHWEIGENDE GEWÄHRLEISTUNG.

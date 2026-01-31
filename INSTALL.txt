@@ -1,0 +1,138 @@
+===========================================
+   DIGITALER NOTENTISCH - INSTALLATION
+===========================================
+
+SCHNELLSTART (nach Installation):
+1. Doppelklick auf "Notentisch.bat"
+2. Browser öffnet sich automatisch
+3. XML laden und loslegen!
+
+===========================================
+ERSTINSTALLATION - SCHRITT FÜR SCHRITT
+===========================================
+
+SCHRITT 1: DATEIEN BEREITSTELLEN
+---------------------------------
+Alle Projekt-Dateien in einen Ordner kopieren, z.B.:
+C:\Users\User\OneDrive\lapdaten (E)\Daten\Projekt notentisch\
+
+Benötigte Dateien:
+✓ board.html
+✓ start_server.ps1
+✓ Notentisch.bat
+✓ center.png (optional)
+✓ Cards_Export/ (Ordner für Kartenbilder)
+✓ README.md
+✓ INSTALL.txt (diese Datei)
+
+
+SCHRITT 2: PDF-ORDNER ANPASSEN
+-------------------------------
+1. Öffnen Sie "start_server.ps1" mit Notepad oder VS Code
+2. Finden Sie Zeile 8:
+   $notenBase = "C:\Users\User\OneDrive\myMusic\Noten"
+3. Ändern Sie den Pfad zu IHREM PDF-Ordner
+4. Speichern (Strg+S)
+
+
+SCHRITT 3: POWERSHELL-RECHTE SETZEN (EINMALIG!)
+------------------------------------------------
+Nur beim ersten Mal nötig:
+
+1. Windows-Taste drücken
+2. "PowerShell" tippen
+3. RECHTSKLICK auf "Windows PowerShell"
+4. "Als Administrator ausführen" klicken
+5. Eingeben (genau so):
+   Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+6. Mit "J" oder "Y" bestätigen
+7. PowerShell schließen
+
+Dieser Schritt ist WICHTIG! Ohne diesen funktioniert der Server nicht.
+
+
+SCHRITT 4: ERSTER START
+------------------------
+1. Doppelklick auf "Notentisch.bat"
+2. PowerShell-Fenster öffnet sich (nicht schließen!)
+3. Browser öffnet sich automatisch
+4. Seite lädt: http://localhost:8080/board.html
+
+Falls Browser nicht automatisch öffnet:
+→ Manuell öffnen: http://localhost:8080/board.html
+
+
+SCHRITT 5: XML-DATEI LADEN
+---------------------------
+1. Im Browser: Button "LADEN" klicken
+2. XML-Datei mit Kartendaten auswählen
+3. Karten erscheinen in den Quadranten
+4. Fertig!
+
+
+SCHRITT 6: DESKTOP-VERKNÜPFUNG (OPTIONAL)
+-----------------------------------------
+Für schnelleren Zugriff:
+1. Rechtsklick auf "Notentisch.bat"
+2. "Verknüpfung erstellen"
+3. Verknüpfung auf Desktop ziehen
+4. Optional: Rechtsklick auf Verknüpfung → Eigenschaften
+   → "Ausführen" auf "Minimiert" stellen
+
+===========================================
+PROBLEMLÖSUNGEN
+===========================================
+
+PROBLEM: "Die Datei kann nicht geladen werden"
+Lösung: → Siehe SCHRITT 3 (PowerShell-Rechte)
+
+PROBLEM: "Port 8080 bereits belegt"
+Lösung: 
+1. Öffne start_server.ps1
+2. Zeile 2: $port = 8080
+3. Ändere auf anderen Port (z.B. 8081)
+4. Speichern und neu starten
+
+PROBLEM: PDF lädt nicht
+Lösung:
+1. Server läuft? (PowerShell-Fenster offen?)
+2. PDF-Pfad in start_server.ps1 korrekt?
+3. PDF-Datei existiert im angegebenen Ordner?
+4. Alternativ: "PDF öffnen" Button nutzen
+
+PROBLEM: Keine Karten sichtbar
+Lösung:
+1. XML korrekt geladen? (Button "LADEN")
+2. Kartenbilder in Cards_Export/ vorhanden?
+3. Browser-Console öffnen (F12) → Fehler prüfen
+
+PROBLEM: Browser öffnet nicht automatisch
+Lösung:
+→ Manuell öffnen: http://localhost:8080/board.html
+
+===========================================
+WEITERE HILFE
+===========================================
+
+Siehe README.md für:
+- Detaillierte Bedienungsanleitung
+- Tastatur-Shortcuts
+- Konfigurationsmöglichkeiten
+- XML-Format-Beschreibung
+
+Siehe CHANGELOG.md für:
+- Versionshistorie
+- Geplante Features
+- Bekannte Einschränkungen
+
+===========================================
+SYSTEMANFORDERUNGEN
+===========================================
+
+Betriebssystem: Windows 10/11
+PowerShell:     Vorinstalliert
+Browser:        Chrome, Edge oder Firefox
+Festplatte:     ~50 MB (ohne PDFs)
+RAM:            Mind. 4 GB empfohlen
+
+===========================================
