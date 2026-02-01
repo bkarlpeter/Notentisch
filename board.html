@@ -9,23 +9,18 @@
         .quadrant { border: 1px solid #333; position: relative; display: flex; flex-direction: column; align-items: center; padding: 60px 10px 10px; overflow-y: auto; cursor: pointer; }
         .quadrant.active { border: 2px solid #3498db; }
         
-        /* Quadranten-Beschriftung */
-        .quadrant::before { position: absolute; top: 15px; left: 20px; font-size: 1.2rem; opacity: 0.4; font-weight: bold; color: #3498db; text-transform: uppercase; }
-        #neueIdee::before { content: "Neue Idee (Q1)"; }
-        #wiederholen::before { content: "Wiederholen (Q2)"; }
-        #geuebt::before { content: "Geübt (Q3)"; }
-        #gelernt::before { content: "Gelernt (Q4)"; }
+        .quadrant::before { position: absolute; top: 15px; font-size: 1.2rem; opacity: 0.4; font-weight: bold; color: #3498db; text-transform: uppercase; }
+        #neueIdee::before { content: "Neue Idee (Q1)"; left: 20px; }
+        #wiederholen::before { content: "Wiederholen (Q2)"; right: 20px; }
+        #geuebt::before { content: "Geübt (Q3)"; left: 20px; }
+        #gelernt::before { content: "Gelernt (Q4)"; right: 20px; }
 
-        .center-hole { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 700px; height: 500px; background: #2c3e50; border-radius: 20px; z-index: 1000; box-shadow: 0 0 50px rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 10px; border: 3px solid #3498db; padding: 10px; box-sizing: border-box; }
+        .center-hole { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 900px; height: 520px; background: #2c3e50; border-radius: 20px; z-index: 1000; box-shadow: 0 0 50px rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 10px; border: 3px solid #3498db; padding: 10px; box-sizing: border-box; }
         #center-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
         
-        #stage-image { max-height: 80%; max-width: 100%; object-fit: contain; border-radius: 8px; }
         .control-bar { grid-column: 1 / 3; background: #1a1a1a; border-top: 1px solid #333; padding: 8px; display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 11px; }
         .control-bar .btn { padding: 6px 10px; font-size: 10px; width: auto; }
         .control-bar input { width: 40px; height: 20px; padding: 2px; font-size: 10px; }
-        .center-hole.empty { justify-content: center; }
-        #viewer-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.98); z-index: 2000; justify-content: center; align-items: center; cursor: zoom-out; }
-        #viewer-overlay img { max-height: 98vh; max-width: 98vw; box-shadow: 0 0 60px #000; border: 1px solid #444; }
 
         .card-container { width: 190px; text-align: center; flex-shrink: 0; cursor: grab; display: none; }
         .card-container.visible { display: block; }
@@ -33,19 +28,30 @@
         .card { width: 100%; height: 250px; background: white; border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.6); pointer-events: none; background-size: cover; background-position: top; }
         .card-title { font-size: 11px; color: #ccc; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 5px; }
 
-        /* Stapel-Effekt: Alle Quadranten (Q1-Q4) staffeln */
-        #neueIdee .card-container, #wiederholen .card-container, #geuebt .card-container, #gelernt .card-container { position: absolute !important; top: 0; left: 50%; transform: translateX(-50%); }
-        #neueIdee .card-container.visible:nth-child(1), #wiederholen .card-container.visible:nth-child(1), #geuebt .card-container.visible:nth-child(1), #gelernt .card-container.visible:nth-child(1) { z-index: 10; top: 0; }
-        #neueIdee .card-container.visible:nth-child(2), #wiederholen .card-container.visible:nth-child(2), #geuebt .card-container.visible:nth-child(2), #gelernt .card-container.visible:nth-child(2) { z-index: 11; top: 50px; }
-        #neueIdee .card-container.visible:nth-child(3), #wiederholen .card-container.visible:nth-child(3), #geuebt .card-container.visible:nth-child(3), #gelernt .card-container.visible:nth-child(3) { z-index: 12; top: 100px; }
-        #neueIdee .card-container.visible:nth-child(4), #wiederholen .card-container.visible:nth-child(4), #geuebt .card-container.visible:nth-child(4), #gelernt .card-container.visible:nth-child(4) { z-index: 13; top: 150px; }
-        #neueIdee .card-container.visible:nth-child(5), #wiederholen .card-container.visible:nth-child(5), #geuebt .card-container.visible:nth-child(5), #gelernt .card-container.visible:nth-child(5) { z-index: 14; top: 200px; }
-        #neueIdee .card-container.visible:nth-child(n+6), #wiederholen .card-container.visible:nth-child(n+6), #geuebt .card-container.visible:nth-child(n+6), #gelernt .card-container.visible:nth-child(n+6) { z-index: 15; top: 250px; }
-        #neueIdee .card-container:hover, #wiederholen .card-container:hover, #geuebt .card-container:hover, #gelernt .card-container:hover { z-index: 100 !important; transform: translateX(-50%) scale(1.05) translateY(-10px); }
+        /* Cards an äußeren Rändern */
+        #neueIdee .card-container { position: absolute !important; top: 50px; left: 10px; transform: none; }
+        #wiederholen .card-container { position: absolute !important; top: 50px; right: 10px; transform: none; }
+        #geuebt .card-container { position: absolute !important; top: 50px; left: 10px; transform: none; }
+        #gelernt .card-container { position: absolute !important; top: 50px; right: 10px; transform: none; }
+
+        #neueIdee .card-container.visible:nth-child(1), #wiederholen .card-container.visible:nth-child(1), 
+        #geuebt .card-container.visible:nth-child(1), #gelernt .card-container.visible:nth-child(1) { z-index: 10; top: 50px; }
+        #neueIdee .card-container.visible:nth-child(2), #wiederholen .card-container.visible:nth-child(2), 
+        #geuebt .card-container.visible:nth-child(2), #gelernt .card-container.visible:nth-child(2) { z-index: 11; top: 100px; }
+        #neueIdee .card-container.visible:nth-child(3), #wiederholen .card-container.visible:nth-child(3), 
+        #geuebt .card-container.visible:nth-child(3), #gelernt .card-container.visible:nth-child(3) { z-index: 12; top: 150px; }
+        #neueIdee .card-container.visible:nth-child(4), #wiederholen .card-container.visible:nth-child(4), 
+        #geuebt .card-container.visible:nth-child(4), #gelernt .card-container.visible:nth-child(4) { z-index: 13; top: 200px; }
+        #neueIdee .card-container.visible:nth-child(5), #wiederholen .card-container.visible:nth-child(5), 
+        #geuebt .card-container.visible:nth-child(5), #gelernt .card-container.visible:nth-child(5) { z-index: 14; top: 250px; }
+        #neueIdee .card-container.visible:nth-child(n+6), #wiederholen .card-container.visible:nth-child(n+6), 
+        #geuebt .card-container.visible:nth-child(n+6), #gelernt .card-container.visible:nth-child(n+6) { z-index: 15; top: 300px; }
+
+        #neueIdee .card-container:hover, #geuebt .card-container:hover { z-index: 100 !important; transform: scale(1.05) translateX(-10px); }
+        #wiederholen .card-container:hover, #gelernt .card-container:hover { z-index: 100 !important; transform: scale(1.05) translateX(10px); }
         
         .btn { cursor: pointer; padding: 10px; border-radius: 6px; border: none; background: #3498db; color: white; font-weight: bold; width: 85%; }
         .btn:hover { background: #2980b9; }
-        .settings-row { font-size: 12px; margin-top: 8px; display: flex; align-items: center; gap: 8px; color: #bdc3c7; }
         #stackLimit { width: 45px; background: #1a1a1a; color: white; border: 1px solid #3498db; text-align: center; border-radius: 3px; }
         #fileInput { display: none; }
     </style>
@@ -55,11 +61,6 @@
     </script>
 </head>
 <body>
-
-    <div id="viewer-overlay" onclick="this.style.display='none'">
-        <img id="full-view-img" src="">
-    </div>
-
     <div class="center-hole" id="CENTER" ondrop="drop(event)" ondragover="allow(event)">
         <img src="center.png" style="width:50px; opacity:0.3; margin-bottom: 4px;" alt="">
         <div id="center-content">
@@ -76,491 +77,19 @@
         <button class="btn" onclick="document.getElementById('fileInput').click()">LADEN</button>
         <button class="btn" onclick="saveXml()">SPEICHERN</button>
         <span style="color: #666;">|</span>
+        <button class="btn" onclick="switchLayout()" id="layoutBtn">Layout: 2x2</button>
+        <span style="color: #666;">|</span>
+        <button class="btn" onclick="togglePagesPerView()" id="pagesBtn" style="width: auto; padding: 6px 10px;">2 Seiten</button>
+        <span style="color: #666;">|</span>
         <button class="btn" onclick="previousPage()" style="width: auto; padding: 6px 8px;">↑</button>
         <span id="pageInfo" style="min-width: 60px; text-align:center;"></span>
         <button class="btn" onclick="nextPage()" style="width: auto; padding: 6px 8px;">↓</button>
         <span style="color: #666;">|</span>
         <label style="display: flex; align-items: center; gap: 3px;">L: <input type="number" id="stackLimit" value="8" min="1" onchange="renderBoard()"></label>
         <label style="display: flex; align-items: center; gap: 3px;">S: <input type="number" id="stackOffset" value="30" min="10" onchange="renderBoard()">px</label>
-        <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)" style="display: none;">
+        <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)">
     </div>
 
-<script>
-    let currentXmlDoc = null;
-    let currentOffset = 0;
-    const statusMapping = { "neueIdee": "neueIdee", "wiederholen": "wiederholen", "geuebt": "geuebt", "gelernt": "gelernt" };
-
-    function normalizeStatus(value) {
-        const raw = (value || '').toLowerCase().trim();
-        if (raw === 'neueidee') return 'neueIdee';
-        if (raw === 'wiederholen') return 'wiederholen';
-        if (raw === 'wiedervorlegen') return 'wiederholen';
-        if (raw === 'geuebt') return 'geuebt';
-        if (raw === 'gelernt') return 'gelernt';
-        if (raw === 'zurück' || raw === 'zurueck') return 'geuebt';
-        return 'neueIdee';
-    }
-
-    function sanitizeFilename(name) {
-        return name.replace(/[\\/:*?"<>|#]/g, '')
-                   .replace(/[\u0000-\u001F]/g, '')
-                   .trim();
-    }
-
-    function normalizeUmlauts(value) {
-        return value
-            .replace(/ä/g, 'ae')
-            .replace(/ö/g, 'oe')
-            .replace(/ü/g, 'ue')
-            .replace(/ß/g, 'ss')
-            .replace(/Ä/g, 'Ae')
-            .replace(/Ö/g, 'Oe')
-            .replace(/Ü/g, 'Ue');
-    }
-
-    function decodeMaybe(value) {
-        try {
-            return decodeURIComponent(value);
-        } catch {
-            return value;
-        }
-    }
-
-    function parseSpeicherort(rawValue) {
-        if (!rawValue) return { title: 'Unbekannt', pdfPath: '' };
-
-        const decoded = decodeMaybe(rawValue);
-        const parts = decoded.split('#').map(p => p.trim()).filter(Boolean);
-        
-        const title = (parts[0] || 'Unbekannt').replace(/\.pdf$/i, '').trim();
-        const pdfPath = parts[1] || '';
-        
-        return { title, pdfPath };
-    }
-
-    function findCardImage(displayName, pdfPath) {
-        let cleanName = displayName || '';
-        
-        cleanName = cleanName.replace(/\.(pdf|PDF|jpg|jpeg|png)$/i, '');
-        
-        if (cleanName.includes('\\')) {
-            cleanName = cleanName.split('\\').pop();
-        }
-        if (cleanName.includes('/')) {
-            cleanName = cleanName.split('/').pop();
-        }
-        
-        let pdfName = '';
-        if (pdfPath) {
-            const pdfFile = pdfPath.split(/[/\\]/).pop() || '';
-            pdfName = pdfFile.replace(/\.pdf$/i, '');
-        }
-
-        const candidates = [];
-        [cleanName, pdfName].forEach(source => {
-            const base = (source || '').trim();
-            if (!base) return;
-            const noExt = base.replace(/\.(pdf|PDF|jpg|jpeg|png)$/i, '').trim();
-            const compact = noExt.replace(/\s+/g, ' ');
-            const underscored = compact.replace(/\s/g, '_');
-            const noSpaces = compact.replace(/\s/g, '');
-            const firstWord = compact.split(/[\s\-]/)[0];
-
-            [noExt, compact, underscored, noSpaces, firstWord].forEach(name => {
-                const safe = sanitizeFilename(name);
-                candidates.push(safe);
-                candidates.push(normalizeUmlauts(safe));
-            });
-        });
-
-        const unique = Array.from(new Set(candidates)).filter(Boolean);
-        return unique.map(name => `Cards_Export/${name}.png`);
-    }
-
-    function loadImageWithFallback(cardDiv, paths) {
-        if (!paths || paths.length === 0) {
-            cardDiv.style.background = '#666';
-            cardDiv.innerHTML = '<small style="color:#ccc;">Kein Bild</small>';
-            return;
-        }
-
-        const tryPath = (index) => {
-            if (index >= paths.length) {
-                cardDiv.style.background = '#666';
-                cardDiv.innerHTML = '<small style="color:#ccc;">Kein Bild</small>';
-                return;
-            }
-            const path = paths[index];
-            const img = new Image();
-            img.onload = () => {
-                cardDiv.style.backgroundImage = `url('${path}')`;
-                cardDiv.style.backgroundSize = 'cover';
-                cardDiv.style.backgroundPosition = 'top';
-            };
-            img.onerror = () => {
-                tryPath(index + 1);
-            };
-            img.src = path;
-        };
-
-        tryPath(0);
-    }
-
-    function allow(e) { e.preventDefault(); }
-
-    function handleFile(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = e => {
-            currentXmlDoc = new DOMParser().parseFromString(e.target.result, "text/xml");
-            const savedLimit = currentXmlDoc.querySelector('StaffelLimit')?.textContent;
-            if(savedLimit) document.getElementById('stackLimit').value = savedLimit;
-            renderBoard();
-        };
-        reader.readAsText(file);
-    }
-
-    function renderBoard() {
-        if (!currentXmlDoc) return;
-        const limit = parseInt(document.getElementById('stackLimit').value) || 8;
-        const stackOffset = parseInt(document.getElementById('stackOffset').value) || 30;
-        
-        document.querySelectorAll('.quadrant').forEach(q => q.innerHTML = '');
-        document.querySelectorAll('.center-hole .card-container').forEach(c => c.remove());
-
-        const items = Array.from(currentXmlDoc.querySelectorAll('Notentisch'));
-        
-        Object.keys(statusMapping).forEach(qId => {
-            const qItems = items.filter(item => normalizeStatus(item.querySelector('ArbeitsStatus')?.textContent) === qId);
-
-            qItems.forEach((item, index) => {
-                const id = item.querySelector('NotID')?.textContent;
-                const rawName = item.querySelector('Speicherort')?.textContent;
-                const parsed = parseSpeicherort(rawName);
-                const displayName = parsed.title;
-                const xmlImg = item.querySelector('img')?.textContent || '';
-                const imagePaths = xmlImg ? [xmlImg] : findCardImage(displayName, parsed.pdfPath);
-
-                const container = document.createElement('div');
-                container.className = 'card-container';
-                if (index >= currentOffset && index < currentOffset + limit) container.classList.add('visible');
-                
-                container.id = 'cont-' + id;
-                container.dataset.notid = id;
-                container.dataset.pdfPath = parsed.pdfPath || '';
-                container.dataset.title = displayName;
-                container.draggable = true;
-                container.onclick = function() { if(this.parentElement.id !== 'CENTER') this.parentElement.appendChild(this); };
-                container.ondragstart = e => e.dataTransfer.setData('text', e.target.id);
-                
-                let cardHtml = '';
-                if (imagePaths && imagePaths.length) {
-                    cardHtml = `<div class="card" data-img="1"></div>`;
-                } else {
-                    cardHtml = `<div class="card" style="background: #666; display: flex; align-items: center; justify-content: center; color: #ccc;"><small>Kein Bild</small></div>`;
-                }
-                cardHtml += `<div class="card-title">${displayName}</div>`;
-                container.innerHTML = cardHtml;
-
-                const cardDiv = container.querySelector('.card[data-img]');
-                if (cardDiv) {
-                    loadImageWithFallback(cardDiv, imagePaths);
-                }
-                
-                document.getElementById(qId).appendChild(container);
-            });
-        });
-        
-        const style = document.getElementById('stack-offset-style') || document.createElement('style');
-        style.id = 'stack-offset-style';
-        style.innerHTML = `
-            #neueIdee .card-container.visible:nth-child(2), #wiederholen .card-container.visible:nth-child(2), #geuebt .card-container.visible:nth-child(2), #gelernt .card-container.visible:nth-child(2) { top: ${stackOffset}px; }
-            #neueIdee .card-container.visible:nth-child(3), #wiederholen .card-container.visible:nth-child(3), #geuebt .card-container.visible:nth-child(3), #gelernt .card-container.visible:nth-child(3) { top: ${stackOffset * 2}px; }
-            #neueIdee .card-container.visible:nth-child(4), #wiederholen .card-container.visible:nth-child(4), #geuebt .card-container.visible:nth-child(4), #gelernt .card-container.visible:nth-child(4) { top: ${stackOffset * 3}px; }
-            #neueIdee .card-container.visible:nth-child(5), #wiederholen .card-container.visible:nth-child(5), #geuebt .card-container.visible:nth-child(5), #gelernt .card-container.visible:nth-child(5) { top: ${stackOffset * 4}px; }
-            #neueIdee .card-container.visible:nth-child(n+6), #wiederholen .card-container.visible:nth-child(n+6), #geuebt .card-container.visible:nth-child(n+6), #gelernt .card-container.visible:nth-child(n+6) { top: ${stackOffset * 5}px; }
-        `;
-        if (!document.getElementById('stack-offset-style')) {
-            document.head.appendChild(style);
-        }
-        
-        document.getElementById('pageInfo').textContent = `(Ab ${currentOffset + 1})`;
-    }
-
-let currentPageOffset = 0;
-let totalPages = 0;
-let currentPdfDoc = null;
-let currentNotId = null;
-
-async function showPdfPages(pdfPath, notId) {
-    const center = document.getElementById('center-content');
-    currentPageOffset = 0;
-    currentNotId = notId;
-    
-    center.innerHTML = '<div style="color:#ccc;">Lade PDF...</div>';
-    
-    try {
-        let serverPath = pdfPath.trim().replace(/^[\\\/]+/, '').replace(/\\/g, '/');
-        console.log(`Lade PDF: ${serverPath}`);
-        
-        const loadingTask = pdfjsLib.getDocument(serverPath);
-        currentPdfDoc = await loadingTask.promise;
-        totalPages = currentPdfDoc.numPages;
-        
-        console.log(`✓ PDF geladen: ${totalPages} Seiten`);
-        await renderPdfPages();
-        
-    } catch (err) {
-        console.error('Fehler:', err);
-        center.innerHTML = `
-            <div style="color:#ccc; text-align:center; padding:20px;">
-                <p>PDF nicht gefunden</p>
-                <button class="btn" onclick="selectPdfManually('${notId}')" style="width:auto;">PDF öffnen</button>
-            </div>
-        `;
-    }
-}
-
-async function renderPdfPages() {
-    const center = document.getElementById('center-content');
-    const page1Num = currentPageOffset + 1;
-    const page2Num = currentPageOffset + 2;
-    
-    let html = '<div style="display:flex; flex-direction:row; gap:5px; width:100%; height:100%; align-items:center; justify-content:center;">';
-    
-    // Linker Pfeil: nur wenn nicht auf Seite 1
-    if (currentPageOffset > 0) {
-        html += '<button style="position:absolute; left:10px; z-index:10; width:40px; height:40px; background:#3498db; border:none; color:white; font-size:18px; cursor:pointer; border-radius:5px;" onclick="prevPdfPages()">◄</button>';
-    }
-    
-    html += '<div style="display:flex; gap:5px; max-height:100%; max-width:100%; align-items:center;">';
-    html += '<canvas id="pdf-canvas-1"></canvas>';
-    if (page2Num <= totalPages) {
-        html += '<canvas id="pdf-canvas-2"></canvas>';
-    }
-    html += '</div>';
-    
-    // Rechter Pfeil: nur wenn noch mehr Seiten kommen
-    if (page2Num < totalPages) {
-        html += '<button style="position:absolute; right:10px; z-index:10; width:40px; height:40px; background:#3498db; border:none; color:white; font-size:18px; cursor:pointer; border-radius:5px;" onclick="nextPdfPages()">►</button>';
-    }
-    
-    html += '</div>';
-    center.innerHTML = html;
-    
-    // 10% größer: 0.88 statt 0.8
-    const scale = 0.88;
-    await renderOnePage(page1Num, 'pdf-canvas-1', scale);
-    if (page2Num <= totalPages) {
-        await renderOnePage(page2Num, 'pdf-canvas-2', scale);
-    }
-}
-
-async function renderOnePage(pageNum, canvasId, scale) {
-    try {
-        const page = await currentPdfDoc.getPage(pageNum);
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
-        
-        const viewport = page.getViewport({ scale: scale });
-        const context = canvas.getContext('2d');
-        
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-        canvas.style.border = '1px solid #555';
-        canvas.style.maxHeight = '100%';
-        canvas.style.maxWidth = '48%';
-        
-        await page.render({ canvasContext: context, viewport: viewport }).promise;
-        console.log(`Seite ${pageNum} gerendert`);
-    } catch (err) {
-        console.error(`Fehler Seite ${pageNum}:`, err);
-    }
-}
-
-function nextPdfPages() {
-    // Schiebe um 1 Seite weiter (nicht 2)
-    if (currentPageOffset + 2 < totalPages) {
-        currentPageOffset += 1;
-        renderPdfPages();
-    }
-}
-
-function prevPdfPages() {
-    // Schiebe um 1 Seite zurück (nicht 2)
-    if (currentPageOffset > 0) {
-        currentPageOffset -= 1;
-        renderPdfPages();
-    }
-} 
-
-    function selectPdfManually(notId) {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'application/pdf';
-        
-        input.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const center = document.getElementById('center-content');
-            center.innerHTML = '<div style="color:#ccc;">Lade PDF...</div>';
-            
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                currentPdfDoc = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-                totalPages = currentPdfDoc.numPages;
-                currentPageOffset = 0;
-                await renderPdfPages();
-            } catch (err) {
-                center.innerHTML = '<div style="color:#ccc;">Fehler</div>';
-            }
-        };
-        
-        input.click();
-    }
-
-    function drop(e) {
-        e.preventDefault();
-        const cardId = e.dataTransfer.getData('text');
-        const card = document.getElementById(cardId);
-        const target = e.target.closest('.quadrant') || e.target.closest('.center-hole');
-        
-        if (!target || !card) return;
-        
-        if (target.id === 'CENTER') {
-            // Card bleibt im Quadranten, nur PDF wird geladen
-            const pdfPath = card.dataset.pdfPath;
-            const notId = card.dataset.notid;
-            
-            if (pdfPath && notId) {
-                // Entferne alte Markierung
-                document.querySelectorAll('.card-container.in-center').forEach(c => c.classList.remove('in-center'));
-                
-                // Markiere neue Card
-                card.classList.add('in-center');
-                currentNotId = notId;
-                showPdfPages(pdfPath, notId);
-            } else {
-                document.getElementById('center-content').innerHTML = `<div style="text-align:center; color:#ccc; font-size:12px;">Kein PDF-Pfad</div>`;
-            }
-        } else {
-            // Quadrant-zu-Quadrant Bewegung (nur wenn kein PDF aktiv)
-            if (!currentPdfDoc) {
-                target.appendChild(card);
-            }
-        }
-    }
-
-    function moveCardToQuadrant(quadrantId) {
-        if (!currentNotId) return;
-        
-        const card = document.querySelector(`.card-container.in-center[data-notid="${currentNotId}"]`);
-        if (card) {
-            card.classList.remove('in-center');
-            document.getElementById(quadrantId).appendChild(card);
-            
-            // Leere Center
-            document.getElementById('center-content').innerHTML = '<div style="text-align:center; color:#9aa; font-size:12px;">PDF im Center anzeigen</div>';
-            currentPdfDoc = null;
-            currentNotId = null;
-            totalPages = 0;
-            
-            console.log(`Card verschoben nach ${quadrantId}`);
-        }
-    }
-
-    // Einfachklick auf Quadrant -> Card dorthin verschieben
-    document.querySelectorAll('.quadrant').forEach(quadrant => {
-        quadrant.addEventListener('click', (e) => {
-            // Nur wenn nicht auf Card geklickt wurde
-            if (!e.target.closest('.card-container') && currentNotId) {
-                quadrant.classList.add('active');
-                setTimeout(() => quadrant.classList.remove('active'), 200);
-                moveCardToQuadrant(quadrant.id);
-            }
-        });
-    });
-
-    function nextPage() {
-        const limit = parseInt(document.getElementById('stackLimit').value) || 8;
-        const totalCards = Array.from(currentXmlDoc.querySelectorAll('Notentisch')).length;
-        if (currentOffset + limit < totalCards) {
-            currentOffset += limit;
-            renderBoard();
-        }
-    }
-
-    function previousPage() {
-        const limit = parseInt(document.getElementById('stackLimit').value) || 8;
-        currentOffset = Math.max(0, currentOffset - limit);
-        renderBoard();
-    }
-
-    function saveXml() {
-        if (!currentXmlDoc) return;
-        
-        // StaffelLimit speichern
-        let limitNode = currentXmlDoc.querySelector('StaffelLimit');
-        if(!limitNode) {
-            limitNode = currentXmlDoc.createElement('StaffelLimit');
-            currentXmlDoc.documentElement.appendChild(limitNode);
-        }
-        limitNode.textContent = document.getElementById('stackLimit').value;
-
-        // Status-Zähler für Bestätigung
-        const statusCount = { neueIdee: 0, wiederholen: 0, geuebt: 0, gelernt: 0 };
-
-        // Alle Quadranten durchgehen und Status aktualisieren
-        ['neueIdee','wiederholen','geuebt','gelernt'].forEach(qId => {
-            document.getElementById(qId).querySelectorAll('.card-container').forEach(card => {
-                const notId = card.dataset.notid;
-                const node = Array.from(currentXmlDoc.querySelectorAll('Notentisch'))
-                                .find(n => n.querySelector('NotID').textContent === notId);
-                if (node) {
-                    // Setze Status auf aktuellen Quadranten
-                    node.querySelector('ArbeitsStatus').textContent = qId;
-                    statusCount[qId]++;
-                    console.log(`Card ${notId} → ${qId}`);
-                }
-            });
-        });
-
-        // Bestätigung ausgeben
-        console.log('=== SPEICHERN ABGESCHLOSSEN ===');
-        console.log(`Q1 (neueIdee): ${statusCount.neueIdee} Cards`);
-        console.log(`Q2 (wiederholen): ${statusCount.wiederholen} Cards`);
-        console.log(`Q3 (geuebt): ${statusCount.geuebt} Cards`);
-        console.log(`Q4 (gelernt): ${statusCount.gelernt} Cards`);
-
-        // XML speichern
-        const xmlStr = new XMLSerializer().serializeToString(currentXmlDoc);
-        const blob = new Blob([xmlStr], {type: "text/xml"});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = "notenblaetter_cards_updated.xml";
-        a.click();
-        
-        alert(`Gespeichert!\nQ1: ${statusCount.neueIdee} | Q2: ${statusCount.wiederholen} | Q3: ${statusCount.geuebt} | Q4: ${statusCount.gelernt}`);
-    }
-    document.addEventListener('keydown', e => {
-        const limit = parseInt(document.getElementById('stackLimit').value) || 8;
-        if (e.code === "Space" || e.key === "Escape") {
-            document.getElementById('viewer-overlay').style.display = 'none';
-            // ESC leert auch Center
-            if (currentNotId && e.key === "Escape") {
-                moveCardToQuadrant('neueIdee');
-            }
-        }
-        if (e.key === "ArrowRight") { currentOffset += limit; renderBoard(); }
-        if (e.key === "ArrowLeft") { currentOffset = Math.max(0, currentOffset - limit); renderBoard(); }
-        if (e.key === "Delete") { 
-            if (currentNotId) {
-                moveCardToQuadrant('neueIdee');
-            }
-        }
-    });
-</script>
+    <script src="board.js"></script>
 </body>
 </html>
