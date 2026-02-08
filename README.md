@@ -115,29 +115,127 @@ Notentisch (Web)          →  XML exportieren  →  Access importieren
 - **Architektur**: Separierte HTML/CSS/JavaScript in `board.html`, `board.js`
 - **Launcher**: `Notentisch.bat` (einfach) oder `Notentisch.vbs` (GUI)
 
-## Dateien
+## Installation & Start
 
-- `board.html` - HTML-Struktur und Styles
-- `board.js` - Alle JavaScript-Funktionen
-- `Notentisch.bat` - Windows Batch Launcher
-- `Notentisch.vbs` - Windows VBS Launcher (mit GUI)
+### Empfohlene Methode (PowerShell-Server)
+
+1. **Doppelklick auf `notentisch_start.vbs`**
+   - Startet automatisch den PowerShell-Server auf Port 8080
+   - Öffnet Browser mit `http://localhost:8080/board.html`
+   - **Vorteil**: Greift auf PDFs außerhalb des Projekt-Ordners zu
+
+### Alternative Methode (Python-Server)
+
+1. **Doppelklick auf `Notentisch.vbs`** (erfordert Python 3.6+)
+   - Startet Python-Server auf Port 8000
+   - Öffnet Browser mit komplexer URL
+   - **Nachteil**: PDFs müssen im OneDrive-Root erreichbar sein
+
+## Workflow: Access → Notentisch → Speichern
+
+### 1. Access-Export (Neue Lernkarten erstellen)
+
+**In Microsoft Access:**
+```
+Access-Datenbank
+  ↓
+Export als XML (Tabelle "NotenTisch")
+  ↓
+Dateien erstellt:
+  - Notentisch.xml (die Kartendaten)
+  - Cards_Export/*.png (Vorschaubilder)
+```
+
+**Wichtig**: Access-Export kann Dateinamen-Bugs haben:
+- Broken UTF-8: `München` → `MÃ¼nchen`
+- Trailing Spaces: `Name.png` → `Name   .png` (1-4 Leerzeichen)
+- Das Board kompensiert diese Bugs automatisch!
+
+### 2. XML-Datei laden
+
+1. Click auf **LADEN** Button
+2. Wähle `Notentisch.xml`
+3. Board lädt:
+   - **Kartendaten** aus XML (NotID, ArbeitsStatus, Speicherort)
+   - **PDF-Pfade** aus `<Speicherort>` Element
+   - **Vorschaubilder** aus `Cards_Export/` (automatische Suche)
+
+**Pfad-Format in XML:**
+```xml
+<Speicherort>Titel#C:\Users\User\OneDrive\myMusic\Noten\Blätter\Datei.pdf</Speicherort>
+```
+oder relativ:
+```xml
+<Speicherort>Titel#..\..\myMusic\Noten\Blätter\Datei.pdf</Speicherort>
+```
+
+### 3. Mit Karten arbeiten
+
+- **Drag ins Center**: PDF wird automatisch geladen
+- **Zwischen Quadranten**: Karten verschieben (Status ändert sich)
+- **Timestamp**: Beim Drag ins Center wird `LastViewed` gesetzt
+
+### 4. Speichern
+
+1. Click auf **SPEICHERN** Button
+2. Datei wird erstellt: `notenblaetter_cards_updated.xml`
+3. Enthält:
+   - Aktualisierte `ArbeitsStatus` (neueIdee/wiederholen/geuebt/gelernt)
+   - `LastViewed` Timestamps (Format: `YYYY-MM-DD HH:MM:SS`)
+   - Stack-Limit Einstellung
+
+### 5. Zurück nach Access (Optional)
+
+**In Microsoft Access:**
+```
+Import XML-Datei
+  ↓
+Tabelle wird aktualisiert
+  ↓
+Auswertungen mit LastViewed-Timestamps
+```
+
+## Datei-Übersicht
+
+### Starter-Dateien
+- **`notentisch_start.vbs`** - PowerShell-Server Launcher (empfohlen)
+- `Notentisch.vbs` - Python-Server Launcher (alternative)
+- `Notentisch.bat` - Python-Server CMD Launcher (alternative)
+- `start_server.ps1` - PowerShell-Server (wird von notentisch_start.vbs aufgerufen)
+
+### Haupt-Anwendung
+- **`board.html`** - HTML-Struktur und Styles
+- **`board.js`** - JavaScript-Logik (PDF-Laden, Drag&Drop, XML-Handling)
+
+### Access-Integration
+- **`ExtractCards.ps1`** - PowerShell-Skript für Access-Export
+- `Notentisch.xml` - Eingabe-Datei (vom Access exportiert)
+- `notenblaetter_cards_updated.xml` - Ausgabe-Datei (zum Access-Import)
+
+### Vorschaubilder
+- **`Cards_Export/`** - Ordner mit PNG-Vorschaubildern (vom Access erstellt)
+  - Format: `Kartenname.png` (190x250px Vorschau der ersten PDF-Seite)
+
+### Dokumentation
 - `README.md` - Diese Dokumentation
 - `CHANGELOG.md` - Versionshistorie
-- `Todo.txt` - Open Tasks & Roadmap
-
-## Installation
-
-1. Alle Dateien in den selben Ordner kopieren
-2. **Option A**: `Notentisch.bat` doppelklicken
-3. **Option B**: `Notentisch.vbs` doppelklicken
-4. Browser öffnet sich automatisch auf `http://localhost:8000`
-5. XML-Datei mit Lernkarten laden (Button "LADEN")
+- `Todo.txt` - Geplante Features (lokal, nicht in Git)
 
 ## Systemanforderungen
 
-- **Windows 7+** oder andere Betriebssysteme mit Python
+### Für PowerShell-Server (empfohlen)
+- **Windows 10+** mit PowerShell 5.1+
+- **Moderner Browser** (Chrome, Firefox, Edge)
+- Keine zusätzliche Software nötig!
+
+### Für Python-Server (alternative)
+- **Windows 7+** oder andere Betriebssysteme
 - **Python 3.6+** (muss im PATH sein)
 - **Moderner Browser** (Chrome, Firefox, Edge, Safari)
 
 ---
-*Letztes Update: 2024 - Dynamische PDF-Skalierung, Layout-Modi, Timestamp-Tracking*
+*Letztes Update: Februar 2026*
+- Automatisches PDF-Laden mit PowerShell-Server
+- Robuste Card-Vorschaubilder (Access-Export Bug-Fixes)
+- Verzögertes Laden verhindert Server-Overload
+
