@@ -133,19 +133,50 @@ Notentisch (Web)          →  XML exportieren  →  Access importieren
 
 ## Workflow: Access → Notentisch → Speichern
 
-### 1. Access-Export (Neue Lernkarten erstellen)
-
-**In Microsoft Access:**
-```
-Access-Datenbank
-  ↓
-Export als XML (Tabelle "NotenTisch")
-  ↓
-Dateien erstellt:
-  - Notentisch.xml (die Kartendaten)
-  - Cards_Export/*.png (Vorschaubilder)
-```
-
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Microsoft Access                                          │
+│    └─ Export Tabelle "NotenTisch" als XML                   │
+│       ├─ Notentisch.xml (Kartendaten)                       │
+│       └─ Cards_Export/*.png (Vorschaubilder)                │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 2. Start: notentisch_start.vbs (Doppelklick)               │
+│    └─ Startet start_server.ps1 (PowerShell-Server)         │
+│       ├─ Port 8080                                           │
+│       └─ Öffnet http://localhost:8080/board.html            │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 3. Im Browser: Board laden                                   │
+│    └─ Click LADEN → Select Notentisch.xml                   │
+│       ├─ Lädt Kartendaten (NotID, ArbeitsStatus, Pfad)      │
+│       ├─ Sucht Vorschaubilder in Cards_Export/              │
+│       │  (kompensiert Access-Bugs automatisch!)             │
+│       └─ Zeigt Cards in 4 Quadranten                        │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 4. Mit Karten arbeiten                                       │
+│    ├─ Drag Card ins Center → PDF lädt automatisch          │
+│    │  └─ LastViewed Timestamp wird gesetzt                  │
+│    ├─ Drag zwischen Quadranten → Status ändert sich        │
+│    └─ Tastatur: ESC/Delete/Pfeile                           │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 5. Speichern                                                 │
+│    └─ Click SPEICHERN                                        │
+│       └─ Download: notenblaetter_cards_updated.xml          │
+│          ├─ Aktualisierte ArbeitsStatus                     │
+│          └─ LastViewed Timestamps                           │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 6. Zurück zu Access (Optional)                              │
+│    └─ Import notenblaetter_cards_updated.xml                │
+│       └─ Auswertungen mit LastViewed-Daten                  │
+└─────────────────────────────────────────────────────────────┘
 **Wichtig**: Access-Export kann Dateinamen-Bugs haben:
 - Broken UTF-8: `München` → `MÃ¼nchen`
 - Trailing Spaces: `Name.png` → `Name   .png` (1-4 Leerzeichen)

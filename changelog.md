@@ -1,6 +1,38 @@
 # Changelog - Notentisch
 
-## [Aktuell] - 2024
+## [v2.0] - Februar 2026
+
+### Neu ✨
+- **PowerShell-Server Support**: `notentisch_start.vbs` für automatisches PDF-Laden
+- **Robuste Card-Vorschaubilder**: Automatische Kompensation von Access-Export Bugs
+  - Broken UTF-8 Encoding (`München` → `MÃ¼nchen`)
+  - Trailing Spaces (1-4 Leerzeichen am Ende)
+  - Normalisierte Umlaute (`ae/oe/ue` Varianten)
+- **Verzögertes Laden**: 50ms Abstand zwischen Card-Bildern (verhindert Server-Overload)
+- **Timeout-Schutz**: 3 Sekunden Timeout bei ERR_EMPTY_RESPONSE
+- **XML-Element-Support**: Funktioniert mit `<Notentisch>` und `<NotenTisch>` Elementen
+
+### Verbessert 🔧
+- **PDF-Pfad-Konvertierung**: Intelligente Erkennung von absoluten und relativen Pfaden
+- **Access-Integration**: Dokumentierter Workflow Access → Export → Notentisch → Save
+- **Starter-Dateien**: Klar dokumentiert (PowerShell vs. Python)
+- **README**: Komplette Dokumentation des Workflows und der Dateistruktur
+
+### Behoben 🐛
+- **XML-Laden blockiert**: Syntaxfehler in `renderBoard()` behoben (fehlende `const`)
+- **PDF-Laden fehlgeschlagen**: Pfad-Konvertierung für PowerShell-Server korrigiert
+- **Card-Bilder fehlen**: Robuste Suche findet Dateien trotz Access-Export Bugs
+- **Speichern fehlerhaft**: `saveXml()` findet jetzt beide XML-Element-Typen
+
+### Technisch 🔨
+- Pfad-Normalisierung für Windows-Pfade (`\` → `/`)
+- URL-Encoding für Umlaute und Sonderzeichen
+- Fallback-Mechanismus mit mehreren Dateinamen-Varianten
+- `.gitignore` erweitert (tmpclaude-*, lokale Datendateien)
+
+---
+
+## [v1.5] - 2024
 
 ### Neu ✨
 - **Dynamische PDF-Skalierung**: Bilder nutzen volle Höhe, automatische Breitenanpassung
