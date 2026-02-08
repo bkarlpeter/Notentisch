@@ -134,21 +134,21 @@ Notentisch (Web)          →  XML exportieren  →  Access importieren
 ## Workflow: Access → Notentisch → Speichern
 
 ┌─────────────────────────────────────────────────────────────┐
-│ 1. Microsoft Access                                          │
+│ 1. Microsoft Access                                         │
 │    └─ Export Tabelle "NotenTisch" als XML                   │
 │       ├─ Notentisch.xml (Kartendaten)                       │
 │       └─ Cards_Export/*.png (Vorschaubilder)                │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ 2. Start: notentisch_start.vbs (Doppelklick)               │
-│    └─ Startet start_server.ps1 (PowerShell-Server)         │
-│       ├─ Port 8080                                           │
+│ 2. Start: notentisch_start.vbs (Doppelklick)                │
+│    └─ Startet start_server.ps1 (PowerShell-Server)          │
+│       ├─ Port 8080                                          │
 │       └─ Öffnet http://localhost:8080/board.html            │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ 3. Im Browser: Board laden                                   │
+│ 3. Im Browser: Board laden                                  │
 │    └─ Click LADEN → Select Notentisch.xml                   │
 │       ├─ Lädt Kartendaten (NotID, ArbeitsStatus, Pfad)      │
 │       ├─ Sucht Vorschaubilder in Cards_Export/              │
@@ -157,16 +157,16 @@ Notentisch (Web)          →  XML exportieren  →  Access importieren
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ 4. Mit Karten arbeiten                                       │
-│    ├─ Drag Card ins Center → PDF lädt automatisch          │
+│ 4. Mit Karten arbeiten                                      │
+│    ├─ Drag Card ins Center → PDF lädt automatisch           │
 │    │  └─ LastViewed Timestamp wird gesetzt                  │
-│    ├─ Drag zwischen Quadranten → Status ändert sich        │
+│    ├─ Drag zwischen Quadranten → Status ändert sich         │
 │    └─ Tastatur: ESC/Delete/Pfeile                           │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ 5. Speichern                                                 │
-│    └─ Click SPEICHERN                                        │
+│ 5. Speichern                                                │
+│    └─ Click SPEICHERN                                       │
 │       └─ Download: notenblaetter_cards_updated.xml          │
 │          ├─ Aktualisierte ArbeitsStatus                     │
 │          └─ LastViewed Timestamps                           │
