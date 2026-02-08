@@ -8,20 +8,25 @@ Version 1.0.0 - FERTIG ✓
 - [x] OneDrive-Integration
 - [x] Batch-Starter
 - [x] Dokumentation
+- [x] Layout-Modi (2x2 / 80/20)
+- [x] 2/3 Seiten-Ansicht
+- [x] Dynamische PDF-Skalierung
+- [x] Timestamp für Cards (LastViewed)
 
-Version 1.1 - IN PLANUNG
-========================
-- [ ] Zoom-Funktion (+/- Buttons)
-- [ ] Tastatur-Navigation für PDF
-- [ ] Vollbild-Modus (F11)
+Version 1.1 - IN ARBEIT 🔄
+==========================
+- [ ] **Full View Mode**: Fullscreen für Center-PDF (mit ESC zum Schließen)
+- [ ] **Layout an Windows anpassen**: Responsive Grid bei Fenstervergrößerung/-verkleinerung
+- [ ] Zoom-Funktion (+/- Buttons für PDF)
+- [ ] Tastatur-Navigation für PDF (Arrow Keys)
 - [ ] Lesezeichen für Seiten
 - [ ] Theme-Switcher (Dark/Light)
 
-Version 1.2 - IDEEN
-===================
+Version 1.2 - PLANUNG
+====================
 - [ ] PDF-Annotationen/Markierungen
 - [ ] Übungsmodus mit Timer
-- [ ] Statistik-Dashboard
+- [ ] Statistik-Dashboard (Timestamps auswerten)
 - [ ] Export als Print-PDF
 - [ ] Metronom-Integration
 
@@ -33,18 +38,22 @@ VERBESSERUNGEN
 ==============
 - [ ] Performance: Lazy Loading für Karten
 - [ ] UX: Drag-Vorschau verbessern
-- [ ] Mobile: Responsive Design
+- [ ] Mobile: Responsive Design (Touch-Unterstützung)
 - [ ] Audio: MP3-Playback für Übungen
 
 TECHNISCHE SCHULDEN
 ===================
-- [ ] Code-Splitting (board.html zu groß)
+- [x] Code-Splitting (board.html zu groß) ✓ → board.js
 - [ ] CSS in separate Datei auslagern
-- [ ] JavaScript modularisieren
+- [x] JavaScript modularisieren ✓
 - [ ] Unit Tests schreiben
+- [ ] Error-Handling verbessern
 
 DOKUMENTATION
 =============
 - [ ] Video-Tutorial erstellen
 - [ ] FAQ-Seite
 - [ ] Keyboard-Shortcuts Übersicht (PDF)
+- [x] README.md aktualisiert ✓
+- [x] CHANGELOG.md erstellt ✓
+- [x] XML-Format mit Timestamps dokumentiert ✓

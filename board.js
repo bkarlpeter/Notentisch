@@ -403,6 +403,12 @@ function drop(e) {
             document.querySelectorAll('.card-container.in-center').forEach(c => c.classList.remove('in-center'));
             card.classList.add('in-center');
             currentNotId = notId;
+            
+            // NEUER CODE: Speichere Timestamp wenn ins Center gezogen
+            const now = new Date();
+            const timestamp = now.toISOString().slice(0, 19).replace('T', ' '); // Format: 2024-01-15 14:32:45
+            card.dataset.lastViewed = timestamp;
+            
             showPdfPages(pdfPath, notId);
         } else {
             document.getElementById('center-content').innerHTML = `<div style="text-align:center; color:#ccc; font-size:12px;">Kein PDF-Pfad</div>`;
@@ -461,6 +467,17 @@ function saveXml() {
             if (node) {
                 node.querySelector('ArbeitsStatus').textContent = qId;
                 statusCount[qId]++;
+                
+                // NEUER CODE: Speichere LastViewed wenn vorhanden
+                const lastViewed = card.dataset.lastViewed;
+                let lastViewedNode = node.querySelector('LastViewed');
+                if (!lastViewedNode && lastViewed) {
+                    lastViewedNode = currentXmlDoc.createElement('LastViewed');
+                    node.appendChild(lastViewedNode);
+                }
+                if (lastViewedNode && lastViewed) {
+                    lastViewedNode.textContent = lastViewed;
+                }
             }
         });
     });
