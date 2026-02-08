@@ -1,4 +1,5 @@
 let currentXmlDoc = null;
+let currentXmlFileName = 'notenblaetter_cards_updated.xml';
 let currentOffset = 0;
 let currentPageOffset = 0;
 let totalPages = 0;
@@ -140,7 +141,8 @@ function allow(e) { e.preventDefault(); }
 function handleFile(event) {
     const file = event.target.files[0];
     if (!file) return;
-    
+
+    currentXmlFileName = file.name;
     console.log('Lade Datei:', file.name);
     
     const reader = new FileReader();
@@ -584,7 +586,7 @@ function saveXml() {
     const blob = new Blob([xmlStr], {type: "text/xml"});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = "notenblaetter_cards_updated.xml";
+    a.download = currentXmlFileName;
     a.click();
     
     alert(`Gespeichert!\nQ1: ${statusCount.neueIdee} | Q2: ${statusCount.wiederholen} | Q3: ${statusCount.geuebt} | Q4: ${statusCount.gelernt}`);
