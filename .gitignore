@@ -22,23 +22,13 @@ Cards_Export/
 
 # PowerShell
 *.ps1.user
-# OS
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Editor
-.vscode/
-
-# Export/Generated
-Cards_Export/
 
 # Third‑party binaries
 poppler-25.12.0/
 
-# Logs/Temp
-*.log
-*.tmp
-*.bak
-*.swp
-*.swo
+# Claude temporary directories
+tmpclaude-*/
+
+# Local data files (work in progress)
+Notentisch.xml
+Todo.txt
