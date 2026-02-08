@@ -167,14 +167,14 @@ Notentisch (Web)          →  XML exportieren  →  Access importieren
 ┌─────────────────────────────────────────────────────────────┐
 │ 5. Speichern                                                │
 │    └─ Click SPEICHERN                                       │
-│       └─ Download: notenblaetter_cards_updated.xml          │
+│       └─ Download: Notentisch.xml (mit gleichem Namen)      │
 │          ├─ Aktualisierte ArbeitsStatus                     │
 │          └─ LastViewed Timestamps                           │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ 6. Zurück zu Access (Optional)                              │
-│    └─ Import notenblaetter_cards_updated.xml                │
+│    └─ Import aktualisierte Notentisch.xml                   │
 │       └─ Auswertungen mit LastViewed-Daten                  │
 └─────────────────────────────────────────────────────────────┘
 **Wichtig**: Access-Export kann Dateinamen-Bugs haben:
@@ -209,11 +209,13 @@ oder relativ:
 ### 4. Speichern
 
 1. Click auf **SPEICHERN** Button
-2. Datei wird erstellt: `notenblaetter_cards_updated.xml`
+2. Datei wird gespeichert mit dem ursprünglichen Dateinamen (z.B. `Notentisch.xml`)
 3. Enthält:
    - Aktualisierte `ArbeitsStatus` (neueIdee/wiederholen/geuebt/gelernt)
    - `LastViewed` Timestamps (Format: `YYYY-MM-DD HH:MM:SS`)
    - Stack-Limit Einstellung
+
+**Tipp**: In den Browser-Einstellungen "Vor jedem Download nach Speicherort fragen" aktivieren, um die Datei direkt zu überschreiben.
 
 ### 5. Zurück nach Access (Optional)
 
