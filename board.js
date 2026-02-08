@@ -36,6 +36,14 @@ function normalizeUmlauts(value) {
                 .replace(/ß/g, 'ss').replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue');
 }
 
+function brokenUtf8Encoding(value) {
+    // Access-Export erstellt manchmal falsche UTF-8 Dateinamen
+    // ü → Ã¼, ö → Ã¶, ä → Ã¤
+    return value.replace(/ü/g, 'Ã¼').replace(/ö/g, 'Ã¶').replace(/ä/g, 'Ã¤')
+                .replace(/Ü/g, 'Ãœ').replace(/Ö/g, 'Ã–').replace(/Ä/g, 'Ã„')
+                .replace(/ß/g, 'ÃŸ');
+}
+
 function decodeMaybe(value) {
     try { return decodeURIComponent(value); } catch { return value; }
 }
@@ -72,8 +80,18 @@ function findCardImage(displayName, pdfPath) {
 
         [noExt, compact, underscored, noSpaces, firstWord].forEach(name => {
             const safe = sanitizeFilename(name);
+            // Original-Name
             candidates.push(safe);
+            // Mit ae/oe/ue
             candidates.push(normalizeUmlauts(safe));
+            // Mit broken UTF-8 (Access-Export)
+            candidates.push(brokenUtf8Encoding(safe));
+
+            // Zusätzlich: Mit trailing spaces (häufiger Access-Export Bug - 1 bis 4 spaces)
+            for (let i = 1; i <= 4; i++) {
+                candidates.push(safe + ' '.repeat(i));
+                candidates.push(brokenUtf8Encoding(safe) + ' '.repeat(i));
+            }
         });
     });
 
@@ -94,12 +112,23 @@ function loadImageWithFallback(cardDiv, paths) {
             return;
         }
         const img = new Image();
+
+        // Timeout falls Server nicht antwortet (ERR_EMPTY_RESPONSE)
+        const timeoutId = setTimeout(() => {
+            img.src = ''; // Abbruch
+            tryPath(index + 1); // Nächster Versuch
+        }, 3000); // 3 Sekunden Timeout
+
         img.onload = () => {
+            clearTimeout(timeoutId);
             cardDiv.style.backgroundImage = `url('${paths[index]}')`;
             cardDiv.style.backgroundSize = 'cover';
             cardDiv.style.backgroundPosition = 'top';
         };
-        img.onerror = () => tryPath(index + 1);
+        img.onerror = () => {
+            clearTimeout(timeoutId);
+            tryPath(index + 1);
+        };
         img.src = paths[index];
     };
     tryPath(0);
@@ -160,6 +189,8 @@ function renderBoard() {
 
     const items = Array.from(currentXmlDoc.querySelectorAll('Notentisch, NotenTisch'));
 
+    let imageLoadDelay = 0; // Verzögerung für Bild-Laden in ms
+
     Object.keys(statusMapping).forEach(qId => {
         const qItems = items.filter(item => normalizeStatus(item.querySelector('ArbeitsStatus')?.textContent) === qId);
 
@@ -174,7 +205,7 @@ function renderBoard() {
             const container = document.createElement('div');
             container.className = 'card-container';
             if (index >= currentOffset && index < currentOffset + limit) container.classList.add('visible');
-            
+
             container.id = 'cont-' + id;
             container.dataset.notid = id;
             container.dataset.pdfPath = parsed.pdfPath || '';
@@ -182,16 +213,21 @@ function renderBoard() {
             container.draggable = true;
             container.onclick = function() { if(this.parentElement.id !== 'CENTER') this.parentElement.appendChild(this); };
             container.ondragstart = e => e.dataTransfer.setData('text', e.target.id);
-            
-            let cardHtml = imagePaths && imagePaths.length 
+
+            let cardHtml = imagePaths && imagePaths.length
                 ? `<div class="card" data-img="1"></div>`
                 : `<div class="card" style="background: #666; display: flex; align-items: center; justify-content: center; color: #ccc;"><small>Kein Bild</small></div>`;
             cardHtml += `<div class="card-title">${displayName}</div>`;
             container.innerHTML = cardHtml;
 
             const cardDiv = container.querySelector('.card[data-img]');
-            if (cardDiv) loadImageWithFallback(cardDiv, imagePaths);
-            
+            if (cardDiv) {
+                // Verzögertes Laden um Server nicht zu überlasten
+                const delay = imageLoadDelay;
+                setTimeout(() => loadImageWithFallback(cardDiv, imagePaths), delay);
+                imageLoadDelay += 50; // 50ms zwischen jedem Bild
+            }
+
             document.getElementById(qId).appendChild(container);
         });
     });
@@ -229,16 +265,23 @@ async function showPdfPages(pdfPath, notId) {
         // Konvertiere Windows-Pfade zu Unix-Pfaden
         serverPath = serverPath.replace(/\\/g, '/');
 
-        // Wenn absoluter Pfad: Entferne C:/Users/User/OneDrive/ Präfix
-        const oneDriveRoot = 'C:/Users/User/OneDrive/';
-        if (serverPath.startsWith(oneDriveRoot)) {
-            serverPath = serverPath.substring(oneDriveRoot.length);
-        } else if (serverPath.startsWith('C:')) {
-            // Andere absolute Pfade: Warnung
-            console.warn('Absoluter Pfad außerhalb OneDrive:', serverPath);
+        // Für PowerShell-Server: Konvertiere zu Blätter/xyz.pdf Format
+        // Der PowerShell-Server erwartet: Blätter/xyz.pdf und fügt automatisch myMusic/Noten/ hinzu
+
+        if (serverPath.match(/^[A-Za-z]:/)) {
+            // Absoluter Pfad: C:/Users/User/OneDrive/myMusic/Noten/Blätter/xyz.pdf
+            // Extrahiere nur: Blätter/xyz.pdf
+            const match = serverPath.match(/(?:myMusic\/Noten\/|Noten\/)?(.+)$/);
+            if (match) {
+                serverPath = match[1];
+            }
         } else if (serverPath.startsWith('../')) {
-            // Relativer Pfad: Entferne ../ Präfixe (Server läuft jetzt im OneDrive-Root)
-            serverPath = serverPath.replace(/^(\.\.\/)+/, '');
+            // Relativer Pfad: ../../myMusic/Noten/Blätter/xyz.pdf
+            // Extrahiere nur: Blätter/xyz.pdf
+            const match = serverPath.match(/(?:myMusic\/Noten\/|Noten\/)?(.+)$/);
+            if (match) {
+                serverPath = match[1];
+            }
         }
 
         // Entferne führende Slashes
