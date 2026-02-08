@@ -118,7 +118,7 @@ function handleFile(event) {
     
     reader.onerror = (error) => {
         console.error('Fehler beim Laden der Datei:', error);
-        alert('Fehler beim Laden der Datei: ' + error.message);
+        alert(`Fehler beim Laden der Datei: ${error?.message || 'Unbekannter Fehler'}`);
     };
     
     reader.onload = e => {
@@ -142,7 +142,7 @@ function handleFile(event) {
             console.log('Board erfolgreich geladen!');
         } catch (error) {
             console.error('Fehler beim Verarbeiten:', error);
-            alert('Fehler beim Verarbeiten der Datei: ' + error.message);
+            alert(`Fehler beim Verarbeiten der Datei: ${error?.message || 'Unbekannter Fehler'}`);
         }
     };
     
