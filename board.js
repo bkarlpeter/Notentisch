@@ -111,13 +111,41 @@ function allow(e) { e.preventDefault(); }
 function handleFile(event) {
     const file = event.target.files[0];
     if (!file) return;
+    
+    console.log('Lade Datei:', file.name);
+    
     const reader = new FileReader();
-    reader.onload = e => {
-        currentXmlDoc = new DOMParser().parseFromString(e.target.result, "text/xml");
-        const savedLimit = currentXmlDoc.querySelector('StaffelLimit')?.textContent;
-        if (savedLimit) document.getElementById('stackLimit').value = savedLimit;
-        renderBoard();
+    
+    reader.onerror = (error) => {
+        console.error('Fehler beim Laden der Datei:', error);
+        alert(`Fehler beim Laden der Datei: ${error?.message || 'Unbekannter Fehler'}`);
     };
+    
+    reader.onload = e => {
+        try {
+            console.log('Datei geladen, parse XML...');
+            currentXmlDoc = new DOMParser().parseFromString(e.target.result, "text/xml");
+            
+            // Prüfe auf XML-Parsing-Fehler
+            const parseError = currentXmlDoc.querySelector('parsererror');
+            if (parseError) {
+                console.error('XML-Parsing-Fehler:', parseError.textContent);
+                alert('Fehler beim Parsen der XML-Datei. Bitte prüfen Sie das Format.');
+                return;
+            }
+            
+            const savedLimit = currentXmlDoc.querySelector('StaffelLimit')?.textContent;
+            if (savedLimit) document.getElementById('stackLimit').value = savedLimit;
+            
+            console.log('Rendere Board...');
+            renderBoard();
+            console.log('Board erfolgreich geladen!');
+        } catch (error) {
+            console.error('Fehler beim Verarbeiten:', error);
+            alert(`Fehler beim Verarbeiten der Datei: ${error?.message || 'Unbekannter Fehler'}`);
+        }
+    };
+    
     reader.readAsText(file);
 }
 
