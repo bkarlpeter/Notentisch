@@ -5,7 +5,9 @@ setlocal enabledelayedexpansion
 
 REM Definiere den Projekt-Pfad
 set "PROJECTDIR=%~dp0"
-cd /d "!PROJECTDIR!"
+
+REM Wechsle zum OneDrive-Root damit Server auf alle Dateien zugreifen kann
+cd /d "C:\Users\User\OneDrive"
 
 REM Prüfe ob Python installiert ist
 python --version >nul 2>&1
@@ -23,14 +25,14 @@ timeout /t 2
 
 REM Öffne die Anwendung im Standard-Browser
 echo Öffne Notentisch im Browser...
-start http://localhost:8000/board.html
+start http://localhost:8000/lapdaten%%20%%28E%%29/Daten/Projekt%%20notentisch/board.html
 
 echo.
 echo ========================================
 echo Digitaler Notentisch läuft!
 echo ========================================
 echo.
-echo URL: http://localhost:8000/board.html
+echo URL: http://localhost:8000/lapdaten%%20%%28E%%29/Daten/Projekt%%20notentisch/board.html
 echo Projekt-Pfad: !PROJECTDIR!
 echo.
 echo Server läuft im Hintergrund.

@@ -8,9 +8,12 @@ Set objFSO = CreateObject("Scripting.FileSystemObject")
 ' Projekt-Pfad ermitteln (Verzeichnis der VBS-Datei)
 strProjectDir = objFSO.GetParentFolderName(WScript.ScriptFullName)
 
+' Wechsle zum OneDrive-Root damit Server auf alle Dateien zugreifen kann
+objShell.CurrentDirectory = "C:\Users\User\OneDrive"
+
 ' Port definieren
 intPort = 8000
-strURL = "http://localhost:" & intPort & "/board.html"
+strURL = "http://localhost:" & intPort & "/lapdaten%20%28E%29/Daten/Projekt%20notentisch/board.html"
 
 ' Prüfe ob Python installiert ist
 On Error Resume Next
@@ -24,7 +27,8 @@ If Err.Number <> 0 Then
 End If
 On Error GoTo 0
 
-' Starte Python Server im Hintergrund
+' Starte Python Server im Hintergrund (vom OneDrive-Root aus)
+objShell.CurrentDirectory = "C:\Users\User\OneDrive"
 Set objExec = objShell.Exec("python -m http.server " & intPort)
 
 ' Warte kurz, damit Server startet

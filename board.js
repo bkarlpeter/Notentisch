@@ -158,8 +158,8 @@ function renderBoard() {
     document.querySelectorAll('.quadrant').forEach(q => q.innerHTML = '');
     document.querySelectorAll('.center-hole .card-container').forEach(c => c.remove());
 
-    const items = Array.from(currentXmlDoc.querySelectorAll('Notentisch'));
-    
+    const items = Array.from(currentXmlDoc.querySelectorAll('Notentisch, NotenTisch'));
+
     Object.keys(statusMapping).forEach(qId => {
         const qItems = items.filter(item => normalizeStatus(item.querySelector('ArbeitsStatus')?.textContent) === qId);
 
@@ -222,15 +222,42 @@ async function showPdfPages(pdfPath, notId) {
     currentPageOffset = 0;
     currentNotId = notId;
     center.innerHTML = '<div style="color:#ccc;">Lade PDF...</div>';
-    
+
     try {
-        let serverPath = pdfPath.trim().replace(/^[\\\/]+/, '').replace(/\\/g, '/');
+        let serverPath = pdfPath.trim();
+
+        // Konvertiere Windows-Pfade zu Unix-Pfaden
+        serverPath = serverPath.replace(/\\/g, '/');
+
+        // Wenn absoluter Pfad: Entferne C:/Users/User/OneDrive/ Präfix
+        const oneDriveRoot = 'C:/Users/User/OneDrive/';
+        if (serverPath.startsWith(oneDriveRoot)) {
+            serverPath = serverPath.substring(oneDriveRoot.length);
+        } else if (serverPath.startsWith('C:')) {
+            // Andere absolute Pfade: Warnung
+            console.warn('Absoluter Pfad außerhalb OneDrive:', serverPath);
+        } else if (serverPath.startsWith('../')) {
+            // Relativer Pfad: Entferne ../ Präfixe (Server läuft jetzt im OneDrive-Root)
+            serverPath = serverPath.replace(/^(\.\.\/)+/, '');
+        }
+
+        // Entferne führende Slashes
+        serverPath = serverPath.replace(/^[\/]+/, '');
+
+        // URL-encode den Pfad (wichtig für Umlaute und Leerzeichen)
+        serverPath = serverPath.split('/').map(part => encodeURIComponent(part)).join('/');
+
         const loadingTask = pdfjsLib.getDocument(serverPath);
         currentPdfDoc = await loadingTask.promise;
         totalPages = currentPdfDoc.numPages;
         await renderPdfPages();
     } catch (err) {
-        center.innerHTML = `<div style="color:#ccc; text-align:center; padding:20px;"><p>PDF nicht gefunden</p><button class="btn" onclick="selectPdfManually('${notId}')" style="width:auto;">PDF öffnen</button></div>`;
+        console.error('PDF-Ladefehler:', err);
+        center.innerHTML = `<div style="color:#ccc; text-align:center; padding:20px;">
+            <p>PDF nicht gefunden</p>
+            <small style="color:#999; font-size:10px;">Pfad: ${pdfPath}</small><br><br>
+            <button class="btn" onclick="selectPdfManually('${notId}')" style="width:auto;">PDF öffnen</button>
+        </div>`;
     }
 }
 
@@ -491,7 +518,7 @@ function saveXml() {
     ['neueIdee', 'wiederholen', 'geuebt', 'gelernt'].forEach(qId => {
         document.getElementById(qId).querySelectorAll('.card-container').forEach(card => {
             const notId = card.dataset.notid;
-            const node = Array.from(currentXmlDoc.querySelectorAll('Notentisch')).find(n => n.querySelector('NotID').textContent === notId);
+            const node = Array.from(currentXmlDoc.querySelectorAll('Notentisch, NotenTisch')).find(n => n.querySelector('NotID').textContent === notId);
             if (node) {
                 node.querySelector('ArbeitsStatus').textContent = qId;
                 statusCount[qId]++;
