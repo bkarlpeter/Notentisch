@@ -1,21 +1,39 @@
 let currentXmlDoc = null;
-let currentXmlFileName = 'notenblaetter_cards_updated.xml';
-let currentOffset = 0;
+let currentXmlFileName = 'NotenTisch.xml';
+// NEU: Offset pro Quadrant speichern
+let currentOffsets = { 
+    'neueIdee': 0,
+    'wiederholen': 0,
+    'geuebt': 0,
+    'gelernt': 0
+};
 let currentPageOffset = 0;
 let totalPages = 0;
 let currentPdfDoc = null;
 let currentNotId = null;
+let currentQuadrant = 'neueIdee'; // Aktueller Quadrant
 let pagesPerView = 2;
 let imageFormat = 'center'; // IMMER 'center'
 let autoScale = true;
 let currentLayout = '2x2';
+let currentFileHandle = null;
 
-const statusMapping = { 
+// Wird beim Laden der XML dynamisch befüllt
+let statusMapping = { 
+    "neueIdee": "zurueckgestellt", 
+    "wiederholen": "wiederholen", 
+    "geuebt": "geuebt", 
+    "gelernt": "gelernt" 
+};
+
+const statusMappingDefaults = { 
     "neueIdee": "neueIdee", 
     "wiederholen": "wiederholen", 
     "geuebt": "geuebt", 
     "gelernt": "gelernt" 
 };
+
+const statusMappingNames = ['neueIdee', 'wiederholen', 'geuebt', 'gelernt'];
 
 // Status-Normalisierung
 function normalizeStatus(value) {
@@ -41,7 +59,7 @@ function brokenUtf8Encoding(value) {
     // Access-Export erstellt manchmal falsche UTF-8 Dateinamen
     // ü → Ã¼, ö → Ã¶, ä → Ã¤
     return value.replace(/ü/g, 'Ã¼').replace(/ö/g, 'Ã¶').replace(/ä/g, 'Ã¤')
-                .replace(/Ü/g, 'Ãœ').replace(/Ö/g, 'Ã–').replace(/Ä/g, 'Ã„')
+                .replace(/Ü/g, 'Ãœ').replace(/Ö/g, 'ÃÖ').replace(/Ä/g, 'Ã„')
                 .replace(/ß/g, 'ÃŸ');
 }
 
@@ -143,6 +161,10 @@ function handleFile(event) {
     if (!file) return;
 
     currentXmlFileName = file.name;
+   // NEU: Speichere File Handle wenn möglich
+    if (event.target.files[0].handle) {
+        currentFileHandle = event.target.files[0].handle;
+    }
     console.log('Lade Datei:', file.name);
     
     const reader = new FileReader();
@@ -191,49 +213,79 @@ function renderBoard() {
 
     const items = Array.from(currentXmlDoc.querySelectorAll('Notentisch, NotenTisch'));
 
-    let imageLoadDelay = 0; // Verzögerung für Bild-Laden in ms
+    let imageLoadDelay = 0;
+    const quadrantMap = { 1: 'neueIdee', 2: 'wiederholen', 3: 'geuebt', 4: 'gelernt' };
 
-    Object.keys(statusMapping).forEach(qId => {
-        const qItems = items.filter(item => normalizeStatus(item.querySelector('ArbeitsStatus')?.textContent) === qId);
-
-        qItems.forEach((item, index) => {
-            const id = item.querySelector('NotID')?.textContent;
-            const rawName = item.querySelector('Speicherort')?.textContent;
-            const parsed = parseSpeicherort(rawName);
-            const displayName = parsed.title;
-            const xmlImg = item.querySelector('img')?.textContent || '';
-            const imagePaths = xmlImg ? [xmlImg] : findCardImage(displayName, parsed.pdfPath);
-
-            const container = document.createElement('div');
-            container.className = 'card-container';
-            if (index >= currentOffset && index < currentOffset + limit) container.classList.add('visible');
-
-            container.id = 'cont-' + id;
-            container.dataset.notid = id;
-            container.dataset.pdfPath = parsed.pdfPath || '';
-            container.dataset.title = displayName;
-            container.draggable = true;
-            container.onclick = function() { if(this.parentElement.id !== 'CENTER') this.parentElement.appendChild(this); };
-            container.ondragstart = e => e.dataTransfer.setData('text', e.target.id);
-
-            let cardHtml = imagePaths && imagePaths.length
-                ? `<div class="card" data-img="1"></div>`
-                : `<div class="card" style="background: #666; display: flex; align-items: center; justify-content: center; color: #ccc;"><small>Kein Bild</small></div>`;
-            cardHtml += `<div class="card-title">${displayName}</div>`;
-            container.innerHTML = cardHtml;
-
-            const cardDiv = container.querySelector('.card[data-img]');
-            if (cardDiv) {
-                // Verzögertes Laden um Server nicht zu überlasten
-                const delay = imageLoadDelay;
-                setTimeout(() => loadImageWithFallback(cardDiv, imagePaths), delay);
-                imageLoadDelay += 50; // 50ms zwischen jedem Bild
+    items.forEach((item, index) => {
+        const id = item.querySelector('NotID')?.textContent;
+        const rawName = item.querySelector('Speicherort')?.textContent;
+        const parsed = parseSpeicherort(rawName);
+        const displayName = parsed.title;
+        
+        let qId = 'neueIdee';
+        let quadrant = item.querySelector('Quadrant')?.textContent;
+        if (quadrant) {
+            let quadrantNum = parseInt(quadrant);
+            if (!isNaN(quadrantNum) && quadrantNum >= 1 && quadrantNum <= 4) {
+                qId = quadrantMap[quadrantNum];
             }
+        } else {
+            qId = normalizeStatus(item.querySelector('ArbeitsStatus')?.textContent);
+        }
 
-            document.getElementById(qId).appendChild(container);
+        const xmlImg = item.querySelector('img')?.textContent || '';
+        const imagePaths = xmlImg ? [xmlImg] : findCardImage(displayName, parsed.pdfPath);
+
+        const container = document.createElement('div');
+        container.className = 'card-container';
+        
+        const quadrantItems = items.filter(i => {
+            let q = 'neueIdee';
+            let qs = i.querySelector('Quadrant')?.textContent;
+            if (qs) {
+                let qNum = parseInt(qs);
+                if (!isNaN(qNum) && qNum >= 1 && qNum <= 4) q = quadrantMap[qNum];
+            } else {
+                q = normalizeStatus(i.querySelector('ArbeitsStatus')?.textContent);
+            }
+            return q === qId;
         });
+        const indexInQuadrant = quadrantItems.indexOf(item);
+        const offset = currentOffsets[qId] || 0;
+        
+        if (indexInQuadrant >= offset && indexInQuadrant < offset + limit) {
+            container.classList.add('visible');
+        }
+
+        container.id = 'cont-' + id;
+        container.dataset.notid = id;
+        container.dataset.pdfPath = parsed.pdfPath || '';
+        container.dataset.title = displayName;
+        container.draggable = true;
+        container.onclick = function() { 
+            if(this.parentElement.id !== 'CENTER') {
+                currentQuadrant = this.parentElement.id;
+                this.parentElement.appendChild(this);
+            }
+        };
+        container.ondragstart = e => e.dataTransfer.setData('text', e.target.id);
+
+        let cardHtml = imagePaths && imagePaths.length
+            ? `<div class="card" data-img="1"></div>`
+            : `<div class="card" style="background: #666; display: flex; align-items: center; justify-content: center; color: #ccc;"><small>Kein Bild</small></div>`;
+        cardHtml += `<div class="card-title">${displayName}</div>`;
+        container.innerHTML = cardHtml;
+
+        const cardDiv = container.querySelector('.card[data-img]');
+        if (cardDiv) {
+            const delay = imageLoadDelay;
+            setTimeout(() => loadImageWithFallback(cardDiv, imagePaths), delay);
+            imageLoadDelay += 50;
+        }
+
+        document.getElementById(qId).appendChild(container);
     });
-    
+
     const style = document.getElementById('stack-offset-style') || document.createElement('style');
     style.id = 'stack-offset-style';
     style.innerHTML = `
@@ -251,7 +303,8 @@ function renderBoard() {
     `;
     if (!document.getElementById('stack-offset-style')) document.head.appendChild(style);
     
-    document.getElementById('pageInfo').textContent = `(Ab ${currentOffset + 1})`;
+    const offset = currentOffsets[currentQuadrant] || 0;
+    document.getElementById('pageInfo').textContent = `(Ab ${offset + 1})`;
 }
 
 // PDF-Funktionen
@@ -534,23 +587,39 @@ function moveCardToQuadrant(quadrantId) {
 // Navigation
 function nextPage() {
     const limit = parseInt(document.getElementById('stackLimit').value) || 8;
-    const totalCards = Array.from(currentXmlDoc.querySelectorAll('Notentisch')).length;
-    if (currentOffset + limit < totalCards) {
-        currentOffset += limit;
+    const quadrantMap = { 1: 'neueIdee', 2: 'wiederholen', 3: 'geuebt', 4: 'gelernt' };
+    const items = Array.from(currentXmlDoc.querySelectorAll('Notentisch, NotenTisch'));
+    
+    // Zähle Items im aktuellen Quadrant
+    const quadrantItems = items.filter(i => {
+        let q = 'neueIdee';
+        let qs = i.querySelector('Quadrant')?.textContent;
+        if (qs) {
+            let qNum = parseInt(qs);
+            if (!isNaN(qNum) && qNum >= 1 && qNum <= 4) q = quadrantMap[qNum];
+        } else {
+            q = normalizeStatus(i.querySelector('ArbeitsStatus')?.textContent);
+        }
+        return q === currentQuadrant;
+    });
+    
+    if (currentOffsets[currentQuadrant] + limit < quadrantItems.length) {
+        currentOffsets[currentQuadrant] += limit;
         renderBoard();
     }
 }
 
 function previousPage() {
     const limit = parseInt(document.getElementById('stackLimit').value) || 8;
-    currentOffset = Math.max(0, currentOffset - limit);
+    currentOffsets[currentQuadrant] = Math.max(0, currentOffsets[currentQuadrant] - limit);
     renderBoard();
 }
 
 // Speichern
-function saveXml() {
+async function saveXml() {
     if (!currentXmlDoc) return;
     
+    // StaffelLimit aktualisieren
     let limitNode = currentXmlDoc.querySelector('StaffelLimit');
     if (!limitNode) {
         limitNode = currentXmlDoc.createElement('StaffelLimit');
@@ -563,33 +632,37 @@ function saveXml() {
     ['neueIdee', 'wiederholen', 'geuebt', 'gelernt'].forEach(qId => {
         document.getElementById(qId).querySelectorAll('.card-container').forEach(card => {
             const notId = card.dataset.notid;
-            const node = Array.from(currentXmlDoc.querySelectorAll('Notentisch, NotenTisch')).find(n => n.querySelector('NotID').textContent === notId);
+            const node = Array.from(currentXmlDoc.querySelectorAll('Notentisch, NotenTisch'))
+                .find(n => n.querySelector('NotID').textContent === notId);
             if (node) {
+                // ArbeitsStatus aktualisieren
                 node.querySelector('ArbeitsStatus').textContent = qId;
                 statusCount[qId]++;
-                
-                // NEUER CODE: Speichere LastViewed wenn vorhanden
+
+                // ZuletztGespielt aktualisieren
                 const lastViewed = card.dataset.lastViewed;
-                let lastViewedNode = node.querySelector('LastViewed');
-                if (!lastViewedNode && lastViewed) {
-                    lastViewedNode = currentXmlDoc.createElement('LastViewed');
-                    node.appendChild(lastViewedNode);
+                let zuletztGespieltNode = node.querySelector('ZuletztGespielt');
+                if (!zuletztGespieltNode && lastViewed) {
+                    zuletztGespieltNode = currentXmlDoc.createElement('ZuletztGespielt');
+                    node.appendChild(zuletztGespieltNode);
                 }
-                if (lastViewedNode && lastViewed) {
-                    lastViewedNode.textContent = lastViewed;
+                if (zuletztGespieltNode && lastViewed) {
+                    zuletztGespieltNode.textContent = lastViewed;
                 }
             }
         });
     });
 
     const xmlStr = new XMLSerializer().serializeToString(currentXmlDoc);
-    const blob = new Blob([xmlStr], {type: "text/xml"});
+
+    // Immer: Download der aktualisierten XML
+    const blob = new Blob([xmlStr], { type: "text/xml" });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = currentXmlFileName;
+    a.download = currentXmlFileName || 'NotenTisch.xml';
     a.click();
-    
-    alert(`Gespeichert!\nQ1: ${statusCount.neueIdee} | Q2: ${statusCount.wiederholen} | Q3: ${statusCount.geuebt} | Q4: ${statusCount.gelernt}`);
+
+    alert(`Gespeichert (Download)!\nQ1: ${statusCount.neueIdee} | Q2: ${statusCount.wiederholen} | Q3: ${statusCount.geuebt} | Q4: ${statusCount.gelernt}`);
 }
 
 // Event Listeners

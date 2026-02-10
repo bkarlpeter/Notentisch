@@ -1,0 +1,78 @@
+# ⭐ **Ablauf: Zusammenarbeit zwischen Access und dem HTML‑Board**
+
+Access → Export → NotenTisch.xml → HTML-Board
+HTML-Board → Änderungen → Speichern → NotenTisch.xml → Access
+
+
+## **1. Access – Vorbereitung und Export**
+
+### **1.1 Hauptformular „4‑Notentisch“**
+- Das Formular bildet den digitalen Notentisch mit **vier Unterformularen** ab.  
+- Jedes Unterformular zeigt die Titel eines bestimmten **Arbeitsstatus**:
+  - Q1 = neueIdee  
+  - Q2 = wiederholen  
+  - Q3 = geuebt  
+  - Q4 = gelernt  
+- Der aktuell ausgewählte Quadrant wird über einen Button rechts gesetzt.  
+- Dieser Wert wird in der Tabelle **Einstellungen** gespeichert und beim nächsten Start automatisch wiederhergestellt.
+
+### **1.2 Abfrage „Notentisch“**
+- Access erzeugt eine Liste aller Titel, die **einen Arbeitsstatus** besitzen.  
+- Jeder Datensatz enthält:
+  - Titel  
+  - Arbeitsstatus  
+  - Link zum Speicherort des PDF‑Scans  
+  - ggf. weitere Metadaten (NotID, ZuletztGespielt, etc.)
+
+### **1.3 Export nach XML**
+- Mit dem Button **„Export“** wird die Abfrage als **NotenTisch.xml** exportiert.  
+- Der Speicherort ist in **Einstellungen** hinterlegt.  
+- Diese XML dient als Datengrundlage für das HTML‑Board.
+
+---
+
+# ⭐ **2. HTML‑Board – Laden, Anzeigen, Interaktion**
+
+### **2.1 Laden der XML**
+- Der Button **„Laden“** liest die Datei *NotenTisch.xml* ein.  
+- Die XML wird geparst und für jeden Eintrag wird ein **Card‑Container** erzeugt.  
+- Zusätzlich wird ein Verzeichnis der verfügbaren **PDF‑Scans** eingelesen.
+
+### **2.2 Darstellung der Cards**
+- Jede Card zeigt die **erste Seite des zugehörigen PDFs** als Bild.  
+- Die Card enthält:
+  - Titel  
+  - Arbeitsstatus  
+  - ZuletztGespielt  
+  - Link zum PDF  
+- Falls kein PDF‑Link vorhanden ist:
+  - wird eine Card mit Titel **„Unbekannt“** erzeugt  
+  - sie erhält trotzdem eine gültige NotID  
+  - beim Verschieben ins Center bekommt sie ein **ZuletztGespielt‑Datum**
+
+### **2.3 Verschieben zwischen Quadranten**
+- Cards können per Drag‑and‑Drop zwischen den vier Quadranten verschoben werden.  
+- Beim Verschieben wird der **Arbeitsstatus** der Card sofort aktualisiert.  
+- Die UI spiegelt jederzeit den aktuellen Status wider.
+
+### **2.4 Öffnen im Center**
+- Wird eine Card in die **Center‑Zone** gezogen:
+  - das zugehörige PDF wird geöffnet  
+  - der Nutzer kann das Notenblatt ansehen  
+- Beim Zurücklegen in einen Quadranten (per Klick oder Doppelklick):
+  - wird **ZuletztGespielt** auf das aktuelle Datum gesetzt  
+  - der neue Arbeitsstatus wird gespeichert (im Browser‑Speicher, nicht in XML)
+
+---
+
+# ⭐ **3. HTML‑Board – Speichern zurück nach XML**
+
+### **3.1 Button „Speichern“**
+- Der Button aktualisiert die ursprüngliche *NotenTisch.xml*:
+  - alle geänderten **Arbeitsstatii**  
+  - alle neuen **ZuletztGespielt‑Werte**  
+- Die XML wird **überschrieben**, aber nur an den Stellen, die sich geändert haben.
+
+### **3.2 Ergebnis**
+- Access kann die aktualisierte XML wieder importieren.  
+- Die Änderungen erscheinen beim nächsten Öffnen des Formulars.

@@ -38,6 +38,7 @@ VERBESSERUNGEN
 ==============
 - [ ] Performance: Lazy Loading für Karten
 - [ ] UX: Drag-Vorschau verbessern
+- [ ] UX: Letzten Zustand/Sitzung wiederherstellen
 - [ ] Mobile: Responsive Design (Touch-Unterstützung)
 - [ ] Audio: MP3-Playback für Übungen
 
