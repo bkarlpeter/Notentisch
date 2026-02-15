@@ -32,3 +32,9 @@ tmpclaude-*/
 # Local data files (work in progress)
 Notentisch.xml
 Todo.txt
+# Junction to myMusic (PDF files)
+myMusic/
+
+# Board cache
+board_files/
+Blätter/
