@@ -58,3 +58,42 @@ DOKUMENTATION
 - [x] README.md aktualisiert ✓
 - [x] CHANGELOG.md erstellt ✓
 - [x] XML-Format mit Timestamps dokumentiert ✓
+
+=============================================================================
+TODO-Liste - Projekt Notentisch
+=============================================================================
+
+[ ] Funktion zum automatischen Erstellen neuer Cards
+    - "Neue Card" Button im UI hinzufügen
+    - Formular erstellen für:
+      * NotID (automatisch generieren)
+      * Speicherort (PDF-Pfad)
+      * Titel/Name
+      * ArbeitsStatus (zurückgestellt/wiederholen/geübt/gelernt)
+      * Quadrant (1-4)
+    - XML dynamisch erweitern
+    - Optional: Bild-Upload Funktion für Cards_Export/
+    - Card sofort im Board anzeigen
+
+[ ] Quadranten im Uhrzeigersinn anordnen
+    - HTML Grid-Reihenfolge ändern (Q3 und Q4 tauschen)
+    - quadrantMap anpassen: { 1: 'neueIdee', 2: 'wiederholen', 3: 'gelernt', 4: 'geübt' }
+    - CSS Labels entsprechend aktualisieren
+
+[ ] Weitere mögliche Verbesserungen
+    - [ ] Suchfunktion für Cards
+    - [ ] Filterfunktion nach Status
+    - [ ] Sortierung der Cards (Datum, Name, etc.)
+    - [ ] Drag & Drop zwischen Quadranten verbessern
+    - [ ] Keyboard-Shortcuts dokumentieren
+    - [ ] Export als PDF-Report
+    - [ ] Statistik-Dashboard
+    - [ ] Dark/Light Mode Toggle
+    - [ ] Mobile Responsive Design
+
+=============================================================================
+Notizen:
+- Python HTTP Server läuft auf Port 8080
+- Cards_Export/ Ordner muss Bilder enthalten (PNG-Format)
+- XML-Struktur: <Notentisch> oder <NotenTisch> Einträge
+=============================================================================
