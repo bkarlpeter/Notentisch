@@ -1,5 +1,5 @@
 ﻿const settings = {
-    defaultZoom: 0.8,
+    defaultZoom: 0.6,
     scrollStep: 180,
     pageLabelPrefix: 'Blatt'
 };
@@ -14,6 +14,7 @@ function setZoom(zoomLevel) {
     document.getElementById('zoom-100').style.background = zoomLevel === 1.0 ? '#3498db' : '#555';
     document.getElementById('zoom-90').style.background = zoomLevel === 0.9 ? '#3498db' : '#555';
     document.getElementById('zoom-80').style.background = zoomLevel === 0.8 ? '#3498db' : '#555';
+    document.getElementById('zoom-60').style.background = zoomLevel === 0.6 ? '#3498db' : '#555';
     if (currentPdfDoc) renderPdfPages();
 }
 
