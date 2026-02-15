@@ -1,95 +1,351 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <title>Digitaler Notentisch - Projekt Notentisch</title>
-    <style>
-        body { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr auto; height: 100vh; margin: 0; background: #121212; font-family: 'Segoe UI', sans-serif; overflow: hidden; color: white; }
+
+<style>
+        :root {
+            --card-stack-width: 260px;
+            --stack-overlap: 20px;
+            --control-bar-height: 60px;
+            --center-bottom-gap: 80px;
+        }
+
+        body {
+            margin: 0;
+            background: #121212;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+            color: white;
+            height: 100vh;
+        }
+
+        /* --- LAYOUT CONTAINER --- */
+        #layout-container {
+            display: grid;
+            grid-template-rows: 1fr auto;
+            height: 100vh;
+            width: 100%;
+        }
+
+        /* --- LAYOUT 1: 2x2 (normal) --- */
+        #layout-2x2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 0;
+            height: 100%;
+            position: relative;
+        }
+
+        #layout-2x2.hidden { display: none; }
+
+        /* --- LAYOUT 2: 2x2 COMPACT (breiteres Center) --- */
+        #layout-80-20 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 0;
+            height: 100%;
+            position: relative;
+            --card-stack-width: 140px;
+        }
+
+        #layout-80-20.hidden { display: none; }
+
+        /* --- QUADRANTEN BASIS --- */
+        .quadrant {
+            border: 1px solid #333;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 80px 10px 10px;
+            overflow-y: scroll;
+            cursor: pointer;
+        }
+
+        .quadrant-links {
+            align-items: flex-end;
+            direction: rtl;
+        }
+
+        .quadrant-rechts {
+            align-items: flex-end;
+            direction: ltr;
+        }
         
-        .quadrant { border: 1px solid #333; position: relative; display: flex; flex-direction: column; align-items: center; padding: 60px 10px 10px; overflow-y: auto; cursor: pointer; }
-        .quadrant.active { border: 2px solid #3498db; }
+        .quadrant-links > * {
+            direction: ltr;
+        }
+
+        .quadrant-rechts > * {
+            direction: ltr;
+        }
         
-        .quadrant::before { position: absolute; top: 15px; font-size: 1.2rem; opacity: 0.4; font-weight: bold; color: #3498db; text-transform: uppercase; }
-        #neueIdee::before { content: "Neue Idee (Q1)"; left: 20px; }
-        #wiederholen::before { content: "Wiederholen (Q2)"; right: 20px; }
-        #geuebt::before { content: "Geübt (Q3)"; left: 20px; }
-        #gelernt::before { content: "Gelernt (Q4)"; right: 20px; }
+        /* --- QUADRANT TITEL --- */
+        .quadrant::before {
+            position: absolute;
+            top: 15px;
+            font-size: 1.2rem;
+            opacity: 0.4;
+            font-weight: bold;
+            color: #3498db;
+            text-transform: uppercase;
+            z-index: 10;
+        }
 
-        .center-hole { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 900px; height: 520px; background: #2c3e50; border-radius: 20px; z-index: 1000; box-shadow: 0 0 50px rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 10px; border: 3px solid #3498db; padding: 10px; box-sizing: border-box; }
-        #center-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
-        
-        .control-bar { grid-column: 1 / 3; background: #1a1a1a; border-top: 1px solid #333; padding: 8px; display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 11px; }
-        .control-bar .btn { padding: 6px 10px; font-size: 10px; width: auto; }
-        .control-bar input { width: 40px; height: 20px; padding: 2px; font-size: 10px; }
+        /* Q1 und Q2 Labels OBEN */
+        #Q1::before { content: "zurückgestellt"; left: 20px; }
+        #Q2::before { content: "Wiederholen"; right: 20px; }
 
-        .card-container { width: 190px; text-align: center; flex-shrink: 0; cursor: grab; display: none; }
-        .card-container.visible { display: block; }
-        .card-container.in-center { border: 3px solid #3498db; box-shadow: 0 0 15px #3498db; border-radius: 8px; }
-        .card { width: 100%; height: 250px; background: white; border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.6); pointer-events: none; background-size: cover; background-position: top; }
-        .card-title { font-size: 11px; color: #ccc; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 5px; }
+        /* Q3 und Q4 Labels UNTEN */
+        #Q3::before { 
+            content: "Geübt"; 
+            left: auto;
+            right: 20px;
+            top: auto;
+            bottom: 15px;
+        }
 
-        /* Cards an äußeren Rändern */
-        #neueIdee .card-container { position: absolute !important; top: 50px; left: 10px; transform: none; }
-        #wiederholen .card-container { position: absolute !important; top: 50px; right: 10px; transform: none; }
-        #geuebt .card-container { position: absolute !important; top: 50px; left: 10px; transform: none; }
-        #gelernt .card-container { position: absolute !important; top: 50px; right: 10px; transform: none; }
+        #Q4::before { 
+            content: "Gelernt"; 
+            left: 20px;
+            right: auto;
+            top: auto;
+            bottom: 15px;
+        }
 
-        #neueIdee .card-container.visible:nth-child(1), #wiederholen .card-container.visible:nth-child(1), 
-        #geuebt .card-container.visible:nth-child(1), #gelernt .card-container.visible:nth-child(1) { z-index: 10; top: 50px; }
-        #neueIdee .card-container.visible:nth-child(2), #wiederholen .card-container.visible:nth-child(2), 
-        #geuebt .card-container.visible:nth-child(2), #gelernt .card-container.visible:nth-child(2) { z-index: 11; top: 100px; }
-        #neueIdee .card-container.visible:nth-child(3), #wiederholen .card-container.visible:nth-child(3), 
-        #geuebt .card-container.visible:nth-child(3), #gelernt .card-container.visible:nth-child(3) { z-index: 12; top: 150px; }
-        #neueIdee .card-container.visible:nth-child(4), #wiederholen .card-container.visible:nth-child(4), 
-        #geuebt .card-container.visible:nth-child(4), #gelernt .card-container.visible:nth-child(4) { z-index: 13; top: 200px; }
-        #neueIdee .card-container.visible:nth-child(5), #wiederholen .card-container.visible:nth-child(5), 
-        #geuebt .card-container.visible:nth-child(5), #gelernt .card-container.visible:nth-child(5) { z-index: 14; top: 250px; }
-        #neueIdee .card-container.visible:nth-child(n+6), #wiederholen .card-container.visible:nth-child(n+6), 
-        #geuebt .card-container.visible:nth-child(n+6), #gelernt .card-container.visible:nth-child(n+6) { z-index: 15; top: 300px; }
+        /* --- CENTER-HOLE --- */
+        .center-hole {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: calc(100vw - (2 * (var(--card-stack-width) - var(--stack-overlap))));
+            height: calc(100vh - var(--control-bar-height) - var(--center-bottom-gap));
+            background: #2c3e50;
+            border-radius: 20px;
+            z-index: 1000;
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            border: 3px solid #3498db;
+            padding: 12px 10px;
+            box-sizing: border-box;
+            min-width: 680px;
+            max-width: 1400px;
+        }
 
-        #neueIdee .card-container:hover, #geuebt .card-container:hover { z-index: 100 !important; transform: scale(1.05) translateX(-10px); }
-        #wiederholen .card-container:hover, #gelernt .card-container:hover { z-index: 100 !important; transform: scale(1.05) translateX(10px); }
-        
-        .btn { cursor: pointer; padding: 10px; border-radius: 6px; border: none; background: #3498db; color: white; font-weight: bold; width: 85%; }
+        #center-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        /* --- CENTER in Layout 2 - breiter --- */
+        #layout-80-20 .center-hole {
+            width: calc(100vw - 40px - (var(--card-stack-width) - var(--stack-overlap)));
+            left: 20px;
+        }
+
+        /* --- CONTROL BAR --- */
+        .control-bar {
+            display: flex !important;
+            gap: 10px;
+            align-items: center;
+            padding: 10px;
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+        }
+
+        .btn {
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 6px;
+            border: none;
+            background: #3498db;
+            color: white;
+            font-weight: bold;
+            width: 100px;
+        }
+
         .btn:hover { background: #2980b9; }
-        #stackLimit { width: 45px; background: #1a1a1a; color: white; border: 1px solid #3498db; text-align: center; border-radius: 3px; }
-        #fileInput { display: none; }
-    </style>
+
+        .btn.toggle {
+            width: auto;
+            padding: 8px 12px;
+            background: #27ae60;
+        }
+
+        .btn.toggle:hover { background: #229954; }
+
+        /* --- KARTEN - GESTAFFELT (10px pro Karte) --- */
+        .card-container {
+            width: 190px;
+            text-align: center;
+            flex-shrink: 0;
+            cursor: grab;
+            display: block;
+            position: relative;
+            transform-origin: top center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-bottom: -240px;
+            draggable: true;
+        }
+
+        .card-container.visible { display: block; }
+
+        .card-container:hover {
+            transform: translateY(0px) scale(1.15) !important;
+            z-index: 100 !important;
+        }
+
+        .card-container.in-center { display: none; }
+
+        .card {
+            width: 100%;
+            height: 250px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.8);
+            pointer-events: none;
+            background-size: cover;
+            background-position: top;
+        }
+
+        .card:hover {
+            box-shadow: 0 15px 40px rgba(52, 152, 219, 0.6);
+        }
+
+        .card-title {
+            font-size: 11px;
+            color: #ccc;
+            margin-top: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 5px;
+        }
+
+        /* --- GRID POSITIONEN --- */
+        #Q1 { grid-column: 1; grid-row: 1; }
+        #Q2 { grid-column: 2; grid-row: 1; }
+        #Q4 { grid-column: 1; grid-row: 2; }
+        #Q3 { grid-column: 2; grid-row: 2; }
+</style>
+
+    <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
 </head>
+
 <body>
-    <div class="center-hole" id="CENTER" ondrop="drop(event)" ondragover="allow(event)">
-        <img src="center.png" style="width:50px; opacity:0.3; margin-bottom: 4px;" alt="">
-        <div id="center-content">
-            <div style="text-align:center; color:#9aa; font-size:12px;">PDF im Center anzeigen</div>
+
+<div id="layout-container">
+
+    <!-- LAYOUT 1: 2x2 + CENTER (normal) -->
+    <div id="layout-2x2">
+        
+        <!-- CENTER -->
+        <div class="center-hole" id="CENTER"
+             ondrop="drop(event)"
+             ondragover="event.preventDefault()"
+             ondblclick="moveCardToQ2()">
+            <div id="center-content">
+                <div style="text-align:center; color:#9aa; font-size:12px;">
+                    PDF im Center anzeigen
+                </div>
+            </div>
         </div>
+
+        <!-- QUADRANTEN -->
+        <div id="Q1" class="quadrant quadrant-links"
+            ondrop="drop(event)" ondragover="event.preventDefault()" onclick="moveCardFromCenterTo('Q1')"></div>
+
+        <div id="Q2" class="quadrant quadrant-rechts"
+            ondrop="drop(event)" ondragover="event.preventDefault()" onclick="moveCardFromCenterTo('Q2')"></div>
+
+        <div id="Q3" class="quadrant quadrant-rechts"
+            ondrop="drop(event)" ondragover="event.preventDefault()" onclick="moveCardFromCenterTo('Q3')"></div>
+
+        <div id="Q4" class="quadrant quadrant-links"
+            ondrop="drop(event)" ondragover="event.preventDefault()" onclick="moveCardFromCenterTo('Q4')"></div>
+
     </div>
 
-    <div id="neueIdee" class="quadrant" ondrop="drop(event)" ondragover="allow(event)"></div>
-    <div id="wiederholen" class="quadrant" ondrop="drop(event)" ondragover="allow(event)"></div>
-    <div id="geuebt" class="quadrant" ondrop="drop(event)" ondragover="allow(event)"></div>
-    <div id="gelernt" class="quadrant" ondrop="drop(event)" ondragover="allow(event)"></div>
+    <!-- LAYOUT 2: 2x2 COMPACT (breiteres Center) -->
+    <div id="layout-80-20" class="hidden">
+        
+        <!-- CENTER (gleich wie Layout 1) -->
+        <div class="center-hole" id="CENTER2"
+             ondrop="drop(event)"
+             ondragover="event.preventDefault()"
+             ondblclick="moveCardToQ2()">
+            <div id="center-content2">
+                <div style="text-align:center; color:#9aa; font-size:12px;">
+                    PDF im Center anzeigen
+                </div>
+            </div>
+        </div>
 
+        <!-- QUADRANTEN (gleich wie Layout 1) -->
+        <div id="Q1b" class="quadrant quadrant-links"
+            ondrop="drop(event)" ondragover="event.preventDefault()" onclick="moveCardFromCenterTo('Q1b')"></div>
+
+        <div id="Q2b" class="quadrant quadrant-rechts"
+            ondrop="drop(event)" ondragover="event.preventDefault()" onclick="moveCardFromCenterTo('Q2b')"></div>
+
+        <div id="Q3b" class="quadrant quadrant-rechts"
+            ondrop="drop(event)" ondragover="event.preventDefault()" onclick="moveCardFromCenterTo('Q3b')"></div>
+
+        <div id="Q4b" class="quadrant quadrant-links"
+            ondrop="drop(event)" ondragover="event.preventDefault()" onclick="moveCardFromCenterTo('Q4b')"></div>
+
+    </div>
+
+    <!-- CONTROL BAR -->
     <div class="control-bar">
         <button class="btn" onclick="document.getElementById('fileInput').click()">LADEN</button>
         <button class="btn" onclick="saveXml()">SPEICHERN</button>
+        <button class="btn" onclick="setZoom(1.0)" style="width: auto; padding: 6px 8px; background: #555;" id="zoom-100">100%</button>
+        <button class="btn" onclick="setZoom(0.9)" style="width: auto; padding: 6px 8px; background: #555;" id="zoom-90">90%</button>
+        <button class="btn" onclick="setZoom(0.8)" style="width: auto; padding: 6px 8px; background: #3498db;" id="zoom-80">80%</button>
         <span style="color: #666;">|</span>
-        <button class="btn" onclick="switchLayout()" id="layoutBtn">Layout: 2x2</button>
+        
+        <button class="btn toggle" onclick="toggleLayout()">Layout</button>
         <span style="color: #666;">|</span>
-        <button class="btn" onclick="togglePagesPerView()" id="pagesBtn" style="width: auto; padding: 6px 10px;">2 Seiten</button>
-        <span style="color: #666;">|</span>
-        <button class="btn" onclick="previousPage()" style="width: auto; padding: 6px 8px;">↑</button>
-        <span id="pageInfo" style="min-width: 60px; text-align:center;"></span>
-        <button class="btn" onclick="nextPage()" style="width: auto; padding: 6px 8px;">↓</button>
-        <span style="color: #666;">|</span>
-        <label style="display: flex; align-items: center; gap: 3px;">L: <input type="number" id="stackLimit" value="8" min="1" onchange="renderBoard()"></label>
-        <label style="display: flex; align-items: center; gap: 3px;">S: <input type="number" id="stackOffset" value="30" min="10" onchange="renderBoard()">px</label>
-        <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)">
+        <button class="btn" onclick="previousPage()" style="width: auto; padding: 6px 8px;">&lt;</button>
+        <span id="pageInfo" style="min-width: 80px; text-align:center;"></span>
+        <button class="btn" onclick="nextPage()" style="width: auto; padding: 6px 8px;">&gt;</button>
+        
+        <label style="display: flex; align-items: center; gap: 5px;">
+            Sichtbar: 
+            <input type="number" id="visibleHeight" value="10" min="1" max="250" style="width: 50px;">
+            px
+        </label>
+        
+        <label style="display: flex; align-items: center; gap: 5px;">
+            Staffel: 
+            <input type="number" id="staffelLimit" value="8" min="1" style="width: 50px;">
+            Karten
+        </label>
+        
+        <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)" style="display:none;">
     </div>
 
-    <script src="board.js"></script>
+    <!-- SCRIPTS -->
+    <script src="functions.js?v=20260215"></script>
+    <script src="filehandling.js?v=20260215"></script>
+
 </body>
 </html>
+
