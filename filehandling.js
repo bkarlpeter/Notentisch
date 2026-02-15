@@ -30,7 +30,7 @@ function renderBoard() {
         
         let quad = 'Q1';
         if (status.includes('wiederholen')) quad = 'Q2';
-        if (status.includes('spielen')) quad = 'Q3';
+        if (status.includes('spielen') || status.includes('geübt')) quad = 'Q3';
         if (status.includes('fertig') || status.includes('gelernt')) quad = 'Q4';
         
         if (counts[quad] >= limit) return;
@@ -176,7 +176,7 @@ function saveDateToXml(cardId, quadrant) {
     const card = xmlData.querySelectorAll('NotenTisch')[parseInt(cardId)];
     if (!card) return;
     
-    const map = { 'Q1': 'zurueckgestellt', 'Q2': 'wiederholen', 'Q3': 'spielen', 'Q4': 'fertig' };
+    const map = { 'Q1': 'zurueckgestellt', 'Q2': 'wiederholen', 'Q3': 'geübt', 'Q4': 'gelernt' };
     let el = card.querySelector('Arbeitsstatus');
     if (!el) {
         el = xmlData.createElement('Arbeitsstatus');
