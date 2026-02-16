@@ -302,7 +302,17 @@ async function resetFolder() {
 async function saveXml() {
     if (!xmlData) return;
     
+    const saveBtn = document.querySelector('button[onclick="saveXml()"]');
+    const originalText = saveBtn ? saveBtn.textContent : '';
+    
     try {
+        // Feedback: Speichert...
+        if (saveBtn) {
+            saveBtn.textContent = ' SPEICHERT...';
+            saveBtn.style.background = '#f39c12';
+            saveBtn.disabled = true;
+        }
+        
         // Beim ersten Mal: Ordner auswählen und speichern
         if (!xmlFileHandle) {
             const folderHandle = await window.showDirectoryPicker();
@@ -320,10 +330,38 @@ async function saveXml() {
         await writable.write(new XMLSerializer().serializeToString(xmlData));
         await writable.close();
         console.log('XML gespeichert: ' + xmlFileName);
+        
+        // Feedback: Erfolgreich
+        if (saveBtn) {
+            saveBtn.textContent = ' GESPEICHERT';
+            saveBtn.style.background = '#27ae60';
+            setTimeout(() => {
+                saveBtn.textContent = originalText;
+                saveBtn.style.background = '#3498db';
+                saveBtn.disabled = false;
+            }, 2000);
+        }
     } catch (err) {
         // User hat abgebrochen oder API nicht unterstützt
         if (err.name !== 'AbortError') {
             console.error('Fehler beim Speichern:', err);
+            // Feedback: Fehler
+            if (saveBtn) {
+                saveBtn.textContent = ' FEHLER';
+                saveBtn.style.background = '#e74c3c';
+                setTimeout(() => {
+                    saveBtn.textContent = originalText;
+                    saveBtn.style.background = '#3498db';
+                    saveBtn.disabled = false;
+                }, 2000);
+            }
+        } else {
+            // User hat abgebrochen
+            if (saveBtn) {
+                saveBtn.textContent = originalText;
+                saveBtn.style.background = '#3498db';
+                saveBtn.disabled = false;
+            }
         }
     }
 }
