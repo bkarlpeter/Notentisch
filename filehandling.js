@@ -1,6 +1,69 @@
 ﻿let xmlData = null;
 let xmlFileName = null;
 let xmlFileHandle = null;
+// Speichere Ordner-Handle in localStorage für Persistenz
+async function saveFolderHandle(handle) {
+    try {
+        // Prüfe Berechtigung
+        const permission = await handle.queryPermission({ mode: 'readwrite' });
+        if (permission !== 'granted') {
+            const newPermission = await handle.requestPermission({ mode: 'readwrite' });
+            if (newPermission !== 'granted') {
+                console.log('Berechtigung für Ordner verweigert');
+                return false;
+            }
+        }
+        // Speichere in localStorage (direkt das Handle-Objekt)
+        const idb = await openIndexedDB();
+        idb.put('folderHandle', handle);
+        console.log('Ordner-Handle gespeichert');
+        return true;
+    } catch (err) {
+        console.error('Fehler beim Speichern des Handles:', err);
+        return false;
+    }
+}
+
+// Lade Ordner-Handle aus localStorage
+async function loadFolderHandle() {
+    try {
+        const idb = await openIndexedDB();
+        return idb.get('folderHandle');
+    } catch (err) {
+        console.error('Fehler beim Laden des Handles:', err);
+        return null;
+    }
+}
+
+// IndexedDB Helper
+function openIndexedDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('NotentischDB', 1);
+        request.onerror = () => reject(request.error);
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('config')) {
+                db.createObjectStore('config');
+            }
+        };
+        request.onsuccess = () => {
+            const db = request.result;
+            const store = db.transaction('config', 'readwrite').objectStore('config');
+            resolve({
+                put: (key, value) => new Promise((res, rej) => {
+                    const req = store.put(value, key);
+                    req.onerror = () => rej(req.error);
+                    req.onsuccess = () => res();
+                }),
+                get: (key) => new Promise((res, rej) => {
+                    const req = store.get(key);
+                    req.onerror = () => rej(req.error);
+                    req.onsuccess = () => res(req.result);
+                })
+            });
+        };
+    });
+}
 
 function handleFile(event) {
     const file = event.target.files[0];
@@ -213,10 +276,13 @@ async function saveXml() {
     if (!xmlData) return;
     
     try {
-        // Beim ersten Mal: Ordner auswählen (z.B. Noten-Ordner)
+        // Beim ersten Mal: Ordner auswählen und speichern
         if (!xmlFileHandle) {
             const folderHandle = await window.showDirectoryPicker();
             const fileName = xmlFileName || 'Notentisch.xml';
+            
+            // Speichere Ordner für nächsten Start
+            await saveFolderHandle(folderHandle);
             
             // Datei im ausgewählten Ordner erstellen/überschreiben
             xmlFileHandle = await folderHandle.getFileHandle(fileName, { create: true });
@@ -233,6 +299,26 @@ async function saveXml() {
             console.error('Fehler beim Speichern:', err);
         }
     }
+}
+
+// Lade gespeicherten Ordner beim Start
+async function loadSavedFolder() {
+    try {
+        const savedHandle = await loadFolderHandle();
+        if (savedHandle) {
+            // Prüfe ob Berechtigung noch gültig ist
+            const permission = await savedHandle.queryPermission({ mode: 'readwrite' });
+            if (permission === 'granted') {
+                const fileName = xmlFileName || 'Notentisch.xml';
+                xmlFileHandle = await savedHandle.getFileHandle(fileName, { create: true });
+                console.log('Gespeicherter Ordner geladen');
+                return true;
+            }
+        }
+    } catch (err) {
+        console.error('Fehler beim Laden des gespeicherten Ordners:', err);
+    }
+    return false;
 }
 
 function moveCardFromCenterTo(quadrantId) {
@@ -278,3 +364,8 @@ if (document.readyState === 'loading') {
 } else {
     setupDropListeners();
 }
+
+// Load saved folder when HTML loads
+window.addEventListener('DOMContentLoaded', async () => {
+    await loadSavedFolder();
+});
