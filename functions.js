@@ -216,6 +216,7 @@ function updatePageInfo() {
 function previousPage() {
     if (currentPageOffset > 0) {
         currentPageOffset -= 2;
+        currentZoom = settings.defaultZoom;
         renderPdfPages();
     }
 }
@@ -223,6 +224,7 @@ function previousPage() {
 function nextPage() {
     if (currentPageOffset + 2 < totalPages) {
         currentPageOffset += 2;
+        currentZoom = settings.defaultZoom;
         renderPdfPages();
     }
 }
