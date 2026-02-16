@@ -151,9 +151,10 @@ function setupDropListeners() {
     const dropTargets = ['Q1', 'Q2', 'Q3', 'Q4', 'CENTER'];
     dropTargets.forEach(id => {
         const el = document.getElementById(id);
-        if (el) {
+        if (el && !el.dataset.dropBound) {
             el.addEventListener('dragover', (e) => e.preventDefault());
             el.addEventListener('drop', drop);
+            el.dataset.dropBound = 'true';
         }
     });
 }
