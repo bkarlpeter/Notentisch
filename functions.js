@@ -173,6 +173,8 @@ function renderPdfPages() {
     if (page2 <= totalPages) renderOnePage(page2, centerContainer);
     
     updatePageInfo();
+    // Beim Zoomen oben ausrichten
+    centerContainer.scrollTop = 0;
     
     // Warte bis Canvas gerendert sind, dann Scroll-Buttons aktualisieren
     setTimeout(() => updateScrollButtons(), 100);
