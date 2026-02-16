@@ -18,9 +18,19 @@ function setZoom(zoomLevel) {
     if (currentPdfDoc) renderPdfPages();
 }
 
-function isLayout1() {
-    const layout2x2 = document.getElementById('layout-2x2');
-    return !layout2x2.classList.contains('hidden');
+function toggleWide() {
+    const center = document.getElementById('CENTER');
+    const btn = document.getElementById('wideBtn');
+    
+    if (center.classList.contains('wide')) {
+        center.classList.remove('wide');
+        btn.textContent = 'WIDE';
+    } else {
+        center.classList.add('wide');
+        btn.textContent = 'NORMAL';
+    }
+    
+    if (currentPdfDoc) renderPdfPages();
 }
 
 function normalizePdfServerPath(pdfPath) {
@@ -32,13 +42,6 @@ function normalizePdfServerPath(pdfPath) {
     return path;
 }
 
-function toggleLayout() {
-    const layout1 = document.getElementById('layout-2x2');
-    const layout2 = document.getElementById('layout-80-20');
-    layout1.classList.toggle('hidden');
-    layout2.classList.toggle('hidden');
-    if (currentPdfDoc) renderPdfPages();
-}
 
 function showPdfPages(pdfPath) {
     let actualPath = pdfPath;
