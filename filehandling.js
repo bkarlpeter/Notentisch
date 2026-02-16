@@ -1,10 +1,12 @@
 ﻿let xmlData = null;
 let xmlFileName = null;
+let xmlFileHandle = null;
 
 function handleFile(event) {
     const file = event.target.files[0];
     if (!file) return;
     xmlFileName = file.name;
+    xmlFileHandle = null;  // Reset bei neuer Datei
     const reader = new FileReader();
     reader.onload = (e) => {
         const parser = new DOMParser();
@@ -207,13 +209,32 @@ function saveDateToXml(cardId, quadrant) {
     el.textContent = map[quadrant] || 'spielen';
 }
 
-function saveXml() {
+async function saveXml() {
     if (!xmlData) return;
-    const blob = new Blob([new XMLSerializer().serializeToString(xmlData)], { type: 'application/xml' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = xmlFileName || 'Notentisch.xml';
-    a.click();
+    
+    try {
+        // Beim ersten Mal: Datei auswählen und Handle speichern
+        if (!xmlFileHandle) {
+            xmlFileHandle = await window.showSaveFilePicker({
+                suggestedName: xmlFileName || 'Notentisch.xml',
+                types: [{
+                    description: 'XML-Dateien',
+                    accept: { 'application/xml': ['.xml'] }
+                }]
+            });
+        }
+        
+        // Direkt in die Datei schreiben (überschreibt)
+        const writable = await xmlFileHandle.createWritable();
+        await writable.write(new XMLSerializer().serializeToString(xmlData));
+        await writable.close();
+        console.log('XML gespeichert: ' + xmlFileName);
+    } catch (err) {
+        // User hat abgebrochen oder API nicht unterstützt
+        if (err.name !== 'AbortError') {
+            console.error('Fehler beim Speichern:', err);
+        }
+    }
 }
 
 function moveCardFromCenterTo(quadrantId) {
