@@ -2,6 +2,13 @@
 let xmlFileName = null;
 let xmlFileHandle = null;
 // Speichere Ordner-Handle in localStorage für Persistenz
+/*
+TODO: Später auf NotID statt Titel refenzieren für eindeutige Kartenidentifizierung
+- Derzeit: Karten werden über Index und Titel identifiziert 
+- NotID ist eindeutig, Titel kann mehrfach vorkommen
+- Funktionen betroffen: renderBoard(), savePlayedDateToXml(), saveDateToXml()
+- Vorteil: Robustere Refenzierung auch wenn Titel sich ändert
+*/
 async function saveFolderHandle(handle) {
     try {
         // Prüfe Berechtigung
