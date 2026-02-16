@@ -13,10 +13,15 @@ async function saveFolderHandle(handle) {
                 return false;
             }
         }
-        // Speichere in localStorage (direkt das Handle-Objekt)
+        // Speichere Handle in IndexedDB
         const idb = await openIndexedDB();
         idb.put('folderHandle', handle);
-        console.log('Ordner-Handle gespeichert');
+        
+        // Speichere Ordner-Name in localStorage (sichtbar in Dev Tools)
+        localStorage.setItem('folderName', handle.name || 'Unbekannter Ordner');
+        localStorage.setItem('folderSelected', new Date().toLocaleString());
+        
+        console.log('Ordner-Handle gespeichert: ' + handle.name);
         return true;
     } catch (err) {
         console.error('Fehler beim Speichern des Handles:', err);
@@ -272,6 +277,21 @@ function saveDateToXml(cardId, quadrant) {
     el.textContent = map[quadrant] || 'spielen';
 }
 
+
+// Ordner zurücksetzen und neu auswählen
+async function resetFolder() {
+    try {
+        const idb = await openIndexedDB();
+        idb.put('folderHandle', null);
+        localStorage.removeItem('folderName');
+        localStorage.removeItem('folderSelected');
+        xmlFileHandle = null;
+        console.log('Ordner zurückgesetzt. Beim nächsten Speichern neu auswählen.');
+        alert('Ordner zurückgesetzt. Beim nächsten Speichern neue Auswahl.');
+    } catch (err) {
+        console.error('Fehler beim Zurücksetzen:', err);
+    }
+}
 async function saveXml() {
     if (!xmlData) return;
     
