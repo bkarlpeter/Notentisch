@@ -1,8 +1,10 @@
 ﻿let xmlData = null;
+let xmlFileName = null;
 
 function handleFile(event) {
     const file = event.target.files[0];
     if (!file) return;
+    xmlFileName = file.name;
     const reader = new FileReader();
     reader.onload = (e) => {
         const parser = new DOMParser();
@@ -210,7 +212,7 @@ function saveXml() {
     const blob = new Blob([new XMLSerializer().serializeToString(xmlData)], { type: 'application/xml' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'notentisch.xml';
+    a.download = xmlFileName || 'Notentisch.xml';
     a.click();
 }
 
