@@ -11,10 +11,14 @@ let totalPages = 0;
 let currentZoom = settings.defaultZoom;
 
 function zoomIn() {
-    const maxZoom = 1.0 + (settings.zoomStep * 3); // 1.6
+    const maxZoom = 1.0 + (settings.zoomStep * 4); // 1.8 (4x 20% = 80% größer)
     if (currentZoom < maxZoom) {
         currentZoom = Math.round((currentZoom + settings.zoomStep) * 10) / 10;
-        if (currentPdfDoc) renderPdfPages();
+        console.log('Zoom IN:', currentZoom);
+        if (currentPdfDoc) {
+            renderPdfPages();
+            setTimeout(() => updateScrollButtons(), 100);
+        }
     }
 }
 
@@ -22,20 +26,14 @@ function zoomOut() {
     const minZoom = 1.0;
     if (currentZoom > minZoom) {
         currentZoom = Math.round((currentZoom - settings.zoomStep) * 10) / 10;
-        if (currentPdfDoc) renderPdfPages();
+        console.log('Zoom OUT:', currentZoom);
+        if (currentPdfDoc) {
+            renderPdfPages();
+            setTimeout(() => updateScrollButtons(), 100);
+        }
     }
 }
 
-function setZoom(zoomLevel) {
-    console.log('setZoom called with:', zoomLevel, 'PDF loaded:', !!currentPdfDoc);
-    currentZoom = zoomLevel;
-    if (currentPdfDoc) {
-        renderPdfPages();
-        setTimeout(() => updateScrollButtons(), 100);
-    } else {
-        console.log('Kein PDF geladen - Zoom kann nicht angewendet werden');
-    }
-}
 
 function updateScrollButtons() {
     const container = document.getElementById('center-content');
