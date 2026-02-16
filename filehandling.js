@@ -161,6 +161,7 @@ function drop(event) {
         if (card.dataset.pdf) {
             card.classList.add('in-center');
             showPdfPages(card.dataset.pdf);
+            savePlayedDateToXml(card.dataset.cardid);
             console.log('Moved to center');
         }
     } else if (isQuadrant) {
@@ -169,6 +170,25 @@ function drop(event) {
         saveDateToXml(card.dataset.cardid, targetId);
         console.log('Moved to quadrant: ' + targetId);
     }
+}
+
+function savePlayedDateToXml(cardId) {
+    if (!xmlData) return;
+    const card = xmlData.querySelectorAll('NotenTisch')[parseInt(cardId)];
+    if (!card) return;
+    
+    const now = new Date();
+    const dateStr = now.getFullYear() + '-' + 
+                    String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(now.getDate()).padStart(2, '0');
+    
+    let el = card.querySelector('zuletztgespielt');
+    if (!el) {
+        el = xmlData.createElement('zuletztgespielt');
+        card.appendChild(el);
+    }
+    el.textContent = dateStr;
+    console.log('Saved played date: ' + dateStr + ' for card ' + cardId);
 }
 
 function saveDateToXml(cardId, quadrant) {
@@ -183,10 +203,6 @@ function saveDateToXml(cardId, quadrant) {
         card.appendChild(el);
     }
     el.textContent = map[quadrant] || 'spielen';
-    
-    // TODO: Feld <zuletztgespielt> mit aktuellem Datum speichern
-    // Format: YYYY-MM-DD oder DD.MM.YYYY
-    // Muss erst in XML-Struktur hinzugefuegt werden
 }
 
 function saveXml() {
