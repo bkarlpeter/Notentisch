@@ -9,6 +9,7 @@ let currentPdfPath = "";
 let currentPageOffset = 0;
 let totalPages = 0;
 let currentZoom = settings.defaultZoom;
+let currentRenderToken = 0;  // Track render operations
 
 function zoomIn() {
     const maxZoom = 1.0 + (settings.zoomStep * 4); // 1.8 (4x 20% = 80% größer)
@@ -164,13 +165,15 @@ function renderPdfPages() {
     
     if (!centerContainer || !currentPdfDoc) return;
     
+    currentRenderToken++;  // Invalidate old render operations
+    const token = currentRenderToken;
     centerContainer.innerHTML = '';
     
     const page1 = currentPageOffset + 1;
     const page2 = currentPageOffset + 2;
     
-    if (page1 <= totalPages) renderOnePage(page1, centerContainer);
-    if (page2 <= totalPages) renderOnePage(page2, centerContainer);
+    if (page1 <= totalPages) renderOnePage(page1, centerContainer, token);
+    if (page2 <= totalPages) renderOnePage(page2, centerContainer, token);
     
     updatePageInfo();
     // Beim Zoomen oben ausrichten
@@ -180,8 +183,9 @@ function renderPdfPages() {
     setTimeout(() => updateScrollButtons(), 100);
 }
 
-function renderOnePage(pageNum, container) {
+function renderOnePage(pageNum, container, token) {
     currentPdfDoc.getPage(pageNum).then(page => {
+        if (token !== currentRenderToken) return;  // Ignore old render operations
         // Berechne Scale basierend auf Center-Höhe
         const containerHeight = container.clientHeight;
         const viewport = page.getViewport({ scale: 1.0 });
@@ -199,7 +203,9 @@ function renderOnePage(pageNum, container) {
         canvas.style.margin = '2px';
         
         page.render({ canvasContext: context, viewport: scaledViewport }).promise.then(() => {
+            if (token === currentRenderToken) {
             container.appendChild(canvas);
+            }
         });
     });
 }
