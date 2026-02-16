@@ -1,7 +1,8 @@
 ﻿const settings = {
-    defaultZoom: 0.6,
+    defaultZoom: 1.0,
     scrollStep: 180,
-    pageLabelPrefix: 'Blatt'
+    pageLabelPrefix: 'Blatt',
+    zoomStep: 0.2  // 20% pro Stufe - hier anpassen!
 };
 let currentPdfDoc = null;
 let currentPdfPath = "";
@@ -9,13 +10,44 @@ let currentPageOffset = 0;
 let totalPages = 0;
 let currentZoom = settings.defaultZoom;
 
-function setZoom(zoomLevel) {
-    currentZoom = zoomLevel;
-    document.getElementById('zoom-100').style.background = zoomLevel === 1.0 ? '#3498db' : '#555';
-    document.getElementById('zoom-90').style.background = zoomLevel === 0.9 ? '#3498db' : '#555';
-    document.getElementById('zoom-80').style.background = zoomLevel === 0.8 ? '#3498db' : '#555';
-    document.getElementById('zoom-60').style.background = zoomLevel === 0.6 ? '#3498db' : '#555';
-    if (currentPdfDoc) renderPdfPages();
+function zoomIn() {
+    const maxZoom = 1.0 + (settings.zoomStep * 3); // 1.6
+    if (currentZoom < maxZoom) {
+        currentZoom = Math.round((currentZoom + settings.zoomStep) * 10) / 10;
+        if (currentPdfDoc) renderPdfPages();
+    }
+}
+
+function zoomOut() {
+    const minZoom = 1.0;
+    if (currentZoom > minZoom) {
+        currentZoom = Math.round((currentZoom - settings.zoomStep) * 10) / 10;
+        if (currentPdfDoc) renderPdfPages();
+    }
+}
+
+function updateScrollButtons() {
+    const container = document.getElementById('center-content');
+    const scrollButtons = document.getElementById('scroll-buttons');
+    
+    if (!container || !scrollButtons) return;
+    
+    // Zeige Buttons nur wenn Zoom > 100% UND Inhalt größer als Container
+    if (currentZoom > 1.0 && container.scrollHeight > container.clientHeight) {
+        scrollButtons.style.display = 'flex';
+    } else {
+        scrollButtons.style.display = 'none';
+    }
+}
+
+function scrollPdf(direction) {
+    const container = document.getElementById('center-content');
+    const step = 100;
+    if (direction === 'up') {
+        container.scrollTop -= step;
+    } else {
+        container.scrollTop += step;
+    }
 }
 
 function toggleWide() {
@@ -128,22 +160,30 @@ function renderPdfPages() {
     if (page2 <= totalPages) renderOnePage(page2, centerContainer);
     
     updatePageInfo();
+    
+    // Warte bis Canvas gerendert sind, dann Scroll-Buttons aktualisieren
+    setTimeout(() => updateScrollButtons(), 100);
 }
 
 function renderOnePage(pageNum, container) {
     currentPdfDoc.getPage(pageNum).then(page => {
-        const scale = 1.0 * currentZoom;
-        const viewport = page.getViewport({ scale: scale });
+        // Berechne Scale basierend auf Center-Höhe
+        const containerHeight = container.clientHeight;
+        const viewport = page.getViewport({ scale: 1.0 });
+        const baseScale = containerHeight / viewport.height;
+        const finalScale = baseScale * currentZoom;
+        
+        const scaledViewport = page.getViewport({ scale: finalScale });
         
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
+        canvas.width = scaledViewport.width;
+        canvas.height = scaledViewport.height;
         canvas.style.border = '1px solid #555';
         canvas.style.borderRadius = '4px';
         canvas.style.margin = '2px';
         
-        page.render({ canvasContext: context, viewport: viewport }).promise.then(() => {
+        page.render({ canvasContext: context, viewport: scaledViewport }).promise.then(() => {
             container.appendChild(canvas);
         });
     });

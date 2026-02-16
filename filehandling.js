@@ -183,6 +183,10 @@ function saveDateToXml(cardId, quadrant) {
         card.appendChild(el);
     }
     el.textContent = map[quadrant] || 'spielen';
+    
+    // TODO: Feld <zuletztgespielt> mit aktuellem Datum speichern
+    // Format: YYYY-MM-DD oder DD.MM.YYYY
+    // Muss erst in XML-Struktur hinzugefuegt werden
 }
 
 function saveXml() {
@@ -200,6 +204,23 @@ function moveCardFromCenterTo(quadrantId) {
         document.getElementById(quadrantId).appendChild(card);
         card.classList.remove('in-center');
         saveDateToXml(card.dataset.cardid, quadrantId);
+        
+        // PDF-Dokument komplett bereinigen
+        currentPdfDoc = null;
+        currentPdfPath = "";
+        currentZoom = settings.defaultZoom;
+        
+        // CENTER leeren und PDF weg
+        const centerContent = document.getElementById('center-content');
+        if (centerContent) {
+            centerContent.innerHTML = '<div style="text-align:center; color:#9aa; font-size:12px;">PDF im Center anzeigen</div>';
+        }
+        
+        // Scroll-Buttons verstecken
+        const scrollButtons = document.getElementById('scroll-buttons');
+        if (scrollButtons) {
+            scrollButtons.style.display = 'none';
+        }
     }
 }
 
