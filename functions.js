@@ -26,6 +26,13 @@ function zoomOut() {
     }
 }
 
+function setZoom(zoomLevel) {
+    currentZoom = zoomLevel;
+    if (currentPdfDoc) {
+        renderPdfPages();
+    }
+}
+
 function updateScrollButtons() {
     const container = document.getElementById('center-content');
     const scrollButtons = document.getElementById('scroll-buttons');
