@@ -27,9 +27,13 @@ function zoomOut() {
 }
 
 function setZoom(zoomLevel) {
+    console.log('setZoom called with:', zoomLevel, 'PDF loaded:', !!currentPdfDoc);
     currentZoom = zoomLevel;
     if (currentPdfDoc) {
         renderPdfPages();
+        setTimeout(() => updateScrollButtons(), 100);
+    } else {
+        console.log('Kein PDF geladen - Zoom kann nicht angewendet werden');
     }
 }
 
