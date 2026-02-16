@@ -41,8 +41,8 @@ function updateScrollButtons() {
     
     if (!container || !scrollButtons) return;
     
-    // Zeige Buttons nur wenn Zoom > 100% UND Inhalt größer als Container
-    if (currentZoom > 1.0 && container.scrollHeight > container.clientHeight) {
+    // Zeige Buttons nur wenn Inhalt größer als Container
+    if (container.scrollHeight > container.clientHeight) {
         scrollButtons.style.display = 'flex';
     } else {
         scrollButtons.style.display = 'none';
