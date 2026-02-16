@@ -213,15 +213,13 @@ async function saveXml() {
     if (!xmlData) return;
     
     try {
-        // Beim ersten Mal: Datei auswählen und Handle speichern
+        // Beim ersten Mal: Ordner auswählen (z.B. Noten-Ordner)
         if (!xmlFileHandle) {
-            xmlFileHandle = await window.showSaveFilePicker({
-                suggestedName: xmlFileName || 'Notentisch.xml',
-                types: [{
-                    description: 'XML-Dateien',
-                    accept: { 'application/xml': ['.xml'] }
-                }]
-            });
+            const folderHandle = await window.showDirectoryPicker();
+            const fileName = xmlFileName || 'Notentisch.xml';
+            
+            // Datei im ausgewählten Ordner erstellen/überschreiben
+            xmlFileHandle = await folderHandle.getFileHandle(fileName, { create: true });
         }
         
         // Direkt in die Datei schreiben (überschreibt)
