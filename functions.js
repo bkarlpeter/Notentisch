@@ -61,9 +61,7 @@ function showPdfPages(pdfPath) {
     function tryLoadPdf() {
         if (pathIndex >= paths.length) {
             console.error("PDF nicht erreichbar");
-            const centerContainer = isLayout1() ? 
-                document.getElementById('center-content') : 
-                document.getElementById('center-content2');
+            const centerContainer = document.getElementById('center-content');
             centerContainer.innerHTML = '<div style="text-align:center; padding:20px;"><p>PDF nicht erreichbar</p><p style="font-size:10px; color:#999;">Pfad: ' + actualPath + '</p><button onclick="selectPdfManually()" style="padding:10px 20px; background:#3498db; color:white; border:none; border-radius:4px; cursor:pointer;">PDF öffnen</button></div>';
             return;
         }
@@ -97,9 +95,7 @@ function selectPdfManually() {
         const file = e.target.files[0];
         if (!file) return;
         
-        const centerContainer = isLayout1() ? 
-            document.getElementById('center-content') : 
-            document.getElementById('center-content2');
+        const centerContainer = document.getElementById('center-content');
         centerContainer.innerHTML = '<div style="color:#ccc;">Lade PDF...</div>';
         
         try {
@@ -116,9 +112,7 @@ function selectPdfManually() {
 }
 
 function renderPdfPages() {
-    let centerContainer = isLayout1() ? 
-        document.getElementById('center-content') : 
-        document.getElementById('center-content2');
+    let centerContainer = document.getElementById('center-content');
     
     if (!centerContainer || !currentPdfDoc) return;
     

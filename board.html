@@ -148,6 +148,13 @@
             overflow: hidden;
             position: relative;
         }
+
+        /* --- CENTER WIDE MODE --- */
+        .center-hole.wide {
+            left: 30px;
+            transform: translateY(-50%);
+            width: calc(100vw - 60px - (var(--card-stack-width) - var(--stack-overlap)));
+        }
         /* --- CENTER in Layout 2 - breiter --- */
         #layout-80-20 .center-hole {
             width: calc(100vw - 40px - (var(--card-stack-width) - var(--stack-overlap)));
@@ -282,36 +289,6 @@
 
     </div>
 
-    <!-- LAYOUT 2: 2x2 COMPACT (breiteres Center) -->
-    <div id="layout-80-20" class="hidden">
-        
-        <!-- CENTER (gleich wie Layout 1) -->
-        <div class="center-hole" id="CENTER2"
-             ondrop="drop(event)"
-             ondragover="event.preventDefault()"
-             ondblclick="moveCardToQ2()">
-            <div id="center-content2">
-                <div style="text-align:center; color:#9aa; font-size:12px;">
-                    PDF im Center anzeigen
-                </div>
-            </div>
-        </div>
-
-        <!-- QUADRANTEN (gleich wie Layout 1) -->
-        <div id="Q1b" class="quadrant quadrant-links"
-            ondrop="drop(event)" ondragover="event.preventDefault()" onclick="moveCardFromCenterTo('Q1b')"></div>
-
-        <div id="Q2b" class="quadrant quadrant-rechts"
-            ondrop="drop(event)" ondragover="event.preventDefault()" onclick="moveCardFromCenterTo('Q2b')"></div>
-
-        <div id="Q3b" class="quadrant quadrant-rechts"
-            ondrop="drop(event)" ondragover="event.preventDefault()" onclick="moveCardFromCenterTo('Q3b')"></div>
-
-        <div id="Q4b" class="quadrant quadrant-links"
-            ondrop="drop(event)" ondragover="event.preventDefault()" onclick="moveCardFromCenterTo('Q4b')"></div>
-
-    </div>
-
     <!-- CONTROL BAR -->
     <div class="control-bar">
         <button class="btn" onclick="document.getElementById('fileInput').click()">LADEN</button>
@@ -322,7 +299,7 @@
         <button class="btn" onclick="setZoom(0.6)" style="width: auto; padding: 6px 8px; background: #3498db;" id="zoom-60">60%</button>
         <span style="color: #666;">|</span>
         
-        <button class="btn toggle" onclick="toggleLayout()">Layout</button>
+        <button class="btn toggle" onclick="toggleWide()" id="wideBtn">WIDE</button>
         <span style="color: #666;">|</span>
         <button class="btn" onclick="previousPage()" style="width: auto; padding: 6px 8px;">&lt;</button>
         <span id="pageInfo" style="min-width: 80px; text-align:center;"></span>

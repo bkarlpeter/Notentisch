@@ -14,7 +14,7 @@ function handleFile(event) {
 
 function renderBoard() {
     if (!xmlData) return;
-    ['Q1', 'Q2', 'Q3', 'Q4', 'Q1b', 'Q2b', 'Q3b', 'Q4b'].forEach(q => {
+    ['Q1', 'Q2', 'Q3', 'Q4'].forEach(q => {
         const el = document.getElementById(q);
         if (el) el.innerHTML = '';
     });
@@ -69,7 +69,7 @@ function renderBoard() {
 }
 
 function setupDropListeners() {
-    const dropTargets = ['Q1', 'Q2', 'Q3', 'Q4', 'Q1b', 'Q2b', 'Q3b', 'Q4b', 'CENTER', 'CENTER2'];
+    const dropTargets = ['Q1', 'Q2', 'Q3', 'Q4', 'CENTER'];
     dropTargets.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -152,8 +152,8 @@ function drop(event) {
     }
     
     const targetId = event.currentTarget.id;
-    const isCenter = targetId === 'CENTER' || targetId === 'CENTER2';
-    const isQuadrant = ['Q1', 'Q2', 'Q3', 'Q4', 'Q1b', 'Q2b', 'Q3b', 'Q4b'].includes(targetId);
+    const isCenter = targetId === 'CENTER';
+    const isQuadrant = ['Q1', 'Q2', 'Q3', 'Q4'].includes(targetId);
     
     console.log('Target: ' + targetId + ', isCenter: ' + isCenter + ', isQuadrant: ' + isQuadrant);
     
@@ -176,7 +176,7 @@ function saveDateToXml(cardId, quadrant) {
     const card = xmlData.querySelectorAll('NotenTisch')[parseInt(cardId)];
     if (!card) return;
     
-    const map = { 'Q1': 'zurückgestellt', 'Q2': 'wiederholen', 'Q3': 'geübt', 'Q4': 'gelernt', 'Q1b': 'zurückgestellt', 'Q2b': 'wiederholen', 'Q3b': 'geübt', 'Q4b': 'gelernt' };
+    const map = { 'Q1': 'zurückgestellt', 'Q2': 'wiederholen', 'Q3': 'geübt', 'Q4': 'gelernt' };
     let el = card.querySelector('Arbeitsstatus');
     if (!el) {
         el = xmlData.createElement('Arbeitsstatus');
