@@ -51,11 +51,15 @@ function updateScrollButtons() {
 
 function scrollPdf(direction) {
     const container = document.getElementById('center-content');
-    const step = 100;
+    if (!container) return;
+
+    const step = Math.max(100, Math.floor(container.clientHeight * 0.8));
+    const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+
     if (direction === 'up') {
-        container.scrollTop -= step;
+        container.scrollTop = Math.max(0, container.scrollTop - step);
     } else {
-        container.scrollTop += step;
+        container.scrollTop = Math.min(maxScroll, container.scrollTop + step);
     }
 }
 
