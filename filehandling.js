@@ -448,18 +448,23 @@ function drop(event) {
         if (card.dataset.pdf) {
             card.classList.add('in-center');
             showPdfPages(card.dataset.pdf);
-            console.log('Moved to center');
+            lastCardIdFromCenter = card.dataset.cardid;  // Merke für saveDate
+            // Reset Button wenn neue Karte ins CENTER kommt
+            const btn = document.getElementById('saveDateBtn');
+            if (btn) { btn.style.background = ''; btn.style.color = ''; btn.style.fontWeight = ''; }
+            console.log('Moved to center, lastCardIdFromCenter = ' + lastCardIdFromCenter);
         }
     } else if (isQuadrant) {
         event.currentTarget.appendChild(card);
         card.classList.remove('in-center');
+        lastCardIdFromCenter = card.dataset.cardid;  // Merke für saveDate auch nach ablegen
         saveDateToXml(card.dataset.cardid, targetId);
         // Aktualisiere zuletztgespielt nur wenn zu Q3 (geübt) verschoben
         if (targetId === 'Q3') {
             savePlayedDateToXml(card.dataset.cardid);
             console.log('Updated played date when moving to Q3');
         }
-        console.log('Moved to quadrant: ' + targetId);
+        console.log('Moved to quadrant: ' + targetId + ', lastCardIdFromCenter = ' + lastCardIdFromCenter);
         renderBoard();
     }
 }
@@ -642,6 +647,30 @@ function handleViewportResize() {
     updateStackLayout();
 }
 
+
+function saveDateNow() {
+    // Verwende die cardId die beim Verschieben aus CENTER gespeichert wurde
+    if (!lastCardIdFromCenter) {
+        alert('Zuerst eine Karte ins CENTER ziehen und dann auf einen Quadranten ablegen');
+        return;
+    }
+    
+    const cardId = lastCardIdFromCenter;
+    console.log('Saving date for card: ' + cardId);
+    
+    // Speichere das Datum
+    savePlayedDateToXml(cardId);
+    
+    // Button wird grün und bleibt so
+    const btn = document.getElementById('saveDateBtn');
+    if (btn) {
+        btn.setAttribute('style', 'background-color: #2d7c3a !important; color: white !important; font-weight: bold !important; margin-left: auto;');
+        console.log('Button turned green');
+    }
+    
+    console.log('Played date saved for card ' + cardId);
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         setupDropListeners();
@@ -657,3 +686,20 @@ if (document.readyState === 'loading') {
     loadSavedFolder();
     window.addEventListener('resize', handleViewportResize);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
