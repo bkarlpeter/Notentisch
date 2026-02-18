@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Digitaler Notentisch - Projekt Notentisch</title>
 
 <style>
@@ -245,7 +246,44 @@
             background: #27ae60;
         }
 
-        .btn.toggle:hover { background: #229954; }
+
+        .btn-small {
+            width: auto;
+            padding: 6px 8px;
+        }
+
+        .btn-zoom {
+            background: #555;
+        }
+
+        .separator {
+            color: #666;
+        }
+
+        .page-info {
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .stack-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .stack-input {
+            width: 50px;
+        }
+
+        .hidden-file-input {
+            display: none;
+        }
+
+        .center-placeholder {
+            text-align: center;
+            color: #9aa;
+            font-size: 12px;
+        }
 
         /* --- KARTEN - GESTAFFELT (10px pro Karte) --- */
         .card-container {
@@ -323,7 +361,7 @@
              ondragover="event.preventDefault()"
              ondblclick="moveCardToQ2()">
             <div id="center-content">
-                <div style="text-align:center; color:#9aa; font-size:12px;">
+                <div class="center-placeholder">
                     PDF im Center anzeigen
                 </div>
             </div>
@@ -352,23 +390,23 @@
     <div class="control-bar">
         <button class="btn" onclick="document.getElementById('fileInput').click()">LADEN</button>
         <button class="btn" onclick="saveXml()">SPEICHERN</button>
-        <button class="btn" onclick="zoomOut()" style="width: auto; padding: 6px 8px; background: #555;">ZOOM -</button>
-        <button class="btn" onclick="zoomIn()" style="width: auto; padding: 6px 8px; background: #555;">ZOOM +</button>
-        <span style="color: #666;">|</span>
+        <button class="btn btn-small btn-zoom" onclick="zoomOut()">ZOOM -</button>
+        <button class="btn btn-small btn-zoom" onclick="zoomIn()">ZOOM +</button>
+        <span class="separator">|</span>
         
         <button class="btn toggle" onclick="toggleWide()" id="wideBtn">WIDE</button>
-        <span style="color: #666;">|</span>
-        <button class="btn" onclick="previousPage()" style="width: auto; padding: 6px 8px;">&lt;</button>
-        <span id="pageInfo" style="min-width: 80px; text-align:center;"></span>
-        <button class="btn" onclick="nextPage()" style="width: auto; padding: 6px 8px;">&gt;</button>
+        <span class="separator">|</span>
+        <button class="btn btn-small" onclick="previousPage()">&lt;</button>
+        <span id="pageInfo" class="page-info"></span>
+        <button class="btn btn-small" onclick="nextPage()">&gt;</button>
         
-        <label style="display: flex; align-items: center; gap: 5px;">
+        <label class="stack-label">
             Blätter: 
-            <input type="number" id="stackCount" value="8" min="1" max="10" style="width: 50px;">
+            <input type="number" id="stackCount" value="8" min="1" max="10" class="stack-input">
             (max 10)
         </label>
         
-        <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)" style="display:none;">
+        <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)" class="hidden-file-input">
     </div>
 
 </div>
