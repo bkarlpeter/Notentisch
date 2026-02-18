@@ -79,6 +79,7 @@ function toggleWide() {
     if (currentPdfDoc) renderPdfPages();
 }
 
+
 function normalizePdfServerPath(pdfPath) {
     if (!pdfPath) return '';
     let path = pdfPath.trim();
@@ -90,20 +91,36 @@ function normalizePdfServerPath(pdfPath) {
 
 
 function showPdfPages(pdfPath) {
-    let actualPath = pdfPath;
-    if (pdfPath.includes('#')) {
-        const parts = pdfPath.split('#');
-        actualPath = parts[1] || pdfPath;
+    const rawPath = String(pdfPath || '');
+    const hashParts = rawPath.split('#').map(p => p.trim()).filter(Boolean);
+    const pdfParts = hashParts.filter(p => p.toLowerCase().includes('.pdf'));
+
+    let actualPath = rawPath;
+    if (pdfParts.length) {
+        const relativeCandidate = pdfParts.find(p => !/^[a-zA-Z]:[\\/]/.test(p));
+        actualPath = relativeCandidate || pdfParts[0];
     }
-    
-    currentPdfPath = actualPath;
+
+    const normalizedActual = normalizePdfServerPath(actualPath);
+    const baseCandidates = [normalizedActual, ...pdfParts.map(normalizePdfServerPath)]
+        .filter(Boolean)
+        .map(p => p.split('/').pop())
+        .filter(Boolean);
+
+    const uniqueFileNames = [...new Set(baseCandidates)];
+
+    currentPdfPath = normalizedActual;
     currentPageOffset = 0;
-    
+
     const paths = [
-        normalizePdfServerPath(actualPath),
-        '../myMusic/Noten/' + actualPath.split('/').pop(),
-        'myMusic/Noten/Blätter/' + actualPath.split('/').pop()
-    ];
+        normalizedActual,
+        ...uniqueFileNames.flatMap(name => [
+            'myMusic/Noten/Blätter/' + name,
+            'myMusic/Noten/' + name,
+            '../myMusic/Noten/Blätter/' + name,
+            '../myMusic/Noten/' + name
+        ])
+    ].filter(Boolean);
     
     let pathIndex = 0;
     

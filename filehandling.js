@@ -86,65 +86,195 @@ function handleFile(event) {
     reader.onload = (e) => {
         const parser = new DOMParser();
         xmlData = parser.parseFromString(e.target.result, 'text/xml');
+        resetQuadrantOffsets();
         renderBoard();
     };
     reader.readAsText(file);
 }
 
+const MAX_STACK_CARDS = 10;
+
+
+function getCardNodes() {
+    if (!xmlData) return [];
+    return xmlData.querySelectorAll('NotenTisch, Notentisch');
+}
+
+let quadrantOffsets = { Q1: 0, Q2: 0, Q3: 0, Q4: 0 };
+
+function resetQuadrantOffsets() {
+    quadrantOffsets = { Q1: 0, Q2: 0, Q3: 0, Q4: 0 };
+}
+
+function createCardElement(cardInfo) {
+    const div = document.createElement('div');
+    div.className = 'card-container visible';
+    div.id = 'card-' + cardInfo.idx;
+    div.dataset.cardid = cardInfo.idx;
+    div.dataset.pdf = cardInfo.speicherort;
+    div.draggable = true;
+
+    const img = document.createElement('div');
+    img.className = 'card';
+    img.style.backgroundSize = 'cover';
+    img.style.backgroundPosition = 'top';
+    img.style.backgroundColor = '#ccc';
+
+    loadCardImage(img, cardInfo.titel, cardInfo.speicherort);
+
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'card-title';
+    titleDiv.textContent = cardInfo.titel;
+
+    div.appendChild(img);
+    div.appendChild(titleDiv);
+
+    div.addEventListener('dragstart', drag);
+    div.addEventListener('dblclick', moveCardToQ2);
+
+    return div;
+}
+
+function createQuadrantStackControls(quadrantId, limit, totalCount) {
+    const quadrant = document.getElementById(quadrantId);
+    if (!quadrant) return;
+
+    const maxOffset = Math.max(0, totalCount - limit);
+    const currentOffset = Math.max(0, Math.min(quadrantOffsets[quadrantId] || 0, maxOffset));
+    const offsetStep = Math.max(1, Math.round(limit / 2));
+    quadrantOffsets[quadrantId] = currentOffset;
+
+    if (totalCount <= limit) return;
+
+    const controls = document.createElement('div');
+    const isLeft = quadrantId === 'Q1' || quadrantId === 'Q4';
+    controls.className = 'quadrant-stack-controls ' + (isLeft ? 'left' : 'right');
+    controls.style.display = 'flex';
+
+    const upBtn = document.createElement('button');
+    upBtn.type = 'button';
+    upBtn.className = 'quadrant-stack-btn';
+    upBtn.textContent = '\u25B2';
+    upBtn.disabled = currentOffset <= 0;
+    upBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (quadrantOffsets[quadrantId] > 0) {
+            quadrantOffsets[quadrantId] = Math.max(0, quadrantOffsets[quadrantId] - offsetStep);
+            renderBoard();
+        }
+    });
+
+    const downBtn = document.createElement('button');
+    downBtn.type = 'button';
+    downBtn.className = 'quadrant-stack-btn';
+    downBtn.textContent = '\u25BC';
+    downBtn.disabled = currentOffset >= maxOffset;
+    downBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (quadrantOffsets[quadrantId] < maxOffset) {
+            quadrantOffsets[quadrantId] = Math.min(maxOffset, quadrantOffsets[quadrantId] + offsetStep);
+            renderBoard();
+        }
+    });
+
+    controls.appendChild(upBtn);
+    controls.appendChild(downBtn);
+    quadrant.appendChild(controls);
+}
+
+
+function getStackCount() {
+    const input = document.getElementById('stackCount');
+    const raw = parseInt(input?.value || '8', 10);
+    const safe = Number.isFinite(raw) ? Math.max(1, Math.min(MAX_STACK_CARDS, raw)) : 8;
+    if (input) input.value = String(safe);
+    return safe;
+}
+
+function updateStackLayout() {
+    const root = document.documentElement;
+    const quadrants = ['Q1', 'Q2', 'Q3', 'Q4']
+        .map(id => document.getElementById(id))
+        .filter(Boolean);
+
+    if (!quadrants.length) return;
+
+    const stackCount = getStackCount();
+    const cardHeight = parseFloat(getComputedStyle(root).getPropertyValue('--card-height')) || 250;
+
+    const quadrantHeight = Math.min(...quadrants.map(q => q.clientHeight));
+    let visibleZone = cardHeight;
+
+    if (stackCount > 1) {
+        visibleZone = (quadrantHeight - cardHeight) / (stackCount - 1);
+    }
+
+    visibleZone = Math.max(1, Math.min(cardHeight, Math.floor(visibleZone)));
+    root.style.setProperty('--visible-zone', visibleZone + 'px');
+}
+
+function initializeStackControls() {
+    const input = document.getElementById('stackCount');
+    if (!input || input.dataset.bound === 'true') return;
+
+    const onChange = () => {
+        getStackCount();
+        updateStackLayout();
+        if (xmlData) renderBoard();
+    };
+
+    input.addEventListener('input', onChange);
+    input.addEventListener('change', onChange);
+    input.dataset.bound = 'true';
+}
 function renderBoard() {
     if (!xmlData) return;
-    ['Q1', 'Q2', 'Q3', 'Q4'].forEach(q => {
+
+    const quadrants = ['Q1', 'Q2', 'Q3', 'Q4'];
+    const grouped = { Q1: [], Q2: [], Q3: [], Q4: [] };
+
+    quadrants.forEach(q => {
         const el = document.getElementById(q);
         if (el) el.innerHTML = '';
     });
-    
-    const cards = xmlData.querySelectorAll('NotenTisch');
-    let counts = { 'Q1': 0, 'Q2': 0, 'Q3': 0, 'Q4': 0 };
-    const limit = parseInt(document.getElementById('staffelLimit')?.value || '8');
-    
+
+    const cards = getCardNodes();
+    const limit = getStackCount();
+
     cards.forEach((cardEl, idx) => {
         const titel = cardEl.querySelector('Titel')?.textContent || 'Unbekannt';
         const speicherort = cardEl.querySelector('Speicherort')?.textContent || '';
         const status = cardEl.querySelector('Arbeitsstatus')?.textContent || 'zurueckgestellt';
-        
+
         let quad = 'Q1';
         if (status.includes('wiederholen')) quad = 'Q2';
         if (status.includes('geübt')) quad = 'Q3';
         if (status.includes('gelernt')) quad = 'Q4';
-        
-        if (counts[quad] >= limit) return;
-        counts[quad]++;
-        
-        const div = document.createElement('div');
-        div.className = 'card-container visible';
-        div.id = 'card-' + idx;
-        div.dataset.cardid = idx;
-        div.dataset.pdf = speicherort;
-        div.draggable = true;
-        
-        const img = document.createElement('div');
-        img.className = 'card';
-        img.style.backgroundSize = 'cover';
-        img.style.backgroundPosition = 'top';
-        img.style.backgroundColor = '#ccc';
-        
-        loadCardImage(img, titel);
-        
-        const titleDiv = document.createElement('div');
-        titleDiv.className = 'card-title';
-        titleDiv.textContent = titel;
-        
-        div.appendChild(img);
-        div.appendChild(titleDiv);
-        
-        div.addEventListener('dragstart', drag);
-        div.addEventListener('dblclick', moveCardToQ2);
-        
-        document.getElementById(quad).appendChild(div);
+
+        grouped[quad].push({ idx, titel, speicherort });
     });
-    
-    // WICHTIG: Registriere Drop-Listener auf alle Quadranten + CENTER
+
+    quadrants.forEach((quad) => {
+        const target = document.getElementById(quad);
+        if (!target) return;
+
+        const total = grouped[quad].length;
+        const maxOffset = Math.max(0, total - limit);
+        const safeOffset = Math.max(0, Math.min(quadrantOffsets[quad] || 0, maxOffset));
+        quadrantOffsets[quad] = safeOffset;
+
+        const visibleCards = grouped[quad].slice(safeOffset, safeOffset + limit);
+        visibleCards.forEach((cardInfo) => {
+            target.appendChild(createCardElement(cardInfo));
+        });
+
+        createQuadrantStackControls(quad, limit, total);
+    });
+
     setupDropListeners();
+    updateStackLayout();
 }
 
 function setupDropListeners() {
@@ -179,37 +309,114 @@ function sanitizeTitle(titel) {
             + '.png';
 }
 
-function loadCardImage(imgElement, titel) {
+function getPdfPathCandidates(pdfPath) {
+    const rawPath = String(pdfPath || '');
+    const hashParts = rawPath.split('#').map(p => p.trim()).filter(Boolean);
+    const pdfParts = hashParts.filter(p => p.toLowerCase().includes('.pdf'));
+
+    let actualPath = rawPath;
+    if (pdfParts.length) {
+        const relativeCandidate = pdfParts.find(p => !/^[a-zA-Z]:[\\/]/.test(p));
+        actualPath = relativeCandidate || pdfParts[0];
+    }
+
+    const normalize = (input) => {
+        if (!input) return '';
+        if (typeof normalizePdfServerPath === 'function') return normalizePdfServerPath(input);
+        return input.replace(/\\/g, '/').replace(/^\.\.\//g, '');
+    };
+
+    const normalizedActual = normalize(actualPath);
+    const baseCandidates = [normalizedActual, ...pdfParts.map(normalize)]
+        .filter(Boolean)
+        .map(p => p.split('/').pop())
+        .filter(Boolean);
+
+    const uniqueFileNames = [...new Set(baseCandidates)];
+
+    return [
+        normalizedActual,
+        ...uniqueFileNames.flatMap(name => [
+            'myMusic/Noten/Blätter/' + name,
+            'myMusic/Noten/' + name,
+            '../myMusic/Noten/Blätter/' + name,
+            '../myMusic/Noten/' + name
+        ])
+    ].filter(Boolean);
+}
+
+function loadCardImageFromPdf(imgElement, pdfPath) {
+    if (!pdfPath || typeof pdfjsLib === 'undefined') {
+        imgElement.style.backgroundColor = '#aaa';
+        return;
+    }
+
+    const paths = getPdfPathCandidates(pdfPath);
+    let pathIndex = 0;
+
+    function tryNextPdf() {
+        if (pathIndex >= paths.length) {
+            imgElement.style.backgroundColor = '#aaa';
+            return;
+        }
+
+        const serverPath = paths[pathIndex];
+
+        pdfjsLib.getDocument(serverPath).promise
+            .then(pdf => pdf.getPage(1))
+            .then(page => {
+                const viewport = page.getViewport({ scale: 0.35 });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                return page.render({ canvasContext: context, viewport }).promise.then(() => {
+                    imgElement.style.backgroundImage = 'url("' + canvas.toDataURL('image/png') + '")';
+                    imgElement.style.backgroundColor = '#fff';
+                });
+            })
+            .catch(() => {
+                pathIndex++;
+                tryNextPdf();
+            });
+    }
+
+    tryNextPdf();
+}
+
+function loadCardImage(imgElement, titel, pdfPath) {
     const variations = [
         sanitizeTitle(titel),
         'card_' + titel.trim().replace(/[,\.]$/g, '').replace(/ /g, '_') + '.png',
         'card_' + titel.toLowerCase().trim().replace(/[,\.]/g, '').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ü/g, 'ue').replace(/ /g, '_').replace(/_+$/, '') + '.png',
     ];
-    
+
+    const uniqueVariations = [...new Set(variations.filter(Boolean))];
     let currentIdx = 0;
-    
-    function tryNext() {
-        if (currentIdx >= variations.length) {
-            imgElement.style.backgroundColor = '#aaa';
+
+    function tryNextImage() {
+        if (currentIdx >= uniqueVariations.length) {
+            loadCardImageFromPdf(imgElement, pdfPath);
             return;
         }
-        
-        const filename = variations[currentIdx];
+
+        const filename = uniqueVariations[currentIdx];
         const img = new Image();
-        
+
         img.onload = () => {
             imgElement.style.backgroundImage = 'url("./Cards_Export/' + filename + '")';
         };
-        
+
         img.onerror = () => {
             currentIdx++;
-            tryNext();
+            tryNextImage();
         };
-        
+
         img.src = './Cards_Export/' + filename;
     }
-    
-    tryNext();
+
+    tryNextImage();
 }
 
 function drag(event) {
@@ -249,12 +456,13 @@ function drop(event) {
         card.classList.remove('in-center');
         saveDateToXml(card.dataset.cardid, targetId);
         console.log('Moved to quadrant: ' + targetId);
+        renderBoard();
     }
 }
 
 function savePlayedDateToXml(cardId) {
     if (!xmlData) return;
-    const card = xmlData.querySelectorAll('NotenTisch')[parseInt(cardId)];
+    const card = getCardNodes()[parseInt(cardId)];
     if (!card) return;
     
     const now = new Date();
@@ -273,7 +481,7 @@ function savePlayedDateToXml(cardId) {
 
 function saveDateToXml(cardId, quadrant) {
     if (!xmlData) return;
-    const card = xmlData.querySelectorAll('NotenTisch')[parseInt(cardId)];
+    const card = getCardNodes()[parseInt(cardId)];
     if (!card) return;
     
     const map = { 'Q1': 'zurückgestellt', 'Q2': 'wiederholen', 'Q3': 'geübt', 'Q4': 'gelernt' };
@@ -410,6 +618,8 @@ function moveCardFromCenterTo(quadrantId) {
         if (scrollButtons) {
             scrollButtons.style.display = 'none';
         }
+
+        renderBoard();
     }
 }
 
@@ -424,14 +634,22 @@ function scrollQuadrant(id, direction) {
     if (q) q.scrollTop += (direction === 'down' ? 180 : -180);
 }
 
-// Starte Drop-Listener wenn Seite geladen
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupDropListeners);
-} else {
-    setupDropListeners();
+function handleViewportResize() {
+    updateStackLayout();
 }
 
-// Load saved folder when HTML loads
-window.addEventListener('DOMContentLoaded', async () => {
-    await loadSavedFolder();
-});
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setupDropListeners();
+        initializeStackControls();
+        updateStackLayout();
+        loadSavedFolder();
+        window.addEventListener('resize', handleViewportResize);
+    });
+} else {
+    setupDropListeners();
+    initializeStackControls();
+    updateStackLayout();
+    loadSavedFolder();
+    window.addEventListener('resize', handleViewportResize);
+}

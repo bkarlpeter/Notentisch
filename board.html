@@ -10,6 +10,8 @@
             --stack-overlap: 20px;
             --control-bar-height: 60px;
             --center-bottom-gap: 80px;
+            --card-height: 250px;
+            --visible-zone: 10px;
         }
 
         body {
@@ -36,6 +38,7 @@
             grid-template-rows: 1fr 1fr;
             gap: 0;
             height: 100%;
+            min-height: 0;
             position: relative;
         }
 
@@ -82,6 +85,51 @@
         .quadrant-rechts > * {
             direction: ltr;
         }
+
+
+        .quadrant-stack-controls {
+            position: absolute;
+            top: 10px;
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 20;
+        }
+
+        .quadrant-stack-controls.left {
+            left: 10px;
+        }
+
+        .quadrant-stack-controls.right {
+            right: 10px;
+        }
+
+        .quadrant-stack-btn {
+            width: 26px;
+            height: 26px;
+            border: 1px solid #3f5568;
+            border-radius: 4px;
+            background: #1f2e3a;
+            color: #cfe8ff;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .quadrant-stack-btn:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+
+        .center-stack-controls {
+            position: absolute;
+            right: 12px;
+            top: 12px;
+            z-index: 2000;
+            opacity: 0.7;
+        }
+
         
         /* --- QUADRANT TITEL --- */
         .quadrant::before {
@@ -167,9 +215,15 @@
             display: flex !important;
             gap: 10px;
             align-items: center;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            min-height: var(--control-bar-height);
             padding: 10px;
             background: #1a1a1a;
             border-top: 1px solid #333;
+            position: relative;
+            z-index: 3000;
         }
 
         .btn {
@@ -203,7 +257,7 @@
             position: relative;
             transform-origin: top center;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
-            margin-bottom: -240px;
+            margin-bottom: calc(-1 * (var(--card-height) - var(--visible-zone)));
             draggable: true;
         }
 
@@ -218,7 +272,7 @@
 
         .card {
             width: 100%;
-            height: 250px;
+            height: var(--card-height);
             background-color: white;
             border-radius: 4px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.8);
@@ -273,9 +327,9 @@
                     PDF im Center anzeigen
                 </div>
             </div>
-            <div id="scroll-buttons" style="display: none; position: absolute; right: 12px; top: 12px; flex-direction: column; gap: 8px; z-index: 2000; opacity: 0.6;">
-                <button class="btn" onclick="scrollPdf('up')" style="width: 50px; height: 50px; font-size: 20px; padding: 0;">UP</button>
-                <button class="btn" onclick="scrollPdf('down')" style="width: 50px; height: 50px; font-size: 20px; padding: 0;">DN</button>
+            <div id="scroll-buttons" class="quadrant-stack-controls right center-stack-controls">
+                <button type="button" class="quadrant-stack-btn" onclick="scrollPdf('up')">&#9650;</button>
+                <button type="button" class="quadrant-stack-btn" onclick="scrollPdf('down')">&#9660;</button>
             </div>
         </div>
 
@@ -309,19 +363,15 @@
         <button class="btn" onclick="nextPage()" style="width: auto; padding: 6px 8px;">&gt;</button>
         
         <label style="display: flex; align-items: center; gap: 5px;">
-            Sichtbar: 
-            <input type="number" id="visibleHeight" value="10" min="1" max="250" style="width: 50px;">
-            px
-        </label>
-        
-        <label style="display: flex; align-items: center; gap: 5px;">
-            Staffel: 
-            <input type="number" id="staffelLimit" value="8" min="1" style="width: 50px;">
-            Karten
+            Blätter: 
+            <input type="number" id="stackCount" value="8" min="1" max="10" style="width: 50px;">
+            (max 10)
         </label>
         
         <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)" style="display:none;">
     </div>
+
+</div>
 
     <!-- SCRIPTS -->
     <script src="functions.js?v=20260215"></script>
