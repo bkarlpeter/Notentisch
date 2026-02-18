@@ -1,5 +1,31 @@
 # Changelog - Notentisch
 
+## [v2.1] - Februar 2026
+
+### Neu 
+- **Dynamische Blätter-Steuerung**: Sichtbare Karten pro Quadrant konfigurierbar (`1` bis `10`)
+- **Quadranten-Navigation**: `/`-Buttons erscheinen nur bei Karten-Overflow
+- **Center-Navigation vereinheitlicht**: `/`-Buttons im selben Look & Feel wie in Quadranten
+- **Card-Thumbnail-Fallback**: Wenn `Cards_Export/card_*.png` fehlt, wird Vorschau aus PDF-Seite 1 gerendert
+
+### Verbessert 
+- **Stack-Schrittweite**: Blättern in Quadranten nutzt jetzt halbe Stapelgröße (gerundet)
+- **PDF-Pfadauflösung**: Robuste Erkennung für gemischte Pfadangaben (`#`-Pattern, Windows/relativ)
+- **XML-Kompatibilität**: Karten werden aus `<NotenTisch>` und `<Notentisch>` gelesen
+- **README aktualisiert**: Doku auf aktuellen Stand der Bedienung und Dateirollen gebracht
+
+### Behoben 
+- **Fehlende Karten**: Tag-Mismatch im XML führte nicht mehr zu ausgelassenen Einträgen
+- **PDF erreichbar, aber Card blind**: Fallback-Rendering aus PDF löst fehlende Exportbilder
+- **Verschwindende Buttonzeile**: Layout-/Strukturprobleme in `board.html` bereinigt
+
+### Technisch 
+- `board.html` aufgeräumt (Inline-Styles in Klassen, `viewport`-Meta ergänzt)
+- Control-Bar robuster gemacht (`z-index`, `overflow-x`, `min-height`)
+- Nicht benötigte Fullscreen-Button-Logik wieder entfernt (F11-only)
+
+---
+
 ## [v2.0] - Februar 2026
 
 ### Neu ✨
