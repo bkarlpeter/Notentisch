@@ -22,8 +22,25 @@ Interaktive Notenverwaltung mit 4 Quadranten, Drag & Drop, PDF-Viewer und XML-Im
 
 1. Im Projektordner starten:
    - `python -m http.server 8000`
+   - oder doppelklick auf `Notentisch.bat`
 2. Im Browser öffnen:
    - `http://localhost:8000/board.html`
+
+## Card-Bilder generieren
+
+Mit `extract_cards.ps1` können Card-Vorschaubilder aus PDFs automatisch erzeugt werden:
+
+```powershell
+.\extract_cards.ps1
+```
+
+Das Skript:
+- Extrahiert die **1. Seite** jedes PDFs mit Poppler (`pdfimages`)
+- Speichert PNG-Bilder in `Cards_Export/`
+- Benennt die Bilder automatisch nach den PDF-Titeln (Umlaute, Leerzeichen werden normalisiert)
+- Überspringt bereits existierende Bilder
+
+**Voraussetzung**: Poppler muss installiert sein.
 
 ## Bedienung
 
@@ -58,4 +75,7 @@ Status-Mapping:
 - `board.html`  UI, Layout, Styles
 - `functions.js`  PDF-Anzeige, Zoom, Seiten-/Scroll-Navigation, Pfadauflösung
 - `filehandling.js`  XML I/O, Karten-Rendering, Drag & Drop, Statusspeicherung
-- `Cards_Export/`  optionale statische Card-Bilder (`card_*.png`)
+- `extract_cards.ps1`  Card-Bilder aus PDFs generieren (Poppler)
+- `Notentisch.bat`  Batch-Launcher für Windows (Server + Browser)
+- `notentisch.vbs`  VB-Wrapper für unsichtbaren Start
+- `Cards_Export/`  Ordner für statische Card-Bilder (`card_*.png`)
