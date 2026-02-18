@@ -50,8 +50,22 @@ Das Skript:
 - `WIDE / NORMAL`: CENTER-Breite umschalten
 - `Blätter`: sichtbare Karten pro Quadrant einstellen (max. 10)
 - Quadranten-`/`: im jeweiligen Stapel blättern
-- Karte in CENTER ziehen: PDF öffnen + `zuletztgespielt` aktualisieren
+- Karte ins CENTER ziehen: PDF anzeigen
 - Karte aus CENTER in Quadrant verschieben: `Arbeitsstatus` aktualisieren
+
+## Use Case
+
+**Typischer Workflow:**
+
+1. User lädt die XML mit Noten-Metadaten (`LADEN`)
+2. User schaut sich die **Blätter aus beliebigen Quadranten an**, indem er sie ins CENTER zieht
+3. Nachdem die Karte angeschaut wurde, wird sie wieder **aus dem CENTER gelegt**  durch Klick auf einen Quadranten
+4. Dabei wird:
+   - Der neue **Quadranten-Name als Arbeitsstatus gespeichert** (z.B. von Q1  Q3)
+   - Das Datum in `zuletztgespielt` aktualisiert, **wenn auf Q3 (geübt) geclickt wird**
+5. User klickt `SPEICHERN`, um die Änderungen zurück in die XML zu schreiben
+
+**Ergebnis**: Die XML enthält den neuen Arbeitsstatus und das `zuletztgespielt`-Datum für alle Noten, die in Q3 \"geübt\" wurden.
 
 ## Dateiformat (XML)
 
@@ -62,6 +76,7 @@ Erwartete Haupteinträge:
   - `<Titel>`
   - `<Speicherort>`
   - `<Arbeitsstatus>`
+  - `<zuletztgespielt>` (optional, wird bei Bedarf erstellt)
 
 Status-Mapping:
 

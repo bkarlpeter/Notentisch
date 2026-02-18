@@ -448,13 +448,17 @@ function drop(event) {
         if (card.dataset.pdf) {
             card.classList.add('in-center');
             showPdfPages(card.dataset.pdf);
-            savePlayedDateToXml(card.dataset.cardid);
             console.log('Moved to center');
         }
     } else if (isQuadrant) {
         event.currentTarget.appendChild(card);
         card.classList.remove('in-center');
         saveDateToXml(card.dataset.cardid, targetId);
+        // Aktualisiere zuletztgespielt nur wenn zu Q3 (geübt) verschoben
+        if (targetId === 'Q3') {
+            savePlayedDateToXml(card.dataset.cardid);
+            console.log('Updated played date when moving to Q3');
+        }
         console.log('Moved to quadrant: ' + targetId);
         renderBoard();
     }
