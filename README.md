@@ -1,3 +1,10 @@
+
+## Installation & Schnellstart
+
+👉 Lies die ausführliche Installationsanleitung in [INSTALL.md](INSTALL.md) (inkl. Problemlösung und Setup-Hinweisen).
+
+---
+
 ## Projekt-Funktions-Check (Test der Umgebung)
 
 Um zu prüfen, ob das Projekt in deiner aktuellen Umgebung korrekt funktioniert, kannst du wie folgt vorgehen:
