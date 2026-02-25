@@ -2,137 +2,120 @@
    DIGITALER NOTENTISCH - INSTALLATION
 ===========================================
 
-SCHNELLSTART (nach Installation):
-1. Doppelklick auf "Notentisch.bat"
-2. Browser öffnet sich automatisch
-3. XML laden und loslegen!
+SCHNELLSTART
+------------
+1. Projektordner auf neuen Windows-Rechner kopieren
+2. Doppelklick auf "Notentisch.bat"
+3. Browser oeffnet: http://localhost:8000/board.html
 
 ===========================================
-ERSTINSTALLATION - SCHRITT FÜR SCHRITT
+ERSTINSTALLATION - SCHRITT FUER SCHRITT
 ===========================================
 
-SCHRITT 1: DATEIEN BEREITSTELLEN
----------------------------------
-Alle Projekt-Dateien in einen Ordner kopieren, z.B.:
-C:\Users\User\OneDrive\lapdaten (E)\Daten\Projekt notentisch\
+SCHRITT 1: VORAUSSETZUNGEN
+--------------------------
+- Windows 10/11
+- Python 3 installiert
+- Bei Python-Installation: "Add Python to PATH" aktivieren
 
-Benötigte Dateien:
-✓ board.html
-✓ start_server.ps1
-✓ Notentisch.bat
-✓ center.png (optional)
-✓ Cards_Export/ (Ordner für Kartenbilder)
-✓ README.md
-✓ INSTALL.txt (diese Datei)
-
-
-SCHRITT 2: PDF-ORDNER ANPASSEN
--------------------------------
-1. Öffnen Sie "start_server.ps1" mit Notepad oder VS Code
-2. Finden Sie Zeile 8:
-   $notenBase = "C:\Users\User\OneDrive\myMusic\Noten"
-3. Ändern Sie den Pfad zu IHREM PDF-Ordner
-4. Speichern (Strg+S)
-
-
-SCHRITT 3: POWERSHELL-RECHTE SETZEN (EINMALIG!)
-------------------------------------------------
-Nur beim ersten Mal nötig:
-
-1. Windows-Taste drücken
-2. "PowerShell" tippen
-3. RECHTSKLICK auf "Windows PowerShell"
-4. "Als Administrator ausführen" klicken
-5. Eingeben (genau so):
-   Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
-6. Mit "J" oder "Y" bestätigen
-7. PowerShell schließen
-
-Dieser Schritt ist WICHTIG! Ohne diesen funktioniert der Server nicht.
-
-
-SCHRITT 4: ERSTER START
-------------------------
-1. Doppelklick auf "Notentisch.bat"
-2. PowerShell-Fenster öffnet sich (nicht schließen!)
-3. Browser öffnet sich automatisch
-4. Seite lädt: http://localhost:8080/board.html
-
-Falls Browser nicht automatisch öffnet:
-→ Manuell öffnen: http://localhost:8080/board.html
-
-
-SCHRITT 5: XML-DATEI LADEN
+SCHRITT 2: PROJEKT KOPIEREN
 ---------------------------
-1. Im Browser: Button "LADEN" klicken
-2. XML-Datei mit Kartendaten auswählen
+Kompletten Ordner "Projekt notentisch" kopieren.
+Wichtig sind u.a.:
+- board.html
+- functions.js
+- filehandling.js
+- Notentisch.bat
+- extract_cards.ps1
+- Cards_Export\
+- Blaetter\
+
+SCHRITT 3: PDF-ORDNER PRUEFEN
+-----------------------------
+Die App erwartet PDFs unter "Blaetter\".
+
+Falls "Blaetter" auf dem Zielrechner nicht funktioniert (z.B. alte Junction):
+1. PowerShell als Administrator oeffnen
+2. In den Projektordner wechseln
+3. Junction neu setzen:
+
+   cmd /c mklink /J "Blätter" "D:\Pfad\zu\deinen\PDFs"
+
+SCHRITT 4: APP STARTEN
+----------------------
+Variante A (empfohlen):
+- Doppelklick auf "Notentisch.bat"
+
+Variante B (manuell):
+- PowerShell im Projektordner oeffnen
+- python -m http.server 8000
+- Browser: http://localhost:8000/board.html
+
+SCHRITT 5: XML LADEN
+--------------------
+1. In der App auf "LADEN" klicken
+2. XML-Datei auswaehlen
 3. Karten erscheinen in den Quadranten
-4. Fertig!
-
-
-SCHRITT 6: DESKTOP-VERKNÜPFUNG (OPTIONAL)
------------------------------------------
-Für schnelleren Zugriff:
-1. Rechtsklick auf "Notentisch.bat"
-2. "Verknüpfung erstellen"
-3. Verknüpfung auf Desktop ziehen
-4. Optional: Rechtsklick auf Verknüpfung → Eigenschaften
-   → "Ausführen" auf "Minimiert" stellen
 
 ===========================================
-PROBLEMLÖSUNGEN
+OPTIONAL: KARTENBILDER ERZEUGEN
 ===========================================
 
-PROBLEM: "Die Datei kann nicht geladen werden"
-Lösung: → Siehe SCHRITT 3 (PowerShell-Rechte)
+Befehl im Projektordner:
 
-PROBLEM: "Port 8080 bereits belegt"
-Lösung: 
-1. Öffne start_server.ps1
-2. Zeile 2: $port = 8080
-3. Ändere auf anderen Port (z.B. 8081)
-4. Speichern und neu starten
+.\extract_cards.ps1
 
-PROBLEM: PDF lädt nicht
-Lösung:
-1. Server läuft? (PowerShell-Fenster offen?)
-2. PDF-Pfad in start_server.ps1 korrekt?
-3. PDF-Datei existiert im angegebenen Ordner?
-4. Alternativ: "PDF öffnen" Button nutzen
+Das Skript nutzt bevorzugt:
+- .\poppler-25.12.0\Library\bin\pdfimages.exe
 
-PROBLEM: Keine Karten sichtbar
-Lösung:
-1. XML korrekt geladen? (Button "LADEN")
-2. Kartenbilder in Cards_Export/ vorhanden?
-3. Browser-Console öffnen (F12) → Fehler prüfen
+Wenn dieser Pfad nicht existiert, wird pdfimages.exe aus PATH verwendet.
 
-PROBLEM: Browser öffnet nicht automatisch
-Lösung:
-→ Manuell öffnen: http://localhost:8080/board.html
+===========================================
+## Start auf einem anderen Windows-System
+===========================================
+
+ so gehts: .\setup_notentisch.ps1
+
+  Das Skript erledigt für dich:
+
+  Prüfung auf Python 3 und Poppler (pdfimages.exe)
+  Anlage des „Blätter“-Ordners bzw. Erstellen einer Junction zu deinen PDFs
+  Anlage des „Cards_Export“-Ordners
+  Prüfung, ob der Standard-Port 8000 frei ist (ggf. Alternativport)
+  Start des lokalen Servers und Öffnen der App im Browser (optional)
+  Du kannst das Skript jederzeit erneut ausführen, falls du die Ordnerstruktur oder Verknüpfungen anpassen möchtest.
+  
+===========================================
+PROBLEMLOESUNG
+===========================================
+
+PROBLEM: "Python wurde nicht gefunden"
+LOESUNG:
+- Python 3 installieren
+- "Add Python to PATH" aktivieren
+- Neues Terminal oeffnen
+
+PROBLEM: Browser oeffnet nicht
+LOESUNG:
+- URL manuell oeffnen: http://localhost:8000/board.html
+
+PROBLEM: PDF wird nicht geladen
+LOESUNG:
+- Pruefen, ob Server laeuft
+- Pruefen, ob PDFs unter Blaetter\ erreichbar sind
+- Falls noetig, Junction neu erstellen (siehe SCHRITT 3)
+
+PROBLEM: Keine Kartenbilder
+LOESUNG:
+- .\extract_cards.ps1 ausfuehren
+- Poppler-Pfad pruefen (siehe OPTIONAL)
 
 ===========================================
 WEITERE HILFE
 ===========================================
 
-Siehe README.md für:
-- Detaillierte Bedienungsanleitung
-- Tastatur-Shortcuts
-- Konfigurationsmöglichkeiten
-- XML-Format-Beschreibung
-
-Siehe CHANGELOG.md für:
-- Versionshistorie
-- Geplante Features
-- Bekannte Einschränkungen
-
-===========================================
-SYSTEMANFORDERUNGEN
-===========================================
-
-Betriebssystem: Windows 10/11
-PowerShell:     Vorinstalliert
-Browser:        Chrome, Edge oder Firefox
-Festplatte:     ~50 MB (ohne PDFs)
-RAM:            Mind. 4 GB empfohlen
-
+Siehe README.md fuer:
+- Bedienung
+- XML-Format
+- Projektdateien
 ===========================================

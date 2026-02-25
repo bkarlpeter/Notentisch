@@ -101,8 +101,11 @@ function showPdfPages(pdfPath) {
         actualPath = relativeCandidate || pdfParts[0];
     }
 
-    const normalizedActual = normalizePdfServerPath(actualPath);
-    const baseCandidates = [normalizedActual, ...pdfParts.map(normalizePdfServerPath)]
+    // Neue Pfad-Normalisierung
+    // Erzwinge immer normalizePdfServerPathV2
+    const normalizedActual = normalizePdfServerPathV2(actualPath);
+
+    const baseCandidates = [normalizedActual, ...pdfParts.map(p => normalizePdfServerPathV2(p))]
         .filter(Boolean)
         .map(p => p.split('/').pop())
         .filter(Boolean);
@@ -112,13 +115,23 @@ function showPdfPages(pdfPath) {
     currentPdfPath = normalizedActual;
     currentPageOffset = 0;
 
+    function encodePath(p) {
+        // Nur den Dateinamen URL-encodieren, nicht den ganzen Pfad
+        if (!p) return '';
+        const parts = p.split('/');
+        if (parts.length === 1) return encodeURIComponent(parts[0]);
+        const last = encodeURIComponent(parts.pop());
+        return parts.join('/') + '/' + last;
+    }
     const paths = [
-        normalizedActual,
+        encodePath(normalizedActual),
         ...uniqueFileNames.flatMap(name => [
-            'myMusic/Noten/Blätter/' + name,
-            'myMusic/Noten/' + name,
-            '../myMusic/Noten/Blätter/' + name,
-            '../myMusic/Noten/' + name
+            encodePath('Blätter/' + name),
+            encodePath('Noten/Blätter/' + name),
+            encodePath('Noten/' + name),
+            encodePath('board_files/' + name),
+            encodePath('Cards_Export/' + name),
+            encodePath('History/' + name)
         ])
     ].filter(Boolean);
     
