@@ -445,6 +445,11 @@ function drop(event) {
     console.log('Target: ' + targetId + ', isCenter: ' + isCenter + ', isQuadrant: ' + isQuadrant);
     
     if (isCenter) {
+        // Prüfe, ob Center voll ist (PDF bereits geladen)
+        if (currentPdfDoc) {
+            alert('Tisch leeren!');
+            return;
+        }
         if (card.dataset.pdf) {
             card.classList.add('in-center');
             showPdfPages(card.dataset.pdf);
