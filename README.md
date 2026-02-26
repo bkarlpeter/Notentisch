@@ -45,7 +45,7 @@ Interaktive Notenverwaltung mit 4 Quadranten, Drag & Drop, PDF-Viewer und XML-Im
 - Quadranten-`/` zum Blaettern, wenn mehr Karten vorhanden sind als sichtbar
 - CENTER-Bereich zeigt PDF (2 Seiten), inkl. `/`-Scroll und Zoom
 - Drag & Drop zwischen Quadranten und CENTER
-- Doppelklick im CENTER verschiebt die aktive Karte nach Q2
+- Doppelklick im CENTER verschiebt die aktive Karte nach Q3 (weitere siehe use case)
 - XML laden/speichern im Browser
 - PDF-Pfad-Fallbacks fuer gemischte Pfadangaben (inkl. Windows-Pfade mit `#`-Trenner)
 - Kartenbild-Fallback: wenn kein `Cards_Export/card_*.png` existiert, wird ein Thumbnail aus Seite 1 der PDF erzeugt
@@ -122,19 +122,21 @@ Das Skript nutzt automatisch:
 
 ## Use Case
 
-1. User laedt die XML mit Noten-Metadaten (`LADEN`)
+1. Start: User laedt die XML mit Noten-Metadaten (`LADEN`). Dabei wird der Speicherort der Exportdatei gefragt, die zuvor mit MS access erstelt wurde.
 2. User schaut sich Blaetter an, indem Karten ins CENTER gezogen werden
 3. Karte wird aus dem CENTER auf einen Quadranten abgelegt
 4. Dabei wird:
    - der neue **Arbeitsstatus** gespeichert
-   - `zuletztgespielt` aktualisiert, wenn auf Q3 (`geuebt`) abgelegt wird
-   - oder wenn `saveDate` geklickt wird
-5. User klickt `SPEICHERN`, um Aenderungen in die XML zu schreiben
+   -- automatisch `zuletztgespielt`, wenn auf Q3 (`geuebt`) abgelegt wird
+   -- oder bei den anderen Quadranten, wenn Button `saveDate` geklickt wird
+5. Abschluss: User klickt `SPEICHERN`, um Aenderungen von Datum und status in die XML zu schreiben
+
+zu 2: beim Ansehen weiterer Blätter wird das aktuelle dorthin zurückgeschoben wo es her kam
 
 ## Dateiformat (XML)
+Eine XML Datei muss vorliegen, die z.B mit Access exportiert wurde und einen Satz an Notenblättern enthält.
 
 Erwartete Haupteintraege:
-
 - `<NotenTisch>` (unterstuetzt zusaetzlich `<Notentisch>`)
 - Unterfelder je Eintrag:
   - `<Titel>`
@@ -142,8 +144,8 @@ Erwartete Haupteintraege:
   - `<Arbeitsstatus>`
   - `<zuletztgespielt>` (optional, wird bei Bedarf erstellt)
 
-Status-Mapping:
-
+Status-Mapping der Quadranten:
+die blötter werden auf vier Felder rund um das Center verteilt ("Quadranten") enstpr. Status:
 - `zurueckgestellt` -> Q1
 - `wiederholen` -> Q2
 - `geuebt` -> Q3

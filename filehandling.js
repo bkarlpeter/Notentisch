@@ -445,15 +445,41 @@ function drop(event) {
     console.log('Target: ' + targetId + ', isCenter: ' + isCenter + ', isQuadrant: ' + isQuadrant);
     
     if (isCenter) {
-        if (card.dataset.pdf) {
-            card.classList.add('in-center');
-            showPdfPages(card.dataset.pdf);
-            lastCardIdFromCenter = card.dataset.cardid;  // Merke für saveDate
-            // Reset Button wenn neue Karte ins CENTER kommt
-            const btn = document.getElementById('saveDateBtn');
-            if (btn) { btn.style.background = ''; btn.style.color = ''; btn.style.fontWeight = ''; }
-            console.log('Moved to center, lastCardIdFromCenter = ' + lastCardIdFromCenter);
+        // Prüfe, ob bereits ein Blatt im Center liegt
+        const center = document.getElementById('CENTER');
+        const centerCard = center.querySelector('.card-container.in-center');
+        if (centerCard && centerCard !== card) {
+            // Ursprungs-Quadrant merken (data-origin muss gesetzt sein)
+            const origin = centerCard.dataset.origin;
+            if (origin && ['Q1','Q2','Q3','Q4'].includes(origin)) {
+                const quad = document.getElementById(origin);
+                if (quad) {
+                    quad.appendChild(centerCard);
+                    centerCard.classList.remove('in-center');
+                }
+            }
         }
+        // Ursprungs-Quadrant des neuen Blattes merken
+        // Herkunfts-Quadrant des neuen Blattes nur setzen, wenn noch nicht vorhanden
+        if (!card.dataset.origin) {
+            let parentQuad = null;
+            let parent = card.parentElement;
+            while (parent) {
+                if (['Q1','Q2','Q3','Q4'].includes(parent.id)) {
+                    parentQuad = parent.id;
+                    break;
+                }
+                parent = parent.parentElement;
+            }
+            card.dataset.origin = parentQuad || 'Q1'; // Fallback
+        }
+        card.classList.add('in-center');
+        showPdfPages(card.dataset.pdf);
+        lastCardIdFromCenter = card.dataset.cardid;
+        // Reset Button wenn neue Karte ins CENTER kommt
+        const btn = document.getElementById('saveDateBtn');
+        if (btn) { btn.style.background = ''; btn.style.color = ''; btn.style.fontWeight = ''; }
+        console.log('Moved to center, lastCardIdFromCenter = ' + lastCardIdFromCenter);
     } else if (isQuadrant) {
         event.currentTarget.appendChild(card);
         card.classList.remove('in-center');

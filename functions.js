@@ -192,25 +192,51 @@ function selectPdfManually() {
 
 function renderPdfPages() {
     let centerContainer = document.getElementById('center-content');
-    
     if (!centerContainer || !currentPdfDoc) return;
-    
-    currentRenderToken++;  // Invalidate old render operations
+    currentRenderToken++;
     const token = currentRenderToken;
     centerContainer.innerHTML = '';
-    
-    const page1 = currentPageOffset + 1;
-    const page2 = currentPageOffset + 2;
-    
-    if (page1 <= totalPages) renderOnePage(page1, centerContainer, token);
-    if (page2 <= totalPages) renderOnePage(page2, centerContainer, token);
-    
-    updatePageInfo();
-    // Beim Zoomen oben ausrichten
-    centerContainer.scrollTop = 0;
-    
-    // Warte bis Canvas gerendert sind, dann Scroll-Buttons aktualisieren
-    setTimeout(() => updateScrollButtons(), 100);
+    let pageNum = currentPageOffset + 1;
+    let totalWidth = 0;
+    let maxWidth = centerContainer.clientWidth;
+    let renderedPages = [];
+    function renderNextPage() {
+        if (pageNum > totalPages) {
+            updatePageInfo(renderedPages);
+            setTimeout(() => updateScrollButtons(), 100);
+            return;
+        }
+        currentPdfDoc.getPage(pageNum).then(page => {
+            if (token !== currentRenderToken) return;
+            const viewport = page.getViewport({ scale: 1.0 });
+            const baseScale = centerContainer.clientHeight / viewport.height;
+            const finalScale = baseScale * currentZoom;
+            const scaledViewport = page.getViewport({ scale: finalScale });
+            // Neue Logik: Solange der linke Rand der Seite noch sichtbar ist, rendern
+            if (totalWidth >= maxWidth + 40) {
+                updatePageInfo(renderedPages);
+                setTimeout(() => updateScrollButtons(), 100);
+                return;
+            }
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = scaledViewport.width;
+            canvas.height = scaledViewport.height;
+            canvas.style.border = '1px solid #555';
+            canvas.style.borderRadius = '4px';
+            canvas.style.margin = '2px';
+            page.render({ canvasContext: context, viewport: scaledViewport }).promise.then(() => {
+                if (token === currentRenderToken) {
+                    centerContainer.appendChild(canvas);
+                    renderedPages.push(pageNum);
+                    totalWidth += scaledViewport.width;
+                    pageNum++;
+                    renderNextPage();
+                }
+            });
+        });
+    }
+    renderNextPage();
 }
 
 function renderOnePage(pageNum, container, token) {
@@ -240,27 +266,56 @@ function renderOnePage(pageNum, container, token) {
     });
 }
 
-function updatePageInfo() {
+function updatePageInfo(renderedPages) {
     const pageInfo = document.getElementById('pageInfo');
     if (pageInfo) {
-        pageInfo.textContent = currentPdfDoc ? 
-            (currentPageOffset + 1) + ' - ' + Math.min(currentPageOffset + 2, totalPages) + ' / ' + totalPages :
-            '- / -';
+        if (currentPdfDoc && renderedPages && renderedPages.length > 0) {
+            pageInfo.textContent = renderedPages[0] + ' - ' + renderedPages[renderedPages.length - 1] + ' / ' + totalPages;
+        } else {
+            pageInfo.textContent = '- / -';
+        }
     }
 }
 
 function previousPage() {
     if (currentPageOffset > 0) {
-        currentPageOffset -= 2;
-        currentZoom = settings.defaultZoom;
+        currentPageOffset = Math.max(0, currentPageOffset - 1);
         renderPdfPages();
     }
 }
 
 function nextPage() {
-    if (currentPageOffset + 2 < totalPages) {
-        currentPageOffset += 2;
-        currentZoom = settings.defaultZoom;
-        renderPdfPages();
+    // Schiebe um eine Seite nach rechts (bzw. so, dass die rechte Teilseite am rechten Rand ist)
+    const centerContainer = document.getElementById('center-content');
+    if (!centerContainer) return;
+    let pageNum = currentPageOffset + 1;
+    let totalWidth = 0;
+    let maxWidth = centerContainer.clientWidth;
+    let visiblePages = 0;
+    function countVisiblePages(cb) {
+        if (pageNum > totalPages) {
+            cb(visiblePages);
+            return;
+        }
+        currentPdfDoc.getPage(pageNum).then(page => {
+            const viewport = page.getViewport({ scale: 1.0 });
+            const baseScale = centerContainer.clientHeight / viewport.height;
+            const finalScale = baseScale * currentZoom;
+            const scaledViewport = page.getViewport({ scale: finalScale });
+            if (totalWidth + scaledViewport.width > maxWidth + 40 && visiblePages > 0) {
+                cb(visiblePages);
+                return;
+            }
+            totalWidth += scaledViewport.width;
+            visiblePages++;
+            pageNum++;
+            countVisiblePages(cb);
+        });
     }
+    countVisiblePages(function(pages) {
+        if (currentPageOffset + pages < totalPages) {
+            currentPageOffset += 1;
+            renderPdfPages();
+        }
+    });
 }
