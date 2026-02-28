@@ -105,6 +105,15 @@ LOESUNG:
 - Pruefen, ob PDFs unter Blaetter\ erreichbar sind
 - Falls noetig, Junction neu erstellen (siehe SCHRITT 3)
 
+PROBLEM: Auf Tablet/zweitem Geraet scheint noch die alte Funktion aktiv
+LOESUNG:
+- Browser-Cache leeren oder Seite hart neu laden
+- Falls als App/Startbildschirm installiert: App komplett schliessen und Websitedaten loeschen
+- Bei JS-Aenderungen in board.html die Versionsparameter anpassen:
+   - functions.js?v=YYYYMMDD
+   - filehandling.js?v=YYYYMMDD
+   Dadurch werden neue Skriptdateien sicher neu geladen (Cache-Busting)
+
 PROBLEM: Keine Kartenbilder
 LOESUNG:
 - .\extract_cards.ps1 ausfuehren
