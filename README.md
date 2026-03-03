@@ -112,13 +112,26 @@ Das Skript nutzt automatisch:
 ## Bedienung
 
 - `LADEN`: XML auswaehlen
-- `SPEICHERN`: XML zurueckschreiben
-- `ZOOM - / ZOOM +`: PDF im CENTER zoomen
-- `WIDE / NORMAL`: CENTER-Breite umschalten
+- `SPEICHERN`: XML-Datei im gewaehlten Zielordner speichern (Datei wird ueberschrieben)
+- `ZOOM - / ZOOM +`: PDF im CENTER zoomen (stufenweise)
+- `Breite`: skaliert so, dass alle sichtbaren Seiten in die aktuelle CENTER-Breite passen
+- `Höhe`: setzt die Seitenhoehe passend zur CENTER-Hoehe
+- `WIDE / NORMAL`: vergroessert CENTER nach links; rechter Rand bleibt fix
 - `Blaetter`: sichtbare Karten pro Quadrant einstellen (max. 10)
 - Quadranten-`/`: im jeweiligen Stapel blaettern
 - Karte ins CENTER ziehen: PDF anzeigen
-- Karte aus CENTER in Quadrant verschieben: `Arbeitsstatus` aktualisieren
+- Karte aus CENTER in Quadrant verschieben (Drop oder Klick auf Q1-Q4): `Arbeitsstatus` aktualisieren
+- `saveDate`: schreibt `zuletztgespielt` fuer die zuletzt abgelegte Karte
+- Hinweislogik: bei Ablage nach `Q3` wird Datum automatisch gesetzt; bei `Q1/Q2/Q4` blinkt `saveDate` 3x als Hinweis
+
+### Speichern & Sicherheit
+
+- Aenderungen an `Arbeitsstatus` und `zuletztgespielt` werden zuerst im geladenen XML-Dokument (im Speicher) aktualisiert.
+- Erst mit `SPEICHERN` werden diese Aenderungen in die XML-Datei im Zielverzeichnis geschrieben.
+- Beim ersten Speichern waehlt der User den Zielordner; danach wird der Ordner-Handle wiederverwendet.
+- Sicherheits-Backup: Bei ungespeicherten Aenderungen wird automatisch eine Sicherung im Browser gespeichert.
+- Bei Neustart kann ein ungespeicherter Sicherungsstand wiederhergestellt werden.
+- Nach erfolgreichem `SPEICHERN` wird das Sicherheits-Backup geloescht.
 
 ## Use Case
 
@@ -126,10 +139,11 @@ Das Skript nutzt automatisch:
 2. User schaut sich Blaetter an, indem Karten ins CENTER gezogen werden
 3. Karte wird aus dem CENTER auf einen Quadranten abgelegt
 4. Dabei wird:
-   - der neue **Arbeitsstatus** gespeichert
-   -- automatisch `zuletztgespielt`, wenn auf Q3 (`geuebt`) abgelegt wird
-   -- oder bei den anderen Quadranten, wenn Button `saveDate` geklickt wird
-5. Abschluss: User klickt `SPEICHERN`, um Aenderungen von Datum und status in die XML zu schreiben
+  - der neue **Arbeitsstatus** im XML aktualisiert
+  - automatisch `zuletztgespielt`, wenn auf Q3 (`geuebt`) abgelegt wird
+  - bei Q1/Q2/Q4 optional `zuletztgespielt` per `saveDate` gesetzt
+5. Abschluss: User klickt `SPEICHERN`, um Aenderungen dauerhaft in die XML-Datei zu schreiben
+6. Falls ohne Speichern beendet wird, kann der Sicherheitsstand beim naechsten Start wiederhergestellt werden
 
 zu 2: beim Ansehen weiterer Blätter wird das aktuelle dorthin zurückgeschoben wo es her kam
 
