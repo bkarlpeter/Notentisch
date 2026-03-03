@@ -195,15 +195,17 @@
             align-items: flex-start;
             justify-content: flex-start;
             overflow-y: auto;
-            overflow-x: hidden;
+            overflow-x: auto;
+            scroll-behavior: smooth;
             position: relative;
         }
 
         /* --- CENTER WIDE MODE --- */
         .center-hole.wide {
             left: 30px;
+            right: calc(var(--card-stack-width) - var(--stack-overlap));
             transform: translateY(-50%);
-            width: calc(100vw - 60px - (var(--card-stack-width) - var(--stack-overlap)));
+            width: auto;
         }
         /* --- CENTER in Layout 2 - breiter --- */
         #layout-80-20 .center-hole {
@@ -394,6 +396,8 @@
         <button class="btn" onclick="saveXml()">SPEICHERN</button>
         <button class="btn btn-small btn-zoom" onclick="zoomOut()">ZOOM -</button>
         <button class="btn btn-small btn-zoom" onclick="zoomIn()">ZOOM +</button>
+        <button class="btn btn-small btn-zoom" onclick="fitPdfWidth()">Breite</button>
+        <button class="btn btn-small btn-zoom" onclick="fitPdfHeight()">Höhe</button>
         <span class="separator">|</span>
         
         <button class="btn toggle" onclick="toggleWide()" id="wideBtn">WIDE</button>
