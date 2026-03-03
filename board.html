@@ -413,7 +413,8 @@
         </label>
         
         <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)" class="hidden-file-input">
-        <button class="btn" id="saveDateBtn" onclick="saveDateNow()" style="margin-left: auto;">saveDate</button>
+        <button class="btn" id="saveDateBtn" onclick="saveDateNow()" style="margin-left: auto;" disabled>saveDate</button>
+        <span id="saveDateHint" class="separator">Q3: Datum automatisch</span>
     </div>
 
 </div>

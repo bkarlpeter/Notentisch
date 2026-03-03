@@ -1,6 +1,86 @@
 ﻿let xmlData = null;
 let xmlFileName = null;
 let xmlFileHandle = null;
+let lastCardIdFromCenter = null;
+let saveDateBlinkTimer = null;
+let hasUnsavedChanges = false;
+
+const SAFETY_XML_KEY = 'notentisch_safety_xml_v1';
+const SAFETY_META_KEY = 'notentisch_safety_meta_v1';
+
+function persistSafetyBackup() {
+    if (!xmlData) return;
+    try {
+        const xmlString = new XMLSerializer().serializeToString(xmlData);
+        const meta = {
+            fileName: xmlFileName || 'Notentisch.xml',
+            updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem(SAFETY_XML_KEY, xmlString);
+        localStorage.setItem(SAFETY_META_KEY, JSON.stringify(meta));
+    } catch (err) {
+        console.error('Safety-Backup konnte nicht gespeichert werden:', err);
+    }
+}
+
+function clearSafetyBackup() {
+    localStorage.removeItem(SAFETY_XML_KEY);
+    localStorage.removeItem(SAFETY_META_KEY);
+}
+
+function markUnsavedChange() {
+    hasUnsavedChanges = true;
+    persistSafetyBackup();
+}
+
+function restoreSafetyBackupIfAvailable() {
+    if (xmlData) return false;
+    const xmlString = localStorage.getItem(SAFETY_XML_KEY);
+    if (!xmlString) return false;
+
+    let meta = null;
+    try {
+        meta = JSON.parse(localStorage.getItem(SAFETY_META_KEY) || 'null');
+    } catch {
+        meta = null;
+    }
+
+    const whenText = meta && meta.updatedAt ? new Date(meta.updatedAt).toLocaleString() : 'unbekannt';
+    const fileText = meta && meta.fileName ? meta.fileName : 'Notentisch.xml';
+    const shouldRestore = confirm('Ungespeicherte Sicherung gefunden (' + fileText + ', ' + whenText + '). Wiederherstellen?');
+    if (!shouldRestore) {
+        return false;
+    }
+
+    try {
+        const parser = new DOMParser();
+        xmlData = parser.parseFromString(xmlString, 'text/xml');
+        xmlFileName = fileText;
+        resetQuadrantOffsets();
+        renderBoard();
+        hasUnsavedChanges = true;
+        setSaveDateState(false, 'Sicherungsstand geladen – bitte SPEICHERN');
+        return true;
+    } catch (err) {
+        console.error('Fehler beim Wiederherstellen der Sicherung:', err);
+        return false;
+    }
+}
+
+function setSaveDateState(enabled, hintText) {
+    const btn = document.getElementById('saveDateBtn');
+    const hint = document.getElementById('saveDateHint');
+    if (btn) {
+        btn.disabled = !enabled;
+        btn.style.backgroundColor = enabled ? '#3498db' : '#555';
+        btn.style.color = 'white';
+        btn.style.fontWeight = enabled ? 'bold' : 'normal';
+        btn.style.marginLeft = 'auto';
+    }
+    if (hint) {
+        hint.textContent = hintText || '';
+    }
+}
 // Speichere Ordner-Handle in localStorage für Persistenz
 /*
 TODO: Später auf NotID statt Titel refenzieren für eindeutige Kartenidentifizierung
@@ -88,6 +168,9 @@ function handleFile(event) {
         xmlData = parser.parseFromString(e.target.result, 'text/xml');
         resetQuadrantOffsets();
         renderBoard();
+        hasUnsavedChanges = false;
+        clearSafetyBackup();
+        setSaveDateState(false, 'Q3: Datum automatisch');
     };
     reader.readAsText(file);
 }
@@ -455,8 +538,7 @@ function drop(event) {
             showPdfPages(card.dataset.pdf);
             lastCardIdFromCenter = card.dataset.cardid;  // Merke für saveDate
             // Reset Button wenn neue Karte ins CENTER kommt
-            const btn = document.getElementById('saveDateBtn');
-            if (btn) { btn.style.background = ''; btn.style.color = ''; btn.style.fontWeight = ''; }
+            setSaveDateState(false, 'Karte ablegen: Q3 auto, sonst saveDate');
             console.log('Moved to center, lastCardIdFromCenter = ' + lastCardIdFromCenter);
         }
     } else if (isQuadrant) {
@@ -468,10 +550,58 @@ function drop(event) {
         if (targetId === 'Q3') {
             savePlayedDateToXml(card.dataset.cardid);
             console.log('Updated played date when moving to Q3');
+            resetSaveDateButtonStyle();
+            setSaveDateState(false, 'Q3: Datum automatisch gesetzt');
+        } else {
+            setSaveDateState(true, 'Datum für letzte Karte offen');
+            blinkSaveDateButton();
         }
         console.log('Moved to quadrant: ' + targetId + ', lastCardIdFromCenter = ' + lastCardIdFromCenter);
         renderBoard();
     }
+}
+
+function resetSaveDateButtonStyle() {
+    const btn = document.getElementById('saveDateBtn');
+    if (!btn) return;
+    btn.style.backgroundColor = btn.disabled ? '#555' : '#3498db';
+    btn.style.color = 'white';
+    btn.style.fontWeight = btn.disabled ? 'normal' : 'bold';
+    btn.style.outline = '';
+    btn.style.outlineOffset = '';
+    btn.style.marginLeft = 'auto';
+}
+
+function blinkSaveDateButton() {
+    const btn = document.getElementById('saveDateBtn');
+    if (!btn) return;
+
+    if (saveDateBlinkTimer) {
+        clearInterval(saveDateBlinkTimer);
+        saveDateBlinkTimer = null;
+    }
+
+    resetSaveDateButtonStyle();
+
+    let tick = 0;
+    const maxTicks = 6; // 3x an/aus
+    saveDateBlinkTimer = setInterval(() => {
+        tick++;
+        if (tick % 2 === 1) {
+            btn.style.outline = '2px solid #f1c40f';
+            btn.style.outlineOffset = '2px';
+        } else {
+            btn.style.outline = '';
+            btn.style.outlineOffset = '';
+        }
+
+        if (tick >= maxTicks) {
+            clearInterval(saveDateBlinkTimer);
+            saveDateBlinkTimer = null;
+            btn.style.outline = '';
+            btn.style.outlineOffset = '';
+        }
+    }, 180);
 }
 
 function savePlayedDateToXml(cardId) {
@@ -490,6 +620,7 @@ function savePlayedDateToXml(cardId) {
         card.appendChild(el);
     }
     el.textContent = dateStr;
+    markUnsavedChange();
     console.log('Saved played date: ' + dateStr + ' for card ' + cardId);
 }
 
@@ -505,6 +636,7 @@ function saveDateToXml(cardId, quadrant) {
         card.appendChild(el);
     }
     el.textContent = map[quadrant] || 'spielen';
+    markUnsavedChange();
 }
 
 
@@ -553,6 +685,8 @@ async function saveXml() {
         await writable.write(new XMLSerializer().serializeToString(xmlData));
         await writable.close();
         console.log('XML gespeichert: ' + xmlFileName);
+        hasUnsavedChanges = false;
+        clearSafetyBackup();
         
         // Feedback: Erfolgreich
         if (saveBtn) {
@@ -614,7 +748,16 @@ function moveCardFromCenterTo(quadrantId) {
     if (card && document.getElementById(quadrantId)) {
         document.getElementById(quadrantId).appendChild(card);
         card.classList.remove('in-center');
+        lastCardIdFromCenter = card.dataset.cardid;
         saveDateToXml(card.dataset.cardid, quadrantId);
+        if (quadrantId === 'Q3') {
+            savePlayedDateToXml(card.dataset.cardid);
+            resetSaveDateButtonStyle();
+            setSaveDateState(false, 'Q3: Datum automatisch gesetzt');
+        } else {
+            setSaveDateState(true, 'Datum für letzte Karte offen');
+            blinkSaveDateButton();
+        }
         
         // PDF-Dokument komplett bereinigen
         currentPdfDoc = null;
@@ -669,9 +812,15 @@ function saveDateNow() {
     // Button wird grün und bleibt so
     const btn = document.getElementById('saveDateBtn');
     if (btn) {
-        btn.setAttribute('style', 'background-color: #2d7c3a !important; color: white !important; font-weight: bold !important; margin-left: auto;');
+        btn.style.backgroundColor = '#2d7c3a';
+        btn.style.color = 'white';
+        btn.style.fontWeight = 'bold';
+        btn.style.marginLeft = 'auto';
+        btn.style.outline = '';
+        btn.style.outlineOffset = '';
         console.log('Button turned green');
     }
+    setSaveDateState(false, 'Datum gespeichert');
     
     console.log('Played date saved for card ' + cardId);
 }
@@ -682,14 +831,30 @@ if (document.readyState === 'loading') {
         initializeStackControls();
         updateStackLayout();
         loadSavedFolder();
+        setSaveDateState(false, 'Q3: Datum automatisch');
+        restoreSafetyBackupIfAvailable();
         window.addEventListener('resize', handleViewportResize);
+        window.addEventListener('beforeunload', (event) => {
+            if (!hasUnsavedChanges) return;
+            persistSafetyBackup();
+            event.preventDefault();
+            event.returnValue = '';
+        });
     });
 } else {
     setupDropListeners();
     initializeStackControls();
     updateStackLayout();
     loadSavedFolder();
+    setSaveDateState(false, 'Q3: Datum automatisch');
+    restoreSafetyBackupIfAvailable();
     window.addEventListener('resize', handleViewportResize);
+    window.addEventListener('beforeunload', (event) => {
+        if (!hasUnsavedChanges) return;
+        persistSafetyBackup();
+        event.preventDefault();
+        event.returnValue = '';
+    });
 }
 
 
