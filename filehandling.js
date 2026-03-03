@@ -1,6 +1,7 @@
 ﻿let xmlData = null;
 let xmlFileName = null;
 let xmlFileHandle = null;
+let xmlFolderHandle = null;
 let lastCardIdFromCenter = null;
 let saveDateBlinkTimer = null;
 let hasUnsavedChanges = false;
@@ -103,6 +104,7 @@ async function saveFolderHandle(handle) {
         // Speichere Handle in IndexedDB
         const idb = await openIndexedDB();
         idb.put('folderHandle', handle);
+        xmlFolderHandle = handle;
         
         // Speichere Ordner-Name in localStorage (sichtbar in Dev Tools)
         localStorage.setItem('folderName', handle.name || 'Unbekannter Ordner');
@@ -120,11 +122,57 @@ async function saveFolderHandle(handle) {
 async function loadFolderHandle() {
     try {
         const idb = await openIndexedDB();
-        return idb.get('folderHandle');
+        const handle = await idb.get('folderHandle');
+        if (handle) {
+            xmlFolderHandle = handle;
+        }
+        return handle;
     } catch (err) {
         console.error('Fehler beim Laden des Handles:', err);
         return null;
     }
+}
+
+async function ensureXmlFileHandle() {
+    const fileName = xmlFileName || 'Notentisch.xml';
+
+    if (xmlFileHandle) {
+        return xmlFileHandle;
+    }
+
+    let folderHandle = xmlFolderHandle;
+    if (!folderHandle) {
+        folderHandle = await loadFolderHandle();
+    }
+
+    if (folderHandle) {
+        try {
+            let permission = await folderHandle.queryPermission({ mode: 'readwrite' });
+            if (permission !== 'granted') {
+                permission = await folderHandle.requestPermission({ mode: 'readwrite' });
+            }
+
+            if (permission === 'granted') {
+                xmlFolderHandle = folderHandle;
+                xmlFileHandle = await folderHandle.getFileHandle(fileName, { create: false });
+                return xmlFileHandle;
+            }
+        } catch (err) {
+            console.warn('Gespeicherter Ordner/Datei nicht nutzbar, frage neu ab:', err);
+            xmlFileHandle = null;
+        }
+    }
+
+    const pickedFolder = await window.showDirectoryPicker();
+    await saveFolderHandle(pickedFolder);
+
+    try {
+        xmlFileHandle = await pickedFolder.getFileHandle(fileName, { create: false });
+    } catch {
+        xmlFileHandle = await pickedFolder.getFileHandle(fileName, { create: true });
+    }
+
+    return xmlFileHandle;
 }
 
 // IndexedDB Helper
@@ -668,17 +716,8 @@ async function saveXml() {
             saveBtn.disabled = true;
         }
         
-        // Beim ersten Mal: Ordner auswählen und speichern
-        if (!xmlFileHandle) {
-            const folderHandle = await window.showDirectoryPicker();
-            const fileName = xmlFileName || 'Notentisch.xml';
-            
-            // Speichere Ordner für nächsten Start
-            await saveFolderHandle(folderHandle);
-            
-            // Datei im ausgewählten Ordner erstellen/überschreiben
-            xmlFileHandle = await folderHandle.getFileHandle(fileName, { create: true });
-        }
+        // Wiederverwendung des gespeicherten Ordners; neue Abfrage nur bei fehlender XML/Berechtigung
+        await ensureXmlFileHandle();
         
         // Direkt in die Datei schreiben (überschreibt)
         const writable = await xmlFileHandle.createWritable();
@@ -731,8 +770,7 @@ async function loadSavedFolder() {
             // Prüfe ob Berechtigung noch gültig ist
             const permission = await savedHandle.queryPermission({ mode: 'readwrite' });
             if (permission === 'granted') {
-                const fileName = xmlFileName || 'Notentisch.xml';
-                xmlFileHandle = await savedHandle.getFileHandle(fileName, { create: true });
+                xmlFolderHandle = savedHandle;
                 console.log('Gespeicherter Ordner geladen');
                 return true;
             }
