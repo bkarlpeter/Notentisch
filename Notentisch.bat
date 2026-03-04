@@ -32,14 +32,13 @@ if not defined PY_CMD (
     echo Bitte Python 3 installieren und "Add Python to PATH" aktivieren.
     echo Download: https://www.python.org/downloads/windows/
     echo.
-    pause
     exit /b 1
 )
 
 pushd "%WEBROOT%"
 
 echo Starte lokalen Server auf http://localhost:%PORT% ...
-start "" cmd /c ""%PY_CMD%" %PY_ARGS% -m http.server %PORT%"
+start "" cmd /c ""%PY_CMD%" %PY_ARGS% local_server.py %PORT%"
 
 timeout /t 2 /nobreak
 start "" "http://localhost:%PORT%/%ENTRY%"
@@ -48,6 +47,4 @@ echo.
 echo Digitaler Notentisch laeuft!
 echo URL: http://localhost:%PORT%/%ENTRY%
 echo.
-pause
-
 popd

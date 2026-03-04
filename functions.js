@@ -2,7 +2,9 @@ const USER_CONFIG_KEY = 'notentischUserConfig';
 const USER_CONFIG_DEFAULTS = {
     pdfSharpness: 1.0,
     paperTintPercent: 3,
-    paperTintColor: '#f5ebd2'
+    paperTintColor: '#f5ebd2',
+    tintMethod: 'paper-only',
+    tintStrength: 1.0
 };
 
 function clampNumber(value, min, max, fallback) {
@@ -17,6 +19,16 @@ function normalizeHexColor(value, fallback) {
     return fallback;
 }
 
+function normalizeTintMethod(value) {
+    const input = String(value || '').trim();
+    if (input === 'paper-only' || input === 'paper-strong') return input;
+    return USER_CONFIG_DEFAULTS.tintMethod;
+}
+
+function normalizeTintStrength(value) {
+    return clampNumber(value, 0.5, 2.0, USER_CONFIG_DEFAULTS.tintStrength);
+}
+
 function hexToRgb(hexColor) {
     const hex = normalizeHexColor(hexColor, USER_CONFIG_DEFAULTS.paperTintColor).slice(1);
     return {
@@ -26,6 +38,27 @@ function hexToRgb(hexColor) {
     };
 }
 
+function getTintOpacityFromPercent(percent) {
+    const normalized = clampNumber(percent / 25, 0, 1, USER_CONFIG_DEFAULTS.paperTintPercent / 25);
+    return clampNumber(normalized * 0.6, 0, 0.6, 0.08);
+}
+
+function getEffectiveTintOpacity(percent, strength) {
+    const baseOpacity = getTintOpacityFromPercent(percent);
+    const normalizedStrength = normalizeTintStrength(strength);
+    return clampNumber(baseOpacity * normalizedStrength, 0, 0.85, 0.08);
+}
+
+function getTintProfile(method) {
+    switch (method) {
+        case 'paper-strong':
+            return { minLum: 140, maxSat: 95, lumSpan: 110 };
+        case 'paper-only':
+        default:
+            return { minLum: 155, maxSat: 72, lumSpan: 100 };
+    }
+}
+
 function loadUserConfig() {
     try {
         const raw = localStorage.getItem(USER_CONFIG_KEY);
@@ -33,8 +66,10 @@ function loadUserConfig() {
         const parsed = JSON.parse(raw);
         return {
             pdfSharpness: clampNumber(parsed.pdfSharpness, 0.8, 2.5, USER_CONFIG_DEFAULTS.pdfSharpness),
-            paperTintPercent: clampNumber(parsed.paperTintPercent, 0, 5, USER_CONFIG_DEFAULTS.paperTintPercent),
-            paperTintColor: normalizeHexColor(parsed.paperTintColor, USER_CONFIG_DEFAULTS.paperTintColor)
+            paperTintPercent: clampNumber(parsed.paperTintPercent, 0, 25, USER_CONFIG_DEFAULTS.paperTintPercent),
+            paperTintColor: normalizeHexColor(parsed.paperTintColor, USER_CONFIG_DEFAULTS.paperTintColor),
+            tintMethod: normalizeTintMethod(parsed.tintMethod),
+            tintStrength: normalizeTintStrength(parsed.tintStrength)
         };
     } catch (err) {
         return { ...USER_CONFIG_DEFAULTS };
@@ -44,22 +79,51 @@ function loadUserConfig() {
 function applyCenterAppearance() {
     const centerContainer = document.getElementById('center-content');
     if (!centerContainer) return;
-
-    const opacity = clampNumber(settings.paperTintPercent / 100, 0, 1, USER_CONFIG_DEFAULTS.paperTintPercent / 100);
-    const tintRgb = hexToRgb(settings.paperTintColor);
-    centerContainer.style.background = 'rgba(' + tintRgb.r + ', ' + tintRgb.g + ', ' + tintRgb.b + ', ' + opacity + ')';
+    centerContainer.style.background = 'rgba(52, 152, 219, 0.12)';
 }
 
 function applyPaperTintOverlay(context, canvas) {
-    const opacity = clampNumber(settings.paperTintPercent / 100, 0, 1, USER_CONFIG_DEFAULTS.paperTintPercent / 100);
+    const opacity = getEffectiveTintOpacity(settings.paperTintPercent, settings.tintStrength);
     if (opacity <= 0) return;
 
     const tintRgb = hexToRgb(settings.paperTintColor);
-    context.save();
-    context.globalCompositeOperation = 'source-over';
-    context.fillStyle = 'rgba(' + tintRgb.r + ', ' + tintRgb.g + ', ' + tintRgb.b + ', ' + opacity + ')';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.restore();
+    const profile = getTintProfile(settings.tintMethod);
+    try {
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const pixels = imageData.data;
+
+        for (let i = 0; i < pixels.length; i += 4) {
+            const alpha = pixels[i + 3];
+            if (alpha === 0) continue;
+
+            const red = pixels[i];
+            const green = pixels[i + 1];
+            const blue = pixels[i + 2];
+
+            const maxChannel = Math.max(red, green, blue);
+            const minChannel = Math.min(red, green, blue);
+            const saturation = maxChannel - minChannel;
+            const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+
+            if (luminance < profile.minLum || saturation > profile.maxSat) continue;
+
+            const paperStrength = clampNumber((luminance - profile.minLum) / profile.lumSpan, 0, 1, 0);
+            const blend = opacity * paperStrength;
+            if (blend <= 0) continue;
+
+            pixels[i] = Math.round((red * (1 - blend)) + (tintRgb.r * blend));
+            pixels[i + 1] = Math.round((green * (1 - blend)) + (tintRgb.g * blend));
+            pixels[i + 2] = Math.round((blue * (1 - blend)) + (tintRgb.b * blend));
+        }
+
+        context.putImageData(imageData, 0, 0);
+    } catch (err) {
+        context.save();
+        context.globalCompositeOperation = 'multiply';
+        context.fillStyle = 'rgba(' + tintRgb.r + ', ' + tintRgb.g + ', ' + tintRgb.b + ', ' + opacity + ')';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.restore();
+    }
 }
 
 function applyUserConfigAndRefresh(shouldRerender = true) {
@@ -67,6 +131,8 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     settings.pdfSharpness = userConfig.pdfSharpness;
     settings.paperTintPercent = userConfig.paperTintPercent;
     settings.paperTintColor = userConfig.paperTintColor;
+    settings.tintMethod = userConfig.tintMethod;
+    settings.tintStrength = userConfig.tintStrength;
     applyCenterAppearance();
 
     if (shouldRerender && currentPdfDoc) {
@@ -78,6 +144,53 @@ function openConfigPage() {
     window.open('config.html', '_blank');
 }
 
+async function requestShutdownAndExit() {
+    const endBtn = document.getElementById('endBtn');
+    const previousText = endBtn ? endBtn.textContent : '';
+
+    if (endBtn) {
+        endBtn.disabled = true;
+        endBtn.textContent = 'Ende...';
+    }
+
+    const shutdownUrl = window.location.origin + '/__shutdown__';
+    let sent = false;
+
+    try {
+        if (navigator.sendBeacon) {
+            const payload = new Blob(['shutdown'], { type: 'text/plain' });
+            sent = navigator.sendBeacon(shutdownUrl, payload);
+        }
+
+        if (!sent) {
+            await fetch(shutdownUrl, {
+                method: 'POST',
+                cache: 'no-store',
+                keepalive: true,
+                headers: { 'Content-Type': 'text/plain' },
+                body: 'shutdown'
+            });
+        }
+    } catch (err) {
+    }
+
+    try {
+        window.close();
+    } catch (err) {
+    }
+
+    setTimeout(() => {
+        window.location.href = 'about:blank';
+    }, 180);
+
+    if (endBtn) {
+        setTimeout(() => {
+            endBtn.disabled = false;
+            endBtn.textContent = previousText || 'Ende';
+        }, 700);
+    }
+}
+
 const initialUserConfig = loadUserConfig();
 
 const settings = {
@@ -87,7 +200,9 @@ const settings = {
     zoomStep: 0.2,
     pdfSharpness: initialUserConfig.pdfSharpness,
     paperTintPercent: initialUserConfig.paperTintPercent,
-    paperTintColor: initialUserConfig.paperTintColor
+    paperTintColor: initialUserConfig.paperTintColor,
+    tintMethod: initialUserConfig.tintMethod,
+    tintStrength: initialUserConfig.tintStrength
 };
 
 window.addEventListener('storage', (event) => {
@@ -96,9 +211,13 @@ window.addEventListener('storage', (event) => {
 });
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => applyUserConfigAndRefresh(false));
+    document.addEventListener('DOMContentLoaded', () => {
+        applyUserConfigAndRefresh(false);
+        syncWideButtonState();
+    });
 } else {
     applyUserConfigAndRefresh(false);
+    syncWideButtonState();
 }
 
 const CANVAS_EXTRA_WIDTH = 6;
@@ -225,7 +344,8 @@ function toggleWide() {
 
     if (center.classList.contains('wide')) {
         center.classList.remove('wide');
-        btn.textContent = 'WIDE';
+        btn.textContent = 'Norm';
+        btn.style.background = '#3498db';
         center.style.right = '';
         center.style.left = '';
         center.style.width = '';
@@ -237,7 +357,8 @@ function toggleWide() {
         const leftTarget = 30;
         const fixedWidth = Math.max(680, Math.floor(rect.right - leftTarget));
         center.classList.add('wide');
-        btn.textContent = 'NORMAL';
+        btn.textContent = 'Weit';
+        btn.style.background = '#27ae60';
         center.style.right = 'auto';
         center.style.left = leftTarget + 'px';
         center.style.width = fixedWidth + 'px';
@@ -248,6 +369,20 @@ function toggleWide() {
 
     if (currentPdfDoc) {
         renderPdfPages();
+    }
+}
+
+function syncWideButtonState() {
+    const center = document.getElementById('CENTER');
+    const btn = document.getElementById('wideBtn');
+    if (!center || !btn) return;
+
+    if (center.classList.contains('wide')) {
+        btn.textContent = 'Weit';
+        btn.style.background = '#27ae60';
+    } else {
+        btn.textContent = 'Norm';
+        btn.style.background = '#3498db';
     }
 }
 

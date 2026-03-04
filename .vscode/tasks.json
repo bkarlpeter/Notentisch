@@ -1,0 +1,16 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Start HTTP Server",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-Command",
+				"py -3 local_server.py 8000"
+			],
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}

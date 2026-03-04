@@ -6,32 +6,14 @@ let lastCardIdFromCenter = null;
 let saveDateBlinkTimer = null;
 let saveWarnBlinkTimer = null;
 let hasUnsavedChanges = false;
+let isPlayMode = true;
 
-const SAFETY_XML_KEY = 'notentisch_safety_xml_v1';
-const SAFETY_META_KEY = 'notentisch_safety_meta_v1';
+function persistSafetyBackup() {}
 
-function persistSafetyBackup() {
-    if (!xmlData) return;
-    try {
-        const xmlString = new XMLSerializer().serializeToString(xmlData);
-        const meta = {
-            fileName: xmlFileName || 'Notentisch.xml',
-            updatedAt: new Date().toISOString()
-        };
-        localStorage.setItem(SAFETY_XML_KEY, xmlString);
-        localStorage.setItem(SAFETY_META_KEY, JSON.stringify(meta));
-    } catch (err) {
-        console.error('Safety-Backup konnte nicht gespeichert werden:', err);
-    }
-}
-
-function clearSafetyBackup() {
-    localStorage.removeItem(SAFETY_XML_KEY);
-    localStorage.removeItem(SAFETY_META_KEY);
-}
+function clearSafetyBackup() {}
 
 function setSaveWarningState(active, message) {
-    const saveBtn = document.querySelector('button[onclick="saveXml()"]');
+    const saveBtn = document.getElementById('modeToggleBtn');
     const hint = document.getElementById('saveDateHint');
 
     if (saveWarnBlinkTimer) {
@@ -66,7 +48,7 @@ function setSaveWarningState(active, message) {
                 saveBtn.style.boxShadow = '';
             }
         }, 260);
-        if (hint) hint.textContent = message || 'Ungespeichert - bitte SPEICHERN';
+        if (hint) hint.textContent = message || '';
     } else {
         if (hint && message) hint.textContent = message;
     }
@@ -74,13 +56,34 @@ function setSaveWarningState(active, message) {
 
 function markUnsavedChange() {
     hasUnsavedChanges = true;
-    persistSafetyBackup();
-    setSaveWarningState(true, 'Ungespeichert - bitte SPEICHERN');
+}
+
+function getModeHintText() {
+    return isPlayMode
+        ? 'Modus: Spielen (Datum automatisch)'
+        : 'Modus: Sichten (kein Datum)';
+}
+
+function applyModeButtonState() {
+    const btn = document.getElementById('modeToggleBtn');
+    if (!btn) return;
+
+    btn.textContent = isPlayMode ? 'Spielen' : 'Sichten';
+    btn.style.background = isPlayMode ? '#27ae60' : '#3498db';
+    btn.style.color = '#fff';
+    btn.style.fontWeight = 'bold';
+    btn.style.border = 'none';
+
+    const hint = document.getElementById('saveDateHint');
+    if (hint) hint.textContent = getModeHintText();
+}
+
+function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    applyModeButtonState();
 }
 
 function restoreSafetyBackupIfAvailable() {
-    clearSafetyBackup();
-    hasUnsavedChanges = false;
     return false;
 }
 
@@ -258,8 +261,8 @@ function applyLoadedXml(xmlText, fileName, directHandle) {
     renderBoard();
     hasUnsavedChanges = false;
     clearSafetyBackup();
-    setSaveWarningState(false, 'Q3: Datum automatisch');
-    setSaveDateState(false, 'Q3: Datum automatisch');
+    setSaveWarningState(false, getModeHintText());
+    setSaveDateState(false, getModeHintText());
 }
 
 async function openAndLoadXmlHandle(handle) {
@@ -694,7 +697,7 @@ function drop(event) {
             showPdfPages(card.dataset.pdf);
             lastCardIdFromCenter = card.dataset.cardid;  // Merke für saveDate
             // Reset Button wenn neue Karte ins CENTER kommt
-            setSaveDateState(false, 'Karte ablegen: Q3 auto, sonst saveDate');
+            setSaveDateState(false, getModeHintText());
             console.log('Moved to center, lastCardIdFromCenter = ' + lastCardIdFromCenter);
         }
     } else if (isQuadrant) {
@@ -702,16 +705,10 @@ function drop(event) {
         card.classList.remove('in-center');
         lastCardIdFromCenter = card.dataset.cardid;  // Merke für saveDate auch nach ablegen
         saveDateToXml(card.dataset.cardid, targetId);
-        // Aktualisiere zuletztgespielt nur wenn zu Q3 (geübt) verschoben
-        if (targetId === 'Q3') {
+        if (isPlayMode) {
             savePlayedDateToXml(card.dataset.cardid);
-            console.log('Updated played date when moving to Q3');
-            resetSaveDateButtonStyle();
-            setSaveDateState(false, 'Q3: Datum automatisch gesetzt');
-        } else {
-            setSaveDateState(true, 'Datum für letzte Karte offen');
-            blinkSaveDateButton();
         }
+        saveXml(true);
         console.log('Moved to quadrant: ' + targetId + ', lastCardIdFromCenter = ' + lastCardIdFromCenter);
         renderBoard();
     }
@@ -810,15 +807,15 @@ async function resetFolder() {
         console.error('Fehler beim Zurücksetzen:', err);
     }
 }
-async function saveXml() {
+async function saveXml(silent = true) {
     if (!xmlData) return;
     
-    const saveBtn = document.querySelector('button[onclick="saveXml()"]');
+    const saveBtn = document.getElementById('modeToggleBtn');
     const originalText = saveBtn ? saveBtn.textContent : '';
     
     try {
         // Feedback: Speichert...
-        if (saveBtn) {
+        if (!silent && saveBtn) {
             saveBtn.textContent = ' SPEICHERT...';
             saveBtn.style.background = '#f39c12';
             saveBtn.disabled = true;
@@ -834,15 +831,14 @@ async function saveXml() {
         console.log('XML gespeichert: ' + xmlFileName);
         hasUnsavedChanges = false;
         clearSafetyBackup();
-        setSaveWarningState(false, 'Gespeichert');
+        setSaveWarningState(false, getModeHintText());
         
-        // Feedback: Erfolgreich
-        if (saveBtn) {
+        if (!silent && saveBtn) {
             saveBtn.textContent = ' GESPEICHERT';
             saveBtn.style.background = '#27ae60';
             setTimeout(() => {
                 saveBtn.textContent = originalText;
-                saveBtn.style.background = '#3498db';
+                applyModeButtonState();
                 saveBtn.disabled = false;
             }, 2000);
         }
@@ -851,20 +847,20 @@ async function saveXml() {
         if (err.name !== 'AbortError') {
             console.error('Fehler beim Speichern:', err);
             // Feedback: Fehler
-            if (saveBtn) {
+            if (!silent && saveBtn) {
                 saveBtn.textContent = ' FEHLER';
                 saveBtn.style.background = '#e74c3c';
                 setTimeout(() => {
                     saveBtn.textContent = originalText;
-                    saveBtn.style.background = '#3498db';
+                    applyModeButtonState();
                     saveBtn.disabled = false;
                 }, 2000);
             }
         } else {
             // User hat abgebrochen
-            if (saveBtn) {
+            if (!silent && saveBtn) {
                 saveBtn.textContent = originalText;
-                saveBtn.style.background = '#3498db';
+                applyModeButtonState();
                 saveBtn.disabled = false;
             }
         }
@@ -897,14 +893,10 @@ function moveCardFromCenterTo(quadrantId) {
         card.classList.remove('in-center');
         lastCardIdFromCenter = card.dataset.cardid;
         saveDateToXml(card.dataset.cardid, quadrantId);
-        if (quadrantId === 'Q3') {
+        if (isPlayMode) {
             savePlayedDateToXml(card.dataset.cardid);
-            resetSaveDateButtonStyle();
-            setSaveDateState(false, 'Q3: Datum automatisch gesetzt');
-        } else {
-            setSaveDateState(true, 'Datum für letzte Karte offen');
-            blinkSaveDateButton();
         }
+        saveXml(true);
         
         // PDF-Dokument komplett bereinigen
         currentPdfDoc = null;
@@ -978,32 +970,18 @@ if (document.readyState === 'loading') {
         initializeStackControls();
         updateStackLayout();
         loadSavedFolder();
-        setSaveWarningState(false, 'Q3: Datum automatisch');
-        setSaveDateState(false, 'Q3: Datum automatisch');
+        applyModeButtonState();
         restoreSafetyBackupIfAvailable();
         window.addEventListener('resize', handleViewportResize);
-        window.addEventListener('beforeunload', (event) => {
-            if (!hasUnsavedChanges) return;
-            persistSafetyBackup();
-            event.preventDefault();
-            event.returnValue = '';
-        });
     });
 } else {
     setupDropListeners();
     initializeStackControls();
     updateStackLayout();
     loadSavedFolder();
-    setSaveWarningState(false, 'Q3: Datum automatisch');
-    setSaveDateState(false, 'Q3: Datum automatisch');
+    applyModeButtonState();
     restoreSafetyBackupIfAvailable();
     window.addEventListener('resize', handleViewportResize);
-    window.addEventListener('beforeunload', (event) => {
-        if (!hasUnsavedChanges) return;
-        persistSafetyBackup();
-        event.preventDefault();
-        event.returnValue = '';
-    });
 }
 
 

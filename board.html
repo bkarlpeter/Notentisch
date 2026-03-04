@@ -191,7 +191,7 @@
         #center-content {
             width: 100%;
             height: 100%;
-            background: rgba(245, 235, 210, 0.03);
+            background: rgba(52, 152, 219, 0.12);
             display: flex;
             align-items: flex-start;
             justify-content: flex-start;
@@ -244,9 +244,13 @@
         .btn:hover { background: #2980b9; }
 
         .btn.toggle {
-            width: auto;
-            padding: 8px 12px;
-            background: #27ae60;
+            width: 100px;
+            padding: 10px;
+            background: #3498db;
+        }
+
+        .btn.toggle:hover {
+            filter: brightness(0.95);
         }
 
 
@@ -257,6 +261,36 @@
 
         .btn-zoom {
             background: #555;
+        }
+
+        .btn-config {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            padding: 0;
+            border-radius: 6px;
+            border: 1px solid #4d4d4d;
+            background: #1a1a1a;
+            color: #c6d0da;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .btn-config:hover {
+            background: #1a1a1a;
+            border-color: #4d4d4d;
+        }
+
+        .btn-end {
+            width: auto;
+            min-width: 58px;
+            padding: 8px 10px;
+            background: #7a2d2d;
+            border: 1px solid #9a3a3a;
+        }
+
+        .btn-end:hover {
+            background: #8f3434;
         }
 
         .separator {
@@ -394,15 +428,14 @@
     <!-- CONTROL BAR -->
     <div class="control-bar">
         <button class="btn" onclick="handleLoadButton()">LADEN</button>
-        <button class="btn" onclick="saveXml()">SPEICHERN</button>
+        <button class="btn" id="modeToggleBtn" onclick="togglePlayMode()">Spielen</button>
         <button class="btn btn-small btn-zoom" onclick="zoomOut()">ZOOM -</button>
         <button class="btn btn-small btn-zoom" onclick="zoomIn()">ZOOM +</button>
         <button class="btn btn-small btn-zoom" onclick="fitPdfWidth()">Breite</button>
         <button class="btn btn-small btn-zoom" onclick="fitPdfHeight()">Höhe</button>
-        <button class="btn btn-small" onclick="openConfigPage()">CONFIG</button>
         <span class="separator">|</span>
         
-        <button class="btn toggle" onclick="toggleWide()" id="wideBtn">WIDE</button>
+        <button class="btn toggle" onclick="toggleWide()" id="wideBtn">Norm</button>
         <span class="separator">|</span>
         <button class="btn btn-small" onclick="previousPage()">&lt;</button>
         <span id="pageInfo" class="page-info"></span>
@@ -415,14 +448,16 @@
         </label>
         
         <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)" class="hidden-file-input">
-        <span id="saveDateHint" class="separator" style="margin-left: auto;">Q3: Datum automatisch</span>
+        <span id="saveDateHint" class="separator" style="margin-left: auto;">Modus: Spielen (Datum automatisch)</span>
+        <button class="btn btn-config" onclick="openConfigPage()" title="Config">C</button>
+        <button class="btn btn-end" id="endBtn" onclick="requestShutdownAndExit()" title="Server beenden und schließen">Ende</button>
     </div>
 
 </div>
 
     <!-- SCRIPTS -->
-    <script src="functions.js?v=20260306"></script>
-    <script src="filehandling.js?v=20260310"></script>
+    <script src="functions.js?v=20260316"></script>
+    <script src="filehandling.js?v=20260316"></script>
 
 </body>
 </html>

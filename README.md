@@ -118,20 +118,18 @@ Das Skript nutzt automatisch:
 - `Höhe`: setzt die Seitenhoehe passend zur CENTER-Hoehe
 - `WIDE / NORMAL`: vergroessert CENTER nach links; rechter Rand bleibt fix
 - `Blaetter`: sichtbare Karten pro Quadrant einstellen (max. 10)
+- `Ende`: beendet den lokalen Server und schliesst die Ansicht
 - Quadranten-`/`: im jeweiligen Stapel blaettern
 - Karte ins CENTER ziehen: PDF anzeigen
 - Karte aus CENTER in Quadrant verschieben (Drop oder Klick auf Q1-Q4): `Arbeitsstatus` aktualisieren
-- `saveDate`: schreibt `zuletztgespielt` fuer die zuletzt abgelegte Karte
-- Hinweislogik: bei Ablage nach `Q3` wird Datum automatisch gesetzt; bei `Q1/Q2/Q4` blinkt `saveDate` 3x als Hinweis
+- Modus `Spielen`: beim Ablegen wird `zuletztgespielt` gesetzt
+- Modus `Sichten`: beim Ablegen wird kein `zuletztgespielt` gesetzt
+- Beim Ablegen auf `Q1` bis `Q4` wird die XML automatisch gespeichert
 
-### Speichern & Sicherheit
+### Speichern
 
-- Aenderungen an `Arbeitsstatus` und `zuletztgespielt` werden zuerst im geladenen XML-Dokument (im Speicher) aktualisiert.
-- Erst mit `SPEICHERN` werden diese Aenderungen in die XML-Datei im Zielverzeichnis geschrieben.
-- Beim ersten Speichern waehlt der User den Zielordner; danach wird der Ordner-Handle wiederverwendet.
-- Sicherheits-Backup: Bei ungespeicherten Aenderungen wird automatisch eine Sicherung im Browser gespeichert.
-- Bei Neustart kann ein ungespeicherter Sicherungsstand wiederhergestellt werden.
-- Nach erfolgreichem `SPEICHERN` wird das Sicherheits-Backup geloescht.
+- Aenderungen an `Arbeitsstatus` und (im Modus `Spielen`) `zuletztgespielt` werden beim Ablegen einer Karte auf `Q1` bis `Q4` automatisch in die XML-Datei geschrieben.
+- Beim ersten Schreibzugriff waehlt der User die XML-Datei; danach wird der gespeicherte Datei-Handle wiederverwendet.
 
 ## Use Case
 
@@ -140,10 +138,10 @@ Das Skript nutzt automatisch:
 3. Karte wird aus dem CENTER auf einen Quadranten abgelegt
 4. Dabei wird:
   - der neue **Arbeitsstatus** im XML aktualisiert
-  - automatisch `zuletztgespielt`, wenn auf Q3 (`geuebt`) abgelegt wird
-  - bei Q1/Q2/Q4 optional `zuletztgespielt` per `saveDate` gesetzt
-5. Abschluss: User klickt `SPEICHERN`, um Aenderungen dauerhaft in die XML-Datei zu schreiben
-6. Falls ohne Speichern beendet wird, kann der Sicherheitsstand beim naechsten Start wiederhergestellt werden
+  - im Modus **Spielen** automatisch `zuletztgespielt` gesetzt
+  - im Modus **Sichten** kein `zuletztgespielt` gesetzt
+  - die XML-Datei automatisch gespeichert
+5. Abschluss: Weitere Karten koennen direkt weiter einsortiert werden; jede Ablage auf `Q1` bis `Q4` wird sofort gespeichert
 
 zu 2: beim Ansehen weiterer Blätter wird das aktuelle dorthin zurückgeschoben wo es her kam
 
@@ -171,8 +169,9 @@ die blötter werden auf vier Felder rund um das Center verteilt ("Quadranten") e
 - `functions.js` - PDF-Anzeige, Zoom, Seiten-/Scroll-Navigation, Pfadaufloesung
 - `filehandling.js` - XML I/O, Karten-Rendering, Drag & Drop, Statusspeicherung
 - `extract_cards.ps1` - Card-Bilder aus PDFs generieren (Poppler)
-- `Notentisch.bat` - Batch-Launcher fuer Windows (Server + Browser)
+- `Notentisch.bat` - Batch-Launcher fuer Windows (startet `local_server.py` + Browser)
 - `notentisch.vbs` - VB-Wrapper fuer unsichtbaren Start
+- `local_server.py` - lokaler HTTP-Server mit Shutdown-Endpoint (`/__shutdown__`)
 - `Cards_Export/` - Ordner fuer statische Card-Bilder (`card_*.png`)
 
 ## Test-Ordner
