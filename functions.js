@@ -1,9 +1,105 @@
+const USER_CONFIG_KEY = 'notentischUserConfig';
+const USER_CONFIG_DEFAULTS = {
+    pdfSharpness: 1.0,
+    paperTintPercent: 3,
+    paperTintColor: '#f5ebd2'
+};
+
+function clampNumber(value, min, max, fallback) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(max, Math.max(min, parsed));
+}
+
+function normalizeHexColor(value, fallback) {
+    const input = String(value || '').trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(input)) return input.toLowerCase();
+    return fallback;
+}
+
+function hexToRgb(hexColor) {
+    const hex = normalizeHexColor(hexColor, USER_CONFIG_DEFAULTS.paperTintColor).slice(1);
+    return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16)
+    };
+}
+
+function loadUserConfig() {
+    try {
+        const raw = localStorage.getItem(USER_CONFIG_KEY);
+        if (!raw) return { ...USER_CONFIG_DEFAULTS };
+        const parsed = JSON.parse(raw);
+        return {
+            pdfSharpness: clampNumber(parsed.pdfSharpness, 0.8, 2.5, USER_CONFIG_DEFAULTS.pdfSharpness),
+            paperTintPercent: clampNumber(parsed.paperTintPercent, 0, 5, USER_CONFIG_DEFAULTS.paperTintPercent),
+            paperTintColor: normalizeHexColor(parsed.paperTintColor, USER_CONFIG_DEFAULTS.paperTintColor)
+        };
+    } catch (err) {
+        return { ...USER_CONFIG_DEFAULTS };
+    }
+}
+
+function applyCenterAppearance() {
+    const centerContainer = document.getElementById('center-content');
+    if (!centerContainer) return;
+
+    const opacity = clampNumber(settings.paperTintPercent / 100, 0, 1, USER_CONFIG_DEFAULTS.paperTintPercent / 100);
+    const tintRgb = hexToRgb(settings.paperTintColor);
+    centerContainer.style.background = 'rgba(' + tintRgb.r + ', ' + tintRgb.g + ', ' + tintRgb.b + ', ' + opacity + ')';
+}
+
+function applyPaperTintOverlay(context, canvas) {
+    const opacity = clampNumber(settings.paperTintPercent / 100, 0, 1, USER_CONFIG_DEFAULTS.paperTintPercent / 100);
+    if (opacity <= 0) return;
+
+    const tintRgb = hexToRgb(settings.paperTintColor);
+    context.save();
+    context.globalCompositeOperation = 'source-over';
+    context.fillStyle = 'rgba(' + tintRgb.r + ', ' + tintRgb.g + ', ' + tintRgb.b + ', ' + opacity + ')';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.restore();
+}
+
+function applyUserConfigAndRefresh(shouldRerender = true) {
+    const userConfig = loadUserConfig();
+    settings.pdfSharpness = userConfig.pdfSharpness;
+    settings.paperTintPercent = userConfig.paperTintPercent;
+    settings.paperTintColor = userConfig.paperTintColor;
+    applyCenterAppearance();
+
+    if (shouldRerender && currentPdfDoc) {
+        renderPdfPages();
+    }
+}
+
+function openConfigPage() {
+    window.open('config.html', '_blank');
+}
+
+const initialUserConfig = loadUserConfig();
+
 const settings = {
     defaultZoom: 1.0,
     scrollStep: 180,
     pageLabelPrefix: 'Blatt',
-    zoomStep: 0.2
+    zoomStep: 0.2,
+    pdfSharpness: initialUserConfig.pdfSharpness,
+    paperTintPercent: initialUserConfig.paperTintPercent,
+    paperTintColor: initialUserConfig.paperTintColor
 };
+
+window.addEventListener('storage', (event) => {
+    if (event.key !== USER_CONFIG_KEY) return;
+    applyUserConfigAndRefresh(true);
+});
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => applyUserConfigAndRefresh(false));
+} else {
+    applyUserConfigAndRefresh(false);
+}
 
 const CANVAS_EXTRA_WIDTH = 6;
 const MIN_ZOOM = 0.4;
@@ -269,6 +365,11 @@ function selectPdfManually() {
 }
 
 function renderPdfPages() {
+    const latest = loadUserConfig();
+    settings.pdfSharpness = latest.pdfSharpness;
+    settings.paperTintPercent = latest.paperTintPercent;
+    settings.paperTintColor = latest.paperTintColor;
+
     const centerContainer = document.getElementById('center-content');
     if (!centerContainer || !currentPdfDoc) return;
 
@@ -301,14 +402,25 @@ function renderPdfPages() {
 
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
-            canvas.width = scaledViewport.width;
-            canvas.height = scaledViewport.height;
+            const outputScale = (window.devicePixelRatio || 1) * settings.pdfSharpness;
+
+            canvas.width = Math.floor(scaledViewport.width * outputScale);
+            canvas.height = Math.floor(scaledViewport.height * outputScale);
+            canvas.style.width = Math.floor(scaledViewport.width) + 'px';
+            canvas.style.height = Math.floor(scaledViewport.height) + 'px';
             canvas.style.border = '1px solid #555';
             canvas.style.borderRadius = '4px';
             canvas.style.margin = '2px';
 
-            page.render({ canvasContext: context, viewport: scaledViewport }).promise.then(() => {
+            const renderContext = {
+                canvasContext: context,
+                viewport: scaledViewport,
+                transform: outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null
+            };
+
+            page.render(renderContext).promise.then(() => {
                 if (token === currentRenderToken) {
+                    applyPaperTintOverlay(context, canvas);
                     centerContainer.appendChild(canvas);
                     renderedPages.push(pageNum);
                     pageNum++;
@@ -333,14 +445,25 @@ function renderOnePage(pageNum, container, token) {
 
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
-        canvas.width = scaledViewport.width;
-        canvas.height = scaledViewport.height;
+        const outputScale = (window.devicePixelRatio || 1) * settings.pdfSharpness;
+
+        canvas.width = Math.floor(scaledViewport.width * outputScale);
+        canvas.height = Math.floor(scaledViewport.height * outputScale);
+        canvas.style.width = Math.floor(scaledViewport.width) + 'px';
+        canvas.style.height = Math.floor(scaledViewport.height) + 'px';
         canvas.style.border = '1px solid #555';
         canvas.style.borderRadius = '4px';
         canvas.style.margin = '2px';
 
-        page.render({ canvasContext: context, viewport: scaledViewport }).promise.then(() => {
+        const renderContext = {
+            canvasContext: context,
+            viewport: scaledViewport,
+            transform: outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null
+        };
+
+        page.render(renderContext).promise.then(() => {
             if (token === currentRenderToken) {
+                applyPaperTintOverlay(context, canvas);
                 container.appendChild(canvas);
             }
         });

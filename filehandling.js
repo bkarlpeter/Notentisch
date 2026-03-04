@@ -4,6 +4,7 @@ let xmlFileHandle = null;
 let xmlFolderHandle = null;
 let lastCardIdFromCenter = null;
 let saveDateBlinkTimer = null;
+let saveWarnBlinkTimer = null;
 let hasUnsavedChanges = false;
 
 const SAFETY_XML_KEY = 'notentisch_safety_xml_v1';
@@ -29,43 +30,58 @@ function clearSafetyBackup() {
     localStorage.removeItem(SAFETY_META_KEY);
 }
 
+function setSaveWarningState(active, message) {
+    const saveBtn = document.querySelector('button[onclick="saveXml()"]');
+    const hint = document.getElementById('saveDateHint');
+
+    if (saveWarnBlinkTimer) {
+        clearInterval(saveWarnBlinkTimer);
+        saveWarnBlinkTimer = null;
+    }
+
+    if (!saveBtn) return;
+
+    saveBtn.style.border = '';
+    saveBtn.style.outline = '';
+    saveBtn.style.outlineOffset = '';
+    saveBtn.style.boxShadow = '';
+    saveBtn.style.opacity = '1';
+
+    if (active) {
+        let on = false;
+        let toggles = 0;
+        const maxToggles = 6;
+        saveWarnBlinkTimer = setInterval(() => {
+            on = !on;
+            toggles++;
+            saveBtn.style.outline = on ? '3px solid #ffd54a' : '3px solid transparent';
+            saveBtn.style.outlineOffset = '1px';
+            saveBtn.style.boxShadow = on ? '0 0 0 2px rgba(255, 213, 74, 0.35)' : '';
+
+            if (toggles >= maxToggles) {
+                clearInterval(saveWarnBlinkTimer);
+                saveWarnBlinkTimer = null;
+                saveBtn.style.outline = '';
+                saveBtn.style.outlineOffset = '';
+                saveBtn.style.boxShadow = '';
+            }
+        }, 260);
+        if (hint) hint.textContent = message || 'Ungespeichert - bitte SPEICHERN';
+    } else {
+        if (hint && message) hint.textContent = message;
+    }
+}
+
 function markUnsavedChange() {
     hasUnsavedChanges = true;
     persistSafetyBackup();
+    setSaveWarningState(true, 'Ungespeichert - bitte SPEICHERN');
 }
 
 function restoreSafetyBackupIfAvailable() {
-    if (xmlData) return false;
-    const xmlString = localStorage.getItem(SAFETY_XML_KEY);
-    if (!xmlString) return false;
-
-    let meta = null;
-    try {
-        meta = JSON.parse(localStorage.getItem(SAFETY_META_KEY) || 'null');
-    } catch {
-        meta = null;
-    }
-
-    const whenText = meta && meta.updatedAt ? new Date(meta.updatedAt).toLocaleString() : 'unbekannt';
-    const fileText = meta && meta.fileName ? meta.fileName : 'Notentisch.xml';
-    const shouldRestore = confirm('Ungespeicherte Sicherung gefunden (' + fileText + ', ' + whenText + '). Wiederherstellen?');
-    if (!shouldRestore) {
-        return false;
-    }
-
-    try {
-        const parser = new DOMParser();
-        xmlData = parser.parseFromString(xmlString, 'text/xml');
-        xmlFileName = fileText;
-        resetQuadrantOffsets();
-        renderBoard();
-        hasUnsavedChanges = true;
-        setSaveDateState(false, 'Sicherungsstand geladen – bitte SPEICHERN');
-        return true;
-    } catch (err) {
-        console.error('Fehler beim Wiederherstellen der Sicherung:', err);
-        return false;
-    }
+    clearSafetyBackup();
+    hasUnsavedChanges = false;
+    return false;
 }
 
 function setSaveDateState(enabled, hintText) {
@@ -73,10 +89,12 @@ function setSaveDateState(enabled, hintText) {
     const hint = document.getElementById('saveDateHint');
     if (btn) {
         btn.disabled = !enabled;
-        btn.style.backgroundColor = enabled ? '#3498db' : '#555';
+        btn.style.backgroundColor = enabled ? '#3498db' : '#6a7480';
         btn.style.color = 'white';
         btn.style.fontWeight = enabled ? 'bold' : 'normal';
         btn.style.marginLeft = 'auto';
+        btn.style.border = '1px solid #a3b1c2';
+        btn.style.opacity = '1';
     }
     if (hint) {
         hint.textContent = hintText || '';
@@ -129,6 +147,30 @@ async function loadFolderHandle() {
         return handle;
     } catch (err) {
         console.error('Fehler beim Laden des Handles:', err);
+        return null;
+    }
+}
+
+async function saveXmlDirectFileHandle(handle) {
+    if (!handle) return;
+    try {
+        const idb = await openIndexedDB();
+        await idb.put('xmlFileHandle', handle);
+        if (handle.name) {
+            localStorage.setItem('xmlLastFileName', handle.name);
+        }
+    } catch (err) {
+        console.warn('XML-Datei-Handle konnte nicht gespeichert werden:', err);
+    }
+}
+
+async function loadXmlDirectFileHandle() {
+    try {
+        const idb = await openIndexedDB();
+        const handle = await idb.get('xmlFileHandle');
+        return handle || null;
+    } catch (err) {
+        console.warn('XML-Datei-Handle konnte nicht geladen werden:', err);
         return null;
     }
 }
@@ -205,22 +247,88 @@ function openIndexedDB() {
     });
 }
 
-function handleFile(event) {
+function applyLoadedXml(xmlText, fileName, directHandle) {
+    const parser = new DOMParser();
+    xmlData = parser.parseFromString(xmlText, 'text/xml');
+    xmlFileName = fileName || 'Notentisch.xml';
+    if (directHandle) {
+        xmlFileHandle = directHandle;
+    }
+    resetQuadrantOffsets();
+    renderBoard();
+    hasUnsavedChanges = false;
+    clearSafetyBackup();
+    setSaveWarningState(false, 'Q3: Datum automatisch');
+    setSaveDateState(false, 'Q3: Datum automatisch');
+}
+
+async function openAndLoadXmlHandle(handle) {
+    const file = await handle.getFile();
+    const xmlText = await file.text();
+    applyLoadedXml(xmlText, file.name || handle.name, handle);
+    await saveXmlDirectFileHandle(handle);
+}
+
+async function handleLoadButton() {
+    if (window.showOpenFilePicker) {
+        let storedHandle = null;
+
+        try {
+            storedHandle = await loadXmlDirectFileHandle();
+            if (storedHandle) {
+                const permission = await storedHandle.queryPermission({ mode: 'read' });
+                if (permission === 'granted') {
+                    await openAndLoadXmlHandle(storedHandle);
+                    return;
+                }
+
+                if (permission === 'prompt') {
+                    const requested = await storedHandle.requestPermission({ mode: 'read' });
+                    if (requested === 'granted') {
+                        await openAndLoadXmlHandle(storedHandle);
+                        return;
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('Gespeicherte XML-Datei nicht nutzbar, öffne Explorer:', err);
+        }
+
+        try {
+            const [pickedHandle] = await window.showOpenFilePicker({
+                multiple: false,
+                types: [{
+                    description: 'XML',
+                    accept: {
+                        'application/xml': ['.xml'],
+                        'text/xml': ['.xml']
+                    }
+                }]
+            });
+
+            if (pickedHandle) {
+                await openAndLoadXmlHandle(pickedHandle);
+            }
+            return;
+        } catch (err) {
+            if (err && err.name !== 'AbortError') {
+                console.error('Fehler beim XML-Laden:', err);
+            }
+            return;
+        }
+    }
+
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) fileInput.click();
+}
+
+async function handleFile(event) {
     const file = event.target.files[0];
     if (!file) return;
-    xmlFileName = file.name;
+    if (event.target) event.target.value = '';
     xmlFileHandle = null;  // Reset bei neuer Datei
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const parser = new DOMParser();
-        xmlData = parser.parseFromString(e.target.result, 'text/xml');
-        resetQuadrantOffsets();
-        renderBoard();
-        hasUnsavedChanges = false;
-        clearSafetyBackup();
-        setSaveDateState(false, 'Q3: Datum automatisch');
-    };
-    reader.readAsText(file);
+    const xmlText = await file.text();
+    applyLoadedXml(xmlText, file.name, null);
 }
 
 const MAX_STACK_CARDS = 10;
@@ -726,6 +834,7 @@ async function saveXml() {
         console.log('XML gespeichert: ' + xmlFileName);
         hasUnsavedChanges = false;
         clearSafetyBackup();
+        setSaveWarningState(false, 'Gespeichert');
         
         // Feedback: Erfolgreich
         if (saveBtn) {
@@ -869,6 +978,7 @@ if (document.readyState === 'loading') {
         initializeStackControls();
         updateStackLayout();
         loadSavedFolder();
+        setSaveWarningState(false, 'Q3: Datum automatisch');
         setSaveDateState(false, 'Q3: Datum automatisch');
         restoreSafetyBackupIfAvailable();
         window.addEventListener('resize', handleViewportResize);
@@ -884,6 +994,7 @@ if (document.readyState === 'loading') {
     initializeStackControls();
     updateStackLayout();
     loadSavedFolder();
+    setSaveWarningState(false, 'Q3: Datum automatisch');
     setSaveDateState(false, 'Q3: Datum automatisch');
     restoreSafetyBackupIfAvailable();
     window.addEventListener('resize', handleViewportResize);

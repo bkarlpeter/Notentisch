@@ -9,12 +9,22 @@ set "ENTRY=board.html"
 
 REM === Python finden (python oder py -3) ===
 set "PY_CMD="
+set "PY_ARGS="
 where python >nul 2>&1
-if %errorlevel%==0 set "PY_CMD=python"
+if %errorlevel%==0 (
+    python --version >nul 2>&1
+    if %errorlevel%==0 set "PY_CMD=python"
+)
 
 if not defined PY_CMD (
     where py >nul 2>&1
-    if %errorlevel%==0 set "PY_CMD=py -3"
+    if %errorlevel%==0 (
+        py -3 --version >nul 2>&1
+        if %errorlevel%==0 (
+            set "PY_CMD=py"
+            set "PY_ARGS=-3"
+        )
+    )
 )
 
 if not defined PY_CMD (
@@ -29,7 +39,7 @@ if not defined PY_CMD (
 pushd "%WEBROOT%"
 
 echo Starte lokalen Server auf http://localhost:%PORT% ...
-start "" cmd /c %PY_CMD% -m http.server %PORT%
+start "" cmd /c ""%PY_CMD%" %PY_ARGS% -m http.server %PORT%"
 
 timeout /t 2 /nobreak
 start "" "http://localhost:%PORT%/%ENTRY%"
