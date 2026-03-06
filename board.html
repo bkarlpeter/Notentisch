@@ -11,6 +11,8 @@
             --stack-overlap: 20px;
             --control-bar-height: 60px;
             --center-bottom-gap: 80px;
+            --center-min-width: 680px;
+            --center-max-width: 1400px;
             --card-height: 250px;
             --visible-zone: 10px;
         }
@@ -184,8 +186,8 @@
             border: 3px solid #3498db;
             padding: 12px 10px;
             box-sizing: border-box;
-            min-width: 680px;
-            max-width: 1400px;
+            min-width: var(--center-min-width);
+            max-width: var(--center-max-width);
         }
 
         #center-content {
@@ -253,6 +255,11 @@
             filter: brightness(0.95);
         }
 
+        .btn.toggle.full-state:hover {
+            background: #d68910;
+            filter: none;
+        }
+
 
         .btn-small {
             width: auto;
@@ -291,6 +298,24 @@
 
         .btn-end:hover {
             background: #8f3434;
+        }
+
+        .btn-fullscreen {
+            width: 44px;
+            min-width: 44px;
+            height: 34px;
+            padding: 0;
+            border-radius: 6px;
+            border: 1px solid #4d4d4d;
+            background: #1a1a1a;
+            color: #c6d0da;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .btn-fullscreen:hover {
+            background: #1a1a1a;
+            border-color: #4d4d4d;
         }
 
         .separator {
@@ -450,13 +475,14 @@
         <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)" class="hidden-file-input">
         <span id="saveDateHint" class="separator" style="margin-left: auto;">Modus: Spielen (Datum automatisch)</span>
         <button class="btn btn-config" onclick="openConfigPage()" title="Config">C</button>
+        <button class="btn btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreenMode()" title="Vollbild (F11 / Esc)">F11</button>
         <button class="btn btn-end" id="endBtn" onclick="requestShutdownAndExit()" title="Server beenden und schließen">Ende</button>
     </div>
 
 </div>
 
     <!-- SCRIPTS -->
-    <script src="functions.js?v=20260316"></script>
+    <script src="functions.js?v=20260322"></script>
     <script src="filehandling.js?v=20260316"></script>
 
 </body>

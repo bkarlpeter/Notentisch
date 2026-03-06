@@ -4,7 +4,9 @@ const USER_CONFIG_DEFAULTS = {
     paperTintPercent: 3,
     paperTintColor: '#f5ebd2',
     tintMethod: 'paper-only',
-    tintStrength: 1.0
+    tintStrength: 1.0,
+    layoutPreset: 'standard',
+    showFullscreenButton: true
 };
 
 function clampNumber(value, min, max, fallback) {
@@ -27,6 +29,19 @@ function normalizeTintMethod(value) {
 
 function normalizeTintStrength(value) {
     return clampNumber(value, 0.5, 2.0, USER_CONFIG_DEFAULTS.tintStrength);
+}
+
+function normalizeLayoutPreset(value) {
+    const input = String(value || '').trim();
+    if (input === 'monitor-2x3' || input === 'standard') return input;
+    return USER_CONFIG_DEFAULTS.layoutPreset;
+}
+
+function normalizeBoolean(value, fallback) {
+    if (typeof value === 'boolean') return value;
+    if (value === 'true' || value === '1' || value === 1 || value === 'show') return true;
+    if (value === 'false' || value === '0' || value === 0 || value === 'hide') return false;
+    return fallback;
 }
 
 function hexToRgb(hexColor) {
@@ -69,11 +84,31 @@ function loadUserConfig() {
             paperTintPercent: clampNumber(parsed.paperTintPercent, 0, 25, USER_CONFIG_DEFAULTS.paperTintPercent),
             paperTintColor: normalizeHexColor(parsed.paperTintColor, USER_CONFIG_DEFAULTS.paperTintColor),
             tintMethod: normalizeTintMethod(parsed.tintMethod),
-            tintStrength: normalizeTintStrength(parsed.tintStrength)
+            tintStrength: normalizeTintStrength(parsed.tintStrength),
+            layoutPreset: normalizeLayoutPreset(parsed.layoutPreset),
+            showFullscreenButton: normalizeBoolean(parsed.showFullscreenButton, USER_CONFIG_DEFAULTS.showFullscreenButton)
         };
     } catch (err) {
         return { ...USER_CONFIG_DEFAULTS };
     }
+}
+
+function applyLayoutPreset(preset) {
+    const root = document.documentElement;
+    if (!root) return;
+
+    if (preset === 'monitor-2x3') {
+        root.style.setProperty('--card-stack-width', '210px');
+        root.style.setProperty('--center-bottom-gap', '46px');
+        root.style.setProperty('--center-min-width', '760px');
+        root.style.setProperty('--center-max-width', '1700px');
+        return;
+    }
+
+    root.style.setProperty('--card-stack-width', '260px');
+    root.style.setProperty('--center-bottom-gap', '80px');
+    root.style.setProperty('--center-min-width', '680px');
+    root.style.setProperty('--center-max-width', '1400px');
 }
 
 function applyCenterAppearance() {
@@ -133,6 +168,10 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     settings.paperTintColor = userConfig.paperTintColor;
     settings.tintMethod = userConfig.tintMethod;
     settings.tintStrength = userConfig.tintStrength;
+    settings.layoutPreset = userConfig.layoutPreset;
+    settings.showFullscreenButton = userConfig.showFullscreenButton;
+    applyLayoutPreset(settings.layoutPreset);
+    applyFullscreenButtonVisibility(settings.showFullscreenButton);
     applyCenterAppearance();
 
     if (shouldRerender && currentPdfDoc) {
@@ -142,6 +181,39 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
 
 function openConfigPage() {
     window.open('config.html', '_blank');
+}
+
+function syncFullscreenButtonState() {
+    const btn = document.getElementById('fullscreenBtn');
+    if (!btn) return;
+
+    const inFullscreen = !!document.fullscreenElement;
+    btn.textContent = inFullscreen ? 'ESC' : 'F11';
+    btn.style.background = inFullscreen ? '#27ae60' : '#1a1a1a';
+    btn.style.borderColor = inFullscreen ? '#2f8f55' : '#4d4d4d';
+    btn.style.color = '#c6d0da';
+}
+
+function applyFullscreenButtonVisibility(visible) {
+    const btn = document.getElementById('fullscreenBtn');
+    if (!btn) return;
+    btn.style.display = visible ? '' : 'none';
+}
+
+async function toggleFullscreenMode() {
+    try {
+        if (!document.fullscreenElement) {
+            const root = document.documentElement;
+            if (root && root.requestFullscreen) {
+                await root.requestFullscreen();
+            }
+        } else if (document.exitFullscreen) {
+            await document.exitFullscreen();
+        }
+    } catch (err) {
+    }
+
+    syncFullscreenButtonState();
 }
 
 async function requestShutdownAndExit() {
@@ -202,7 +274,9 @@ const settings = {
     paperTintPercent: initialUserConfig.paperTintPercent,
     paperTintColor: initialUserConfig.paperTintColor,
     tintMethod: initialUserConfig.tintMethod,
-    tintStrength: initialUserConfig.tintStrength
+    tintStrength: initialUserConfig.tintStrength,
+    layoutPreset: initialUserConfig.layoutPreset,
+    showFullscreenButton: initialUserConfig.showFullscreenButton
 };
 
 window.addEventListener('storage', (event) => {
@@ -214,11 +288,15 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         applyUserConfigAndRefresh(false);
         syncWideButtonState();
+        syncFullscreenButtonState();
     });
 } else {
     applyUserConfigAndRefresh(false);
     syncWideButtonState();
+    syncFullscreenButtonState();
 }
+
+document.addEventListener('fullscreenchange', syncFullscreenButtonState);
 
 const CANVAS_EXTRA_WIDTH = 6;
 const MIN_ZOOM = 0.4;
@@ -280,13 +358,19 @@ function fitPdfWidth() {
     if (!currentPdfDoc) return;
 
     const centerContainer = document.getElementById('center-content');
+    const center = document.getElementById('CENTER');
     if (!centerContainer) return;
 
     const maxWidth = centerContainer.clientWidth;
     const centerHeight = centerContainer.clientHeight;
+    const isExpanded = !!(center && (center.classList.contains('wide') || center.classList.contains('full')));
+    const useThreePages = settings.layoutPreset === 'monitor-2x3' && !isExpanded;
+    const lastPageToFit = useThreePages
+        ? Math.min(totalPages, currentPageOffset + 3)
+        : totalPages;
 
     const pagePromises = [];
-    for (let pageNum = currentPageOffset + 1; pageNum <= totalPages; pageNum++) {
+    for (let pageNum = currentPageOffset + 1; pageNum <= lastPageToFit; pageNum++) {
         pagePromises.push(currentPdfDoc.getPage(pageNum));
     }
 
@@ -342,26 +426,55 @@ function toggleWide() {
     const btn = document.getElementById('wideBtn');
     if (!center || !btn) return;
 
-    if (center.classList.contains('wide')) {
-        center.classList.remove('wide');
-        btn.textContent = 'Norm';
-        btn.style.background = '#3498db';
+    function resetCenterSizing() {
         center.style.right = '';
         center.style.left = '';
+        center.style.top = '';
+        center.style.bottom = '';
         center.style.width = '';
+        center.style.height = '';
         center.style.maxWidth = '';
         center.style.minWidth = '';
         center.style.transform = '';
+    }
+
+    if (center.classList.contains('full')) {
+        center.classList.remove('full');
+        resetCenterSizing();
+        btn.textContent = 'Norm';
+        btn.style.background = '#3498db';
+        btn.classList.remove('full-state');
+    } else if (center.classList.contains('wide')) {
+        center.classList.remove('wide');
+        center.classList.add('full');
+        btn.textContent = 'Full';
+        btn.style.background = '#f39c12';
+        btn.classList.add('full-state');
+        center.style.left = '10px';
+        center.style.right = '10px';
+        center.style.top = '10px';
+        center.style.bottom = '10px';
+        center.style.width = 'auto';
+        center.style.height = 'auto';
+        center.style.maxWidth = 'none';
+        center.style.minWidth = '0';
+        center.style.transform = 'none';
     } else {
         const rect = center.getBoundingClientRect();
         const leftTarget = 30;
         const fixedWidth = Math.max(680, Math.floor(rect.right - leftTarget));
+        center.classList.remove('wide');
+        center.classList.remove('full');
         center.classList.add('wide');
         btn.textContent = 'Weit';
         btn.style.background = '#27ae60';
+        btn.classList.remove('full-state');
         center.style.right = 'auto';
         center.style.left = leftTarget + 'px';
+        center.style.top = '';
+        center.style.bottom = '';
         center.style.width = fixedWidth + 'px';
+        center.style.height = '';
         center.style.maxWidth = 'none';
         center.style.minWidth = '0';
         center.style.transform = 'translateY(-50%)';
@@ -377,12 +490,18 @@ function syncWideButtonState() {
     const btn = document.getElementById('wideBtn');
     if (!center || !btn) return;
 
-    if (center.classList.contains('wide')) {
+    if (center.classList.contains('full')) {
+        btn.textContent = 'Full';
+        btn.style.background = '#f39c12';
+        btn.classList.add('full-state');
+    } else if (center.classList.contains('wide')) {
         btn.textContent = 'Weit';
         btn.style.background = '#27ae60';
+        btn.classList.remove('full-state');
     } else {
         btn.textContent = 'Norm';
         btn.style.background = '#3498db';
+        btn.classList.remove('full-state');
     }
 }
 
