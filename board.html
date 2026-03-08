@@ -454,13 +454,14 @@
     <div class="control-bar">
         <button class="btn" onclick="handleLoadButton()">LADEN</button>
         <button class="btn" id="modeToggleBtn" onclick="togglePlayMode()">Spielen</button>
-        <button class="btn btn-small btn-zoom" onclick="zoomOut()">ZOOM -</button>
-        <button class="btn btn-small btn-zoom" onclick="zoomIn()">ZOOM +</button>
+        <button class="btn btn-small btn-zoom" id="zoomOutBtn" onclick="zoomOut()">ZOOM -</button>
+        <button class="btn btn-small btn-zoom" id="zoomInBtn" onclick="zoomIn()">ZOOM +</button>
         <button class="btn btn-small btn-zoom" onclick="fitPdfWidth()">Breite</button>
         <button class="btn btn-small btn-zoom" onclick="fitPdfHeight()">Höhe</button>
         <span class="separator">|</span>
         
         <button class="btn toggle" onclick="toggleWide()" id="wideBtn">Norm</button>
+        <button class="btn btn-small" onclick="toggleCenterAlign()" id="alignBtn">Links</button>
         <span class="separator">|</span>
         <button class="btn btn-small" onclick="previousPage()">&lt;</button>
         <span id="pageInfo" class="page-info"></span>
@@ -482,8 +483,8 @@
 </div>
 
     <!-- SCRIPTS -->
-    <script src="functions.js?v=20260322"></script>
-    <script src="filehandling.js?v=20260316"></script>
+    <script src="functions.js?v=20260322b"></script>
+    <script src="filehandling.js?v=20260316b"></script>
 
 </body>
 </html>

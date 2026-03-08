@@ -551,10 +551,26 @@ function sanitizeTitle(titel) {
             + '.png';
 }
 
-function getPdfPathCandidates(pdfPath) {
+function getPdfPathCandidates(pdfPath, titel = '') {
     const rawPath = String(pdfPath || '');
     const hashParts = rawPath.split('#').map(p => p.trim()).filter(Boolean);
     const pdfParts = hashParts.filter(p => p.toLowerCase().includes('.pdf'));
+
+    const titleBase = String(titel || '').trim();
+    const titleVariants = titleBase
+        ? [
+            titleBase,
+            titleBase.replace(/\s+$/, ''),
+            titleBase.replace(/\s+/g, ' ').trim(),
+            titleBase.replace(/[\\/:*?"<>|]/g, '').trim()
+        ]
+        : [];
+
+    titleVariants.forEach(v => {
+        if (!v) return;
+        const withPdf = v.toLowerCase().endsWith('.pdf') ? v : v + '.pdf';
+        pdfParts.push(withPdf);
+    });
 
     let actualPath = rawPath;
     if (pdfParts.length) {
@@ -564,6 +580,7 @@ function getPdfPathCandidates(pdfPath) {
 
     const normalize = (input) => {
         if (!input) return '';
+        if (typeof normalizePdfServerPathV2 === 'function') return normalizePdfServerPathV2(input);
         if (typeof normalizePdfServerPath === 'function') return normalizePdfServerPath(input);
         return input.replace(/\\/g, '/').replace(/^\.\.\//g, '');
     };
@@ -579,22 +596,42 @@ function getPdfPathCandidates(pdfPath) {
     return [
         normalizedActual,
         ...uniqueFileNames.flatMap(name => [
-            'myMusic/Noten/Blätter/' + name,
-            'myMusic/Noten/' + name,
-            '../myMusic/Noten/Blätter/' + name,
-            '../myMusic/Noten/' + name
+            'Blätter/' + name,
+            'Noten/Blätter/' + name,
+            'Noten/' + name
         ])
     ].filter(Boolean);
 }
 
-function loadCardImageFromPdf(imgElement, pdfPath) {
+const pdfPathAttemptCache = new Map();
+
+function loadCardImageFromPdf(imgElement, pdfPath, titel = '') {
     if (!pdfPath || typeof pdfjsLib === 'undefined') {
-        imgElement.style.backgroundColor = '#aaa';
-        return;
+        if (typeof pdfjsLib === 'undefined') {
+            imgElement.style.backgroundColor = '#aaa';
+            return;
+        }
     }
 
-    const paths = getPdfPathCandidates(pdfPath);
+    const paths = getPdfPathCandidates(pdfPath, titel);
     let pathIndex = 0;
+
+    function encodePath(pathValue) {
+        if (!pathValue) return '';
+        const safeDecode = (segment) => {
+            try {
+                return decodeURIComponent(segment);
+            } catch {
+                return segment;
+            }
+        };
+
+        return String(pathValue)
+            .split('/')
+            .filter(part => part !== '')
+            .map(part => encodeURIComponent(safeDecode(part)))
+            .join('/');
+    }
 
     function tryNextPdf() {
         if (pathIndex >= paths.length) {
@@ -602,11 +639,18 @@ function loadCardImageFromPdf(imgElement, pdfPath) {
             return;
         }
 
-        const serverPath = paths[pathIndex];
+        const serverPath = encodePath(paths[pathIndex]);
+
+        if (pdfPathAttemptCache.get(serverPath) === false) {
+            pathIndex++;
+            tryNextPdf();
+            return;
+        }
 
         pdfjsLib.getDocument(serverPath).promise
             .then(pdf => pdf.getPage(1))
             .then(page => {
+                pdfPathAttemptCache.set(serverPath, true);
                 const viewport = page.getViewport({ scale: 0.35 });
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
@@ -619,6 +663,7 @@ function loadCardImageFromPdf(imgElement, pdfPath) {
                 });
             })
             .catch(() => {
+                pdfPathAttemptCache.set(serverPath, false);
                 pathIndex++;
                 tryNextPdf();
             });
@@ -639,7 +684,7 @@ function loadCardImage(imgElement, titel, pdfPath) {
 
     function tryNextImage() {
         if (currentIdx >= uniqueVariations.length) {
-            loadCardImageFromPdf(imgElement, pdfPath);
+            loadCardImageFromPdf(imgElement, pdfPath, titel);
             return;
         }
 
@@ -710,7 +755,7 @@ function drop(event) {
         }
         saveXml(true);
         console.log('Moved to quadrant: ' + targetId + ', lastCardIdFromCenter = ' + lastCardIdFromCenter);
-        renderBoard();
+        updateStackLayout();
     }
 }
 
@@ -888,8 +933,14 @@ async function loadSavedFolder() {
 
 function moveCardFromCenterTo(quadrantId) {
     const card = document.querySelector('.card-container.in-center');
-    if (card && document.getElementById(quadrantId)) {
-        document.getElementById(quadrantId).appendChild(card);
+    const targetQuadrant = document.getElementById(quadrantId);
+    if (card && targetQuadrant) {
+        const controls = targetQuadrant.querySelector('.quadrant-stack-controls');
+        if (controls) {
+            targetQuadrant.insertBefore(card, controls);
+        } else {
+            targetQuadrant.appendChild(card);
+        }
         card.classList.remove('in-center');
         lastCardIdFromCenter = card.dataset.cardid;
         saveDateToXml(card.dataset.cardid, quadrantId);
@@ -897,25 +948,8 @@ function moveCardFromCenterTo(quadrantId) {
             savePlayedDateToXml(card.dataset.cardid);
         }
         saveXml(true);
-        
-        // PDF-Dokument komplett bereinigen
-        currentPdfDoc = null;
-        currentPdfPath = "";
-        currentZoom = settings.defaultZoom;
-        
-        // CENTER leeren und PDF weg
-        const centerContent = document.getElementById('center-content');
-        if (centerContent) {
-            centerContent.innerHTML = '<div style="text-align:center; color:#9aa; font-size:12px;">PDF im Center anzeigen</div>';
-        }
-        
-        // Scroll-Buttons verstecken
-        const scrollButtons = document.getElementById('scroll-buttons');
-        if (scrollButtons) {
-            scrollButtons.style.display = 'none';
-        }
 
-        renderBoard();
+        updateStackLayout();
     }
 }
 

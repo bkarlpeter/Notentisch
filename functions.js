@@ -5,8 +5,11 @@ const USER_CONFIG_DEFAULTS = {
     paperTintColor: '#f5ebd2',
     tintMethod: 'paper-only',
     tintStrength: 1.0,
+    zoomStep: 0.05,
+    scrollStep: 180,
     layoutPreset: 'standard',
-    showFullscreenButton: true
+    showFullscreenButton: true,
+    centerAlign: 'left'
 };
 
 function clampNumber(value, min, max, fallback) {
@@ -35,6 +38,20 @@ function normalizeLayoutPreset(value) {
     const input = String(value || '').trim();
     if (input === 'monitor-2x3' || input === 'standard') return input;
     return USER_CONFIG_DEFAULTS.layoutPreset;
+}
+
+function normalizeZoomStep(value) {
+    return clampNumber(value, 0.02, 0.5, USER_CONFIG_DEFAULTS.zoomStep);
+}
+
+function normalizeScrollStep(value) {
+    return clampNumber(value, 60, 800, USER_CONFIG_DEFAULTS.scrollStep);
+}
+
+function normalizeCenterAlign(value) {
+    const input = String(value || '').trim().toLowerCase();
+    if (input === 'left' || input === 'right') return input;
+    return USER_CONFIG_DEFAULTS.centerAlign;
 }
 
 function normalizeBoolean(value, fallback) {
@@ -85,8 +102,11 @@ function loadUserConfig() {
             paperTintColor: normalizeHexColor(parsed.paperTintColor, USER_CONFIG_DEFAULTS.paperTintColor),
             tintMethod: normalizeTintMethod(parsed.tintMethod),
             tintStrength: normalizeTintStrength(parsed.tintStrength),
+            zoomStep: normalizeZoomStep(parsed.zoomStep),
+            scrollStep: normalizeScrollStep(parsed.scrollStep),
             layoutPreset: normalizeLayoutPreset(parsed.layoutPreset),
-            showFullscreenButton: normalizeBoolean(parsed.showFullscreenButton, USER_CONFIG_DEFAULTS.showFullscreenButton)
+            showFullscreenButton: normalizeBoolean(parsed.showFullscreenButton, USER_CONFIG_DEFAULTS.showFullscreenButton),
+            centerAlign: normalizeCenterAlign(parsed.centerAlign)
         };
     } catch (err) {
         return { ...USER_CONFIG_DEFAULTS };
@@ -168,11 +188,15 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     settings.paperTintColor = userConfig.paperTintColor;
     settings.tintMethod = userConfig.tintMethod;
     settings.tintStrength = userConfig.tintStrength;
+    settings.zoomStep = userConfig.zoomStep;
+    settings.scrollStep = userConfig.scrollStep;
     settings.layoutPreset = userConfig.layoutPreset;
     settings.showFullscreenButton = userConfig.showFullscreenButton;
+    centerHorizontalAlign = normalizeCenterAlign(userConfig.centerAlign);
     applyLayoutPreset(settings.layoutPreset);
     applyFullscreenButtonVisibility(settings.showFullscreenButton);
     applyCenterAppearance();
+    applyCenterHorizontalAlign(false);
 
     if (shouldRerender && currentPdfDoc) {
         renderPdfPages();
@@ -180,7 +204,7 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
 }
 
 function openConfigPage() {
-    window.open('config.html', '_blank');
+    window.location.href = 'config.html';
 }
 
 function syncFullscreenButtonState() {
@@ -267,9 +291,9 @@ const initialUserConfig = loadUserConfig();
 
 const settings = {
     defaultZoom: 1.0,
-    scrollStep: 180,
+    scrollStep: initialUserConfig.scrollStep,
     pageLabelPrefix: 'Blatt',
-    zoomStep: 0.2,
+    zoomStep: initialUserConfig.zoomStep,
     pdfSharpness: initialUserConfig.pdfSharpness,
     paperTintPercent: initialUserConfig.paperTintPercent,
     paperTintColor: initialUserConfig.paperTintColor,
@@ -289,17 +313,22 @@ if (document.readyState === 'loading') {
         applyUserConfigAndRefresh(false);
         syncWideButtonState();
         syncFullscreenButtonState();
+        applyCenterHorizontalAlign(false);
+        bindContinuousZoomButtons();
     });
 } else {
     applyUserConfigAndRefresh(false);
     syncWideButtonState();
     syncFullscreenButtonState();
+    applyCenterHorizontalAlign(false);
+    bindContinuousZoomButtons();
 }
 
 document.addEventListener('fullscreenchange', syncFullscreenButtonState);
 
 const CANVAS_EXTRA_WIDTH = 6;
 const MIN_ZOOM = 0.4;
+const MAX_ZOOM = 2.6;
 
 let currentPdfDoc = null;
 let currentPdfPath = "";
@@ -308,22 +337,95 @@ let totalPages = 0;
 let currentZoom = settings.defaultZoom;
 let currentRenderToken = 0;
 let zoomRenderTimer = null;
+let centerHorizontalAlign = 'left';
+let nextRenderViewAnchor = null;
+let zoomHoldDelayTimer = null;
+let zoomHoldInterval = null;
+
+function captureViewAnchor(container) {
+    if (!container) return null;
+
+    const totalWidth = Math.max(1, container.scrollWidth);
+    const totalHeight = Math.max(1, container.scrollHeight);
+    const centerX = container.scrollLeft + (container.clientWidth / 2);
+    const centerY = container.scrollTop + (container.clientHeight / 2);
+
+    return {
+        xRatio: centerX / totalWidth,
+        yRatio: centerY / totalHeight
+    };
+}
+
+function applyViewAnchor(container, anchor) {
+    if (!container || !anchor) return;
+
+    const totalWidth = Math.max(1, container.scrollWidth);
+    const totalHeight = Math.max(1, container.scrollHeight);
+    const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+    const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+    const targetLeft = Math.max(0, Math.min(maxScrollLeft, (anchor.xRatio * totalWidth) - (container.clientWidth / 2)));
+    const targetTop = Math.max(0, Math.min(maxScrollTop, (anchor.yRatio * totalHeight) - (container.clientHeight / 2)));
+
+    container.scrollLeft = targetLeft;
+    container.scrollTop = targetTop;
+}
+
+function applyCenterHorizontalAlign(smooth = false) {
+    const container = document.getElementById('center-content');
+    const button = document.getElementById('alignBtn');
+    if (!container) return;
+
+    const isRight = centerHorizontalAlign === 'right';
+    container.style.justifyContent = isRight ? 'flex-end' : 'flex-start';
+
+    if (button) {
+        button.textContent = isRight ? 'Rechts' : 'Links';
+        button.style.background = isRight ? '#27ae60' : '#3498db';
+    }
+
+    if (isRight) {
+        const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+        if (smooth) {
+            container.scrollTo({ left: maxScrollLeft, top: container.scrollTop, behavior: 'smooth' });
+        } else {
+            container.scrollLeft = maxScrollLeft;
+        }
+    }
+}
+
+function toggleCenterAlign() {
+    centerHorizontalAlign = centerHorizontalAlign === 'left' ? 'right' : 'left';
+    applyCenterHorizontalAlign(true);
+
+    try {
+        const cfg = loadUserConfig();
+        cfg.centerAlign = centerHorizontalAlign;
+        localStorage.setItem(USER_CONFIG_KEY, JSON.stringify(cfg));
+    } catch (err) {
+    }
+}
 
 function alignCenterTopLeft(smooth = false) {
     const container = document.getElementById('center-content');
     if (!container) return;
 
+    const targetLeft = centerHorizontalAlign === 'right'
+        ? Math.max(0, container.scrollWidth - container.clientWidth)
+        : 0;
+
     if (smooth) {
-        container.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        container.scrollTo({ top: 0, left: targetLeft, behavior: 'smooth' });
     } else {
         container.scrollTop = 0;
-        container.scrollLeft = 0;
+        container.scrollLeft = targetLeft;
     }
 }
 
 function queueZoomRender() {
     if (!currentPdfDoc) return;
     if (zoomRenderTimer) clearTimeout(zoomRenderTimer);
+
+    nextRenderViewAnchor = captureViewAnchor(document.getElementById('center-content'));
 
     zoomRenderTimer = setTimeout(() => {
         renderPdfPages();
@@ -333,14 +435,15 @@ function queueZoomRender() {
 }
 
 function setZoom(zoomLevel, allowBelowMin = false) {
-    currentZoom = allowBelowMin ? Math.max(0.05, zoomLevel) : Math.max(MIN_ZOOM, zoomLevel);
+    const minZoom = allowBelowMin ? 0.05 : MIN_ZOOM;
+    currentZoom = Math.min(MAX_ZOOM, Math.max(minZoom, zoomLevel));
     queueZoomRender();
 }
 
 function zoomIn() {
-    const maxZoom = 1.0 + (settings.zoomStep * 4);
+    const maxZoom = MAX_ZOOM;
     if (currentZoom < maxZoom) {
-        currentZoom = Math.min(maxZoom, Math.round((currentZoom + settings.zoomStep) * 10) / 10);
+        currentZoom = Math.min(maxZoom, Math.round((currentZoom + settings.zoomStep) * 1000) / 1000);
         console.log('Zoom IN:', currentZoom);
         queueZoomRender();
     }
@@ -348,10 +451,50 @@ function zoomIn() {
 
 function zoomOut() {
     if (currentZoom > MIN_ZOOM) {
-        currentZoom = Math.max(MIN_ZOOM, Math.round((currentZoom - settings.zoomStep) * 10) / 10);
+        currentZoom = Math.max(MIN_ZOOM, Math.round((currentZoom - settings.zoomStep) * 1000) / 1000);
         console.log('Zoom OUT:', currentZoom);
         queueZoomRender();
     }
+}
+
+function stopContinuousZoom() {
+    if (zoomHoldDelayTimer) {
+        clearTimeout(zoomHoldDelayTimer);
+        zoomHoldDelayTimer = null;
+    }
+    if (zoomHoldInterval) {
+        clearInterval(zoomHoldInterval);
+        zoomHoldInterval = null;
+    }
+}
+
+function startContinuousZoom(direction) {
+    const doZoom = direction === 'in' ? zoomIn : zoomOut;
+    stopContinuousZoom();
+
+    zoomHoldDelayTimer = setTimeout(() => {
+        doZoom();
+        zoomHoldInterval = setInterval(doZoom, 90);
+    }, 320);
+}
+
+function bindContinuousZoomButtons() {
+    const inBtn = document.getElementById('zoomInBtn');
+    const outBtn = document.getElementById('zoomOutBtn');
+    if (!inBtn || !outBtn) return;
+
+    const bind = (btn, direction) => {
+        if (btn.dataset.holdBound === 'true') return;
+
+        btn.addEventListener('pointerdown', () => startContinuousZoom(direction));
+        btn.addEventListener('pointerup', stopContinuousZoom);
+        btn.addEventListener('pointerleave', stopContinuousZoom);
+        btn.addEventListener('pointercancel', stopContinuousZoom);
+        btn.dataset.holdBound = 'true';
+    };
+
+    bind(inBtn, 'in');
+    bind(outBtn, 'out');
 }
 
 function fitPdfWidth() {
@@ -412,7 +555,7 @@ function scrollPdf(direction) {
     const container = document.getElementById('center-content');
     if (!container) return;
 
-    const step = Math.max(100, Math.floor(container.clientHeight * 0.8));
+    const step = Math.max(40, Math.floor(settings.scrollStep));
     const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
     const targetTop = direction === 'up'
         ? Math.max(0, container.scrollTop - step)
@@ -539,10 +682,19 @@ function showPdfPages(pdfPath) {
 
     function encodePath(p) {
         if (!p) return '';
-        const parts = p.split('/');
-        if (parts.length === 1) return encodeURIComponent(parts[0]);
-        const last = encodeURIComponent(parts.pop());
-        return parts.join('/') + '/' + last;
+        const safeDecode = (segment) => {
+            try {
+                return decodeURIComponent(segment);
+            } catch {
+                return segment;
+            }
+        };
+
+        return String(p)
+            .split('/')
+            .filter(part => part !== '')
+            .map(part => encodeURIComponent(safeDecode(part)))
+            .join('/');
     }
 
     const paths = [
@@ -550,10 +702,7 @@ function showPdfPages(pdfPath) {
         ...uniqueFileNames.flatMap(name => [
             encodePath('Blätter/' + name),
             encodePath('Noten/Blätter/' + name),
-            encodePath('Noten/' + name),
-            encodePath('board_files/' + name),
-            encodePath('Cards_Export/' + name),
-            encodePath('History/' + name)
+            encodePath('Noten/' + name)
         ])
     ].filter(Boolean);
 
@@ -629,9 +778,10 @@ function renderPdfPages() {
 
     currentRenderToken++;
     const token = currentRenderToken;
+    const renderAnchor = nextRenderViewAnchor;
+    nextRenderViewAnchor = null;
 
     centerContainer.innerHTML = '';
-    alignCenterTopLeft(false);
 
     let pageNum = currentPageOffset + 1;
     const renderedPages = [];
@@ -640,7 +790,12 @@ function renderPdfPages() {
         if (pageNum > totalPages) {
             updatePageInfo(renderedPages);
             setTimeout(() => {
-                alignCenterTopLeft(false);
+                if (renderAnchor) {
+                    applyViewAnchor(centerContainer, renderAnchor);
+                } else {
+                    alignCenterTopLeft(false);
+                }
+                applyCenterHorizontalAlign(false);
                 updateScrollButtons();
             }, 100);
             return;
