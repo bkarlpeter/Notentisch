@@ -1,5 +1,22 @@
 # Changelog - Notentisch
 
+## [v2026.03.08.2] - 08. März 2026
+
+### Neu
+- **CenterAnsicht in XML erweitert**: `Zoom`, `Align`, `ZoomFokus`, `PosRelX`, `PosRelY` werden pro Blatt gespeichert.
+- **Access-Import-Flag**: `CenterAnsichtChanged=1` wird bei `Save Zoom` gesetzt.
+
+### Verbessert
+- **Config-Roundtrip**: Board-Stacks und Center-Ansicht werden beim Wechsel in die Config als Snapshot gesichert und beim Zurückkehren sofort wiederhergestellt.
+- **Standard-Config-Vorschau**: Schnellere Reihenfolge über PNG-Cache → XML/PDF-Ausschnitt → Bild-Fallback.
+- **Drop-Verhalten**: Ablage in Quadranten immer als Top-Insert mit konfigurierbarem Glow (`dropGlowDurationMs`).
+- **Drop ins Center**: Option `useZoomSettingsOnDrop` steuert die Anwendung blattbezogener Zoomwerte.
+
+### Technisch
+- `functions.js`: Session-Restore für Config↔Board um Board- und Center-Snapshot erweitert.
+- `filehandling.js`: XML-Lesen/Schreiben für Center-Profil + Changed-Flag ergänzt.
+- `config.html`: Vorschaupfad und Caching für schnelleren Wiederaufruf überarbeitet.
+
 ## [v2026.03.08] - 08. März 2026
 
 ### Neu
@@ -13,6 +30,7 @@
 - **Kartenrückgabe aus Center**: Beim Zurücklegen nur Layout-Update statt vollständigem Stack-Rebuild.
 - **PDF-Pfad-Fallbacks**: Robustere Kandidatenbildung, Encoding und Caching bei Pfadversuchen.
 - **Config-Navigation im gleichen Tab**: Rückweg ohne unnötigen neuen Browser-Tab.
+- **Config → Board Rückkehr dokumentiert**: README enthält jetzt ein klares Prozedere mit automatischem Smoke-Check und manuellem 4-Schritte-Test.
 
 ### Behoben
 - **Center wird geleert beim Zurücklegen**: Rückgabe einer Karte aus dem Center leert die Ansicht nicht mehr erzwungen.
@@ -23,6 +41,7 @@
 - `functions.js`: Config-Defaults erweitert (`centerAlign`, `zoomStep`, `scrollStep`), Continuous-Zoom-Binding ergänzt.
 - `filehandling.js`: Rückgabe-Logik aus Center auf Top-Insert + `updateStackLayout()` umgestellt.
 - `local_server.py`: No-Cache-Header ergänzt, um veraltete Browser-Caches zu vermeiden.
+- `test/e2e_config_return_check.ps1`: Neuer E2E-Smoketest für Config↔Board-Rückkehr.
 
 ## [v2.1] - Februar 2026
 

@@ -9,9 +9,224 @@ let centerHorizontalAlign = 'left';
 let nextRenderViewAnchor = null;
 let zoomHoldDelayTimer = null;
 let zoomHoldInterval = null;
+let renderedZoom = settings.defaultZoom;
+let isZoomHolding = false;
+const CONTINUOUS_STEP_FACTOR = 0.55;
+let suppressNextZoomClick = false;
+let continuousZoomDidRun = false;
+let pendingRelativeScrollPosition = null;
+
+function clampRelative(value) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.max(0, Math.min(1, parsed));
+}
+
+function getRelativeScrollPosition(container) {
+    if (!container) return { x: 0, y: 0 };
+    const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+    const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+    return {
+        x: maxScrollLeft > 0 ? clampRelative(container.scrollLeft / maxScrollLeft) : 0,
+        y: maxScrollTop > 0 ? clampRelative(container.scrollTop / maxScrollTop) : 0
+    };
+}
+
+function applyRelativeScrollPosition(container, relativePosition) {
+    if (!container || !relativePosition) return;
+    const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+    const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+    const x = clampRelative(relativePosition.x);
+    const y = clampRelative(relativePosition.y);
+    container.scrollLeft = Math.round(maxScrollLeft * x);
+    container.scrollTop = Math.round(maxScrollTop * y);
+}
 
 function setCenterHorizontalAlign(value) {
     centerHorizontalAlign = normalizeCenterAlign(value);
+}
+
+function normalizeCenterZoomFocusMode(value) {
+    const input = String(value || '').trim().toLowerCase();
+    if (input === 'left-top' || input === 'right-top' || input === 'center') return input;
+    if (centerHorizontalAlign === 'right') return 'right-top';
+    if (centerHorizontalAlign === 'middle') return 'center';
+    return 'left-top';
+}
+
+function getCenterPagesHost() {
+    return document.getElementById('center-pages-host');
+}
+
+function getTransformOriginForFocusMode() {
+    const focusMode = normalizeCenterZoomFocusMode(settings.centerZoomFocus);
+    if (focusMode === 'right-top') return '100% 0%';
+    if (focusMode === 'center') return '50% 50%';
+    return '0% 0%';
+}
+
+function applyFocusAnchorByMode(container, smooth = false) {
+    if (!container) return;
+
+    let focusMode = normalizeCenterZoomFocusMode(settings.centerZoomFocus);
+    if (centerHorizontalAlign === 'middle') {
+        focusMode = 'center';
+    } else if (centerHorizontalAlign === 'right') {
+        focusMode = 'right-top';
+    }
+    const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+    let targetLeft = 0;
+
+    if (focusMode === 'right-top') {
+        targetLeft = maxScrollLeft;
+    } else if (focusMode === 'center') {
+        targetLeft = Math.max(0, Math.round(maxScrollLeft / 2));
+    }
+
+    const behavior = smooth ? 'smooth' : 'auto';
+    container.scrollTo({ top: 0, left: targetLeft, behavior });
+}
+
+function applyLiveZoomPreview() {
+    const host = getCenterPagesHost();
+    if (!host) return;
+
+    const baseZoom = Math.max(0.001, renderedZoom);
+    const scale = currentZoom / baseZoom;
+    host.style.transformOrigin = getTransformOriginForFocusMode();
+    host.style.transform = 'scale(' + scale + ')';
+}
+
+function getCurrentCenterViewSettings() {
+    const container = document.getElementById('center-content');
+    const relativePosition = getRelativeScrollPosition(container);
+    return {
+        zoom: currentZoom,
+        align: centerHorizontalAlign,
+        zoomFocus: normalizeCenterZoomFocusMode(settings.centerZoomFocus),
+        posRelX: relativePosition.x,
+        posRelY: relativePosition.y
+    };
+}
+
+function getCenterDisplayMode() {
+    const center = document.getElementById('CENTER');
+    if (!center) return 'normal';
+    if (center.classList.contains('full')) return 'full';
+    if (center.classList.contains('wide')) return 'wide';
+    return 'normal';
+}
+
+function getCurrentCenterRuntimeState() {
+    if (!currentPdfPath) return null;
+    const viewSettings = getCurrentCenterViewSettings();
+    return {
+        pdfPath: currentPdfPath,
+        pageOffset: currentPageOffset,
+        zoom: viewSettings.zoom,
+        align: viewSettings.align,
+        zoomFocus: viewSettings.zoomFocus,
+        posRelX: viewSettings.posRelX,
+        posRelY: viewSettings.posRelY,
+        mode: getCenterDisplayMode()
+    };
+}
+
+function applyCenterDisplayMode(mode) {
+    const center = document.getElementById('CENTER');
+    if (!center) return;
+
+    function resetCenterSizing() {
+        center.style.right = '';
+        center.style.left = '';
+        center.style.top = '';
+        center.style.bottom = '';
+        center.style.width = '';
+        center.style.height = '';
+        center.style.maxWidth = '';
+        center.style.minWidth = '';
+        center.style.transform = '';
+    }
+
+    center.classList.remove('wide', 'full');
+    resetCenterSizing();
+
+    if (mode === 'full') {
+        center.classList.add('full');
+        center.style.left = '10px';
+        center.style.right = '10px';
+        center.style.top = '10px';
+        center.style.bottom = '10px';
+        center.style.width = 'auto';
+        center.style.height = 'auto';
+        center.style.maxWidth = 'none';
+        center.style.minWidth = '0';
+        center.style.transform = 'none';
+    } else if (mode === 'wide') {
+        center.classList.add('wide');
+        const rect = center.getBoundingClientRect();
+        const leftTarget = 30;
+        const fixedWidth = Math.max(680, Math.floor(rect.right - leftTarget));
+        center.style.right = 'auto';
+        center.style.left = leftTarget + 'px';
+        center.style.width = fixedWidth + 'px';
+        center.style.maxWidth = 'none';
+        center.style.minWidth = '0';
+        center.style.transform = 'translateY(-50%)';
+    }
+
+    syncWideButtonState();
+}
+
+function restoreCenterRuntimeState(state) {
+    if (!state || !state.pdfPath) return;
+
+    applyCenterViewSettings(state, { rerender: false });
+    applyCenterDisplayMode(state.mode);
+    showPdfPages(state.pdfPath, { pageOffset: state.pageOffset });
+}
+
+function applyCenterViewSettings(viewSettings, options = {}) {
+    const shouldRerender = !!options.rerender;
+    if (!viewSettings || typeof viewSettings !== 'object') return;
+
+    if (viewSettings.align) {
+        setCenterHorizontalAlign(viewSettings.align);
+        if (!viewSettings.zoomFocus) {
+            if (centerHorizontalAlign === 'right') settings.centerZoomFocus = 'right-top';
+            else if (centerHorizontalAlign === 'middle') settings.centerZoomFocus = 'center';
+            else settings.centerZoomFocus = 'left-top';
+        }
+    }
+
+    if (viewSettings.zoomFocus) {
+        settings.centerZoomFocus = normalizeCenterZoomFocusMode(viewSettings.zoomFocus);
+    }
+
+    if (Number.isFinite(Number(viewSettings.zoom))) {
+        const parsedZoom = Number(viewSettings.zoom);
+        currentZoom = Math.min(settings.centerMaxZoom, Math.max(settings.centerMinZoom, parsedZoom));
+    }
+
+    const hasRelativePosition = Number.isFinite(Number(viewSettings.posRelX)) || Number.isFinite(Number(viewSettings.posRelY));
+    if (hasRelativePosition) {
+        const normalizedAlign = normalizeCenterAlign(viewSettings.align || centerHorizontalAlign);
+        const normalizedFocus = normalizeCenterZoomFocusMode(viewSettings.zoomFocus || settings.centerZoomFocus);
+        let normalizedX = clampRelative(viewSettings.posRelX);
+        if ((normalizedAlign === 'middle' || normalizedFocus === 'center') && normalizedX <= 0.001) {
+            normalizedX = 0.5;
+        }
+        pendingRelativeScrollPosition = {
+            x: normalizedX,
+            y: clampRelative(viewSettings.posRelY)
+        };
+    }
+
+    applyCenterHorizontalAlign(false);
+
+    if (shouldRerender && currentPdfDoc) {
+        renderPdfPages();
+    }
 }
 
 function captureViewAnchor(container) {
@@ -42,36 +257,56 @@ function applyViewAnchor(container, anchor) {
     container.scrollTop = targetTop;
 }
 
-function applyCenterHorizontalAlign(smooth = false) {
+function applyCenterHorizontalAlign(smooth = false, keepPosition = false) {
     const container = document.getElementById('center-content');
     const button = document.getElementById('alignBtn');
     if (!container) return;
 
     const isRight = centerHorizontalAlign === 'right';
-    container.style.justifyContent = isRight ? 'flex-end' : 'flex-start';
+    const isMiddle = centerHorizontalAlign === 'middle';
+    container.style.justifyContent = isRight ? 'flex-end' : (isMiddle ? 'center' : 'flex-start');
 
     if (button) {
-        button.textContent = isRight ? 'Rechts' : 'Links';
-        button.style.background = isRight ? '#27ae60' : '#3498db';
+        if (isRight) {
+            button.textContent = 'Rechts';
+            button.style.background = '#27ae60';
+        } else if (isMiddle) {
+            button.textContent = 'Mitte';
+            button.style.background = '#f39c12';
+        } else {
+            button.textContent = 'Links';
+            button.style.background = '#3498db';
+        }
     }
 
-    if (isRight) {
-        const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
-        if (smooth) {
-            container.scrollTo({ left: maxScrollLeft, top: container.scrollTop, behavior: 'smooth' });
-        } else {
-            container.scrollLeft = maxScrollLeft;
-        }
+    if (!keepPosition) {
+        applyFocusAnchorByMode(container, smooth);
     }
 }
 
 function toggleCenterAlign() {
-    centerHorizontalAlign = centerHorizontalAlign === 'left' ? 'right' : 'left';
+    if (centerHorizontalAlign === 'left') {
+        centerHorizontalAlign = 'middle';
+    } else if (centerHorizontalAlign === 'middle') {
+        centerHorizontalAlign = 'right';
+    } else {
+        centerHorizontalAlign = 'left';
+    }
+
+    if (centerHorizontalAlign === 'right') {
+        settings.centerZoomFocus = 'right-top';
+    } else if (centerHorizontalAlign === 'middle') {
+        settings.centerZoomFocus = 'center';
+    } else {
+        settings.centerZoomFocus = 'left-top';
+    }
+
     applyCenterHorizontalAlign(true);
 
     try {
         const cfg = loadUserConfig();
         cfg.centerAlign = centerHorizontalAlign;
+        cfg.centerZoomFocus = settings.centerZoomFocus;
         localStorage.setItem(USER_CONFIG_KEY, JSON.stringify(cfg));
     } catch (err) {
     }
@@ -80,17 +315,7 @@ function toggleCenterAlign() {
 function alignCenterTopLeft(smooth = false) {
     const container = document.getElementById('center-content');
     if (!container) return;
-
-    const targetLeft = centerHorizontalAlign === 'right'
-        ? Math.max(0, container.scrollWidth - container.clientWidth)
-        : 0;
-
-    if (smooth) {
-        container.scrollTo({ top: 0, left: targetLeft, behavior: 'smooth' });
-    } else {
-        container.scrollTop = 0;
-        container.scrollLeft = targetLeft;
-    }
+    applyFocusAnchorByMode(container, smooth);
 }
 
 function queueZoomRender() {
@@ -99,11 +324,26 @@ function queueZoomRender() {
 
     nextRenderViewAnchor = captureViewAnchor(document.getElementById('center-content'));
 
+    applyLiveZoomPreview();
+
+    if (isZoomHolding) {
+        return;
+    }
+
     zoomRenderTimer = setTimeout(() => {
         renderPdfPages();
         setTimeout(() => updateScrollButtons(), 100);
         zoomRenderTimer = null;
     }, settings.centerZoomDebounceMs);
+}
+
+function stepZoom(deltaStep) {
+    const minZoom = settings.centerMinZoom;
+    const maxZoom = settings.centerMaxZoom;
+    const nextZoom = Math.min(maxZoom, Math.max(minZoom, Math.round((currentZoom + deltaStep) * 1000) / 1000));
+    if (nextZoom === currentZoom) return;
+    currentZoom = nextZoom;
+    queueZoomRender();
 }
 
 function setZoom(zoomLevel, allowBelowMin = false) {
@@ -113,23 +353,17 @@ function setZoom(zoomLevel, allowBelowMin = false) {
 }
 
 function zoomIn() {
-    const maxZoom = settings.centerMaxZoom;
-    if (currentZoom < maxZoom) {
-        currentZoom = Math.min(maxZoom, Math.round((currentZoom + settings.zoomStep) * 1000) / 1000);
-        console.log('Zoom IN:', currentZoom);
-        queueZoomRender();
-    }
+    stepZoom(settings.zoomStep);
+    console.log('Zoom IN:', currentZoom);
 }
 
 function zoomOut() {
-    if (currentZoom > settings.centerMinZoom) {
-        currentZoom = Math.max(settings.centerMinZoom, Math.round((currentZoom - settings.zoomStep) * 1000) / 1000);
-        console.log('Zoom OUT:', currentZoom);
-        queueZoomRender();
-    }
+    stepZoom(-settings.zoomStep);
+    console.log('Zoom OUT:', currentZoom);
 }
 
 function stopContinuousZoom() {
+    isZoomHolding = false;
     if (zoomHoldDelayTimer) {
         clearTimeout(zoomHoldDelayTimer);
         zoomHoldDelayTimer = null;
@@ -141,14 +375,20 @@ function stopContinuousZoom() {
 }
 
 function startContinuousZoom(direction) {
-    const doZoom = direction === 'in' ? zoomIn : zoomOut;
+    const doZoom = direction === 'in'
+        ? () => stepZoom(settings.zoomStep * CONTINUOUS_STEP_FACTOR)
+        : () => stepZoom(-settings.zoomStep * CONTINUOUS_STEP_FACTOR);
     stopContinuousZoom();
+    continuousZoomDidRun = false;
 
     if (!settings.centerZoomHoldEnabled) {
         return;
     }
 
+    isZoomHolding = true;
+
     zoomHoldDelayTimer = setTimeout(() => {
+        continuousZoomDidRun = true;
         doZoom();
         zoomHoldInterval = setInterval(doZoom, settings.centerZoomHoldIntervalMs);
     }, settings.centerZoomHoldDelayMs);
@@ -159,13 +399,34 @@ function bindContinuousZoomButtons() {
     const outBtn = document.getElementById('zoomOutBtn');
     if (!inBtn || !outBtn) return;
 
+    const finalizeContinuousZoom = () => {
+        stopContinuousZoom();
+        if (continuousZoomDidRun) {
+            suppressNextZoomClick = true;
+        }
+        const focusMode = normalizeCenterZoomFocusMode(settings.centerZoomFocus);
+        if (focusMode !== 'center') {
+            queueZoomRender();
+        }
+    };
+
     const bind = (btn, direction) => {
         if (btn.dataset.holdBound === 'true') return;
 
         btn.addEventListener('pointerdown', () => startContinuousZoom(direction));
-        btn.addEventListener('pointerup', stopContinuousZoom);
-        btn.addEventListener('pointerleave', stopContinuousZoom);
-        btn.addEventListener('pointercancel', stopContinuousZoom);
+        btn.addEventListener('pointerup', finalizeContinuousZoom);
+        btn.addEventListener('pointerleave', () => {
+            finalizeContinuousZoom();
+        });
+        btn.addEventListener('pointercancel', () => {
+            finalizeContinuousZoom();
+        });
+        btn.addEventListener('click', (event) => {
+            if (!suppressNextZoomClick) return;
+            suppressNextZoomClick = false;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }, true);
         btn.dataset.holdBound = 'true';
     };
 
@@ -325,7 +586,7 @@ function syncWideButtonState() {
     }
 }
 
-function showPdfPages(pdfPath) {
+function showPdfPages(pdfPath, options = {}) {
     const rawPath = String(pdfPath || '');
     const hashParts = rawPath.split('#').map(p => p.trim()).filter(Boolean);
     const pdfParts = hashParts.filter(p => p.toLowerCase().includes('.pdf'));
@@ -346,7 +607,10 @@ function showPdfPages(pdfPath) {
     const uniqueFileNames = [...new Set(baseCandidates)];
 
     currentPdfPath = normalizedActual;
-    currentPageOffset = 0;
+    const requestedOffset = Number.isFinite(Number(options.pageOffset))
+        ? Math.max(0, Math.floor(Number(options.pageOffset)))
+        : 0;
+    currentPageOffset = requestedOffset;
 
     function encodePath(p) {
         if (!p) return '';
@@ -393,6 +657,7 @@ function showPdfPages(pdfPath) {
             console.log('PDF geladen von:', serverPath);
             currentPdfDoc = pdf;
             totalPages = pdf.numPages;
+            currentPageOffset = Math.min(currentPageOffset, Math.max(0, totalPages - 1));
             renderPdfPages();
         }).catch(() => {
             console.log('Fehler bei ' + serverPath);
@@ -449,22 +714,42 @@ function renderPdfPages() {
     const renderAnchor = nextRenderViewAnchor;
     nextRenderViewAnchor = null;
 
-    centerContainer.innerHTML = '';
+    const previousHost = getCenterPagesHost();
+    const pagesHost = document.createElement('div');
+    pagesHost.id = 'center-pages-host-next';
+    pagesHost.style.display = 'flex';
+    pagesHost.style.alignItems = 'flex-start';
+    pagesHost.style.transformOrigin = getTransformOriginForFocusMode();
+    pagesHost.style.transform = 'none';
 
     let pageNum = currentPageOffset + 1;
     const renderedPages = [];
 
     function renderNextPage() {
         if (pageNum > totalPages) {
+            if (token !== currentRenderToken) return;
+
+            if (previousHost && previousHost.parentNode === centerContainer) {
+                centerContainer.replaceChild(pagesHost, previousHost);
+            } else {
+                centerContainer.innerHTML = '';
+                centerContainer.appendChild(pagesHost);
+            }
+            pagesHost.id = 'center-pages-host';
+
             updatePageInfo(renderedPages);
             setTimeout(() => {
-                if (renderAnchor) {
+                if (pendingRelativeScrollPosition) {
+                    applyRelativeScrollPosition(centerContainer, pendingRelativeScrollPosition);
+                    pendingRelativeScrollPosition = null;
+                } else if (renderAnchor) {
                     applyViewAnchor(centerContainer, renderAnchor);
                 } else {
-                    alignCenterTopLeft(false);
+                    applyFocusAnchorByMode(centerContainer, false);
                 }
-                applyCenterHorizontalAlign(false);
+                applyCenterHorizontalAlign(false, true);
                 updateScrollButtons();
+                renderedZoom = currentZoom;
             }, 100);
             return;
         }
@@ -498,7 +783,7 @@ function renderPdfPages() {
             page.render(renderContext).promise.then(() => {
                 if (token === currentRenderToken) {
                     applyPaperTintOverlay(context, canvas);
-                    centerContainer.appendChild(canvas);
+                    pagesHost.appendChild(canvas);
                     renderedPages.push(pageNum);
                     pageNum++;
                     renderNextPage();
@@ -574,6 +859,8 @@ function initializeCenterView() {
     const userConfig = loadUserConfig();
     setCenterHorizontalAlign(userConfig.centerAlign);
     currentZoom = userConfig.centerDefaultZoom;
+    renderedZoom = currentZoom;
+    settings.centerZoomFocus = normalizeCenterZoomFocusMode(userConfig.centerZoomFocus);
     syncWideButtonState();
     applyCenterHorizontalAlign(false);
     bindContinuousZoomButtons();

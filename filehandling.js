@@ -3,6 +3,7 @@ let xmlFileName = null;
 let xmlFileHandle = null;
 let xmlFolderHandle = null;
 let lastCardIdFromCenter = null;
+let activeCenterCardId = null;
 let saveDateBlinkTimer = null;
 let saveWarnBlinkTimer = null;
 let hasUnsavedChanges = false;
@@ -340,6 +341,120 @@ const MAX_STACK_CARDS = 10;
 function getCardNodes() {
     if (!xmlData) return [];
     return xmlData.querySelectorAll('NotenTisch, Notentisch');
+}
+
+function getCardNodeById(cardId) {
+    if (!xmlData) return null;
+    const index = parseInt(cardId, 10);
+    if (!Number.isFinite(index)) return null;
+    return getCardNodes()[index] || null;
+}
+
+function readCenterSettingsFromXml(cardId) {
+    const cardNode = getCardNodeById(cardId);
+    if (!cardNode) return null;
+
+    const centerNode = cardNode.querySelector('CenterAnsicht');
+    if (!centerNode) return null;
+
+    const zoomText = centerNode.querySelector('Zoom')?.textContent || '';
+    const alignText = centerNode.querySelector('Align')?.textContent || '';
+    const focusText = centerNode.querySelector('ZoomFokus')?.textContent || '';
+    const posRelXText = centerNode.querySelector('PosRelX')?.textContent || '';
+    const posRelYText = centerNode.querySelector('PosRelY')?.textContent || '';
+    const zoom = Number(zoomText);
+    const posRelX = Number(posRelXText);
+    const posRelY = Number(posRelYText);
+
+    return {
+        zoom: Number.isFinite(zoom) ? zoom : null,
+        align: alignText || null,
+        zoomFocus: focusText || null,
+        posRelX: Number.isFinite(posRelX) ? Math.max(0, Math.min(1, posRelX)) : null,
+        posRelY: Number.isFinite(posRelY) ? Math.max(0, Math.min(1, posRelY)) : null
+    };
+}
+
+function applyCenterSettingsFromXml(cardId) {
+    const settingsFromXml = readCenterSettingsFromXml(cardId);
+    if (!settingsFromXml) return;
+    if (typeof applyCenterViewSettings === 'function') {
+        applyCenterViewSettings(settingsFromXml, { rerender: false });
+    }
+}
+
+function saveCenterSettingsForActiveCard() {
+    if (!xmlData) {
+        alert('Bitte zuerst XML laden.');
+        return;
+    }
+
+    const activeCard = document.querySelector('.card-container.in-center');
+    if (!activeCard) {
+        alert('Bitte zuerst ein Blatt ins CENTER legen.');
+        return;
+    }
+
+    if (typeof getCurrentCenterViewSettings !== 'function') {
+        alert('Center-Einstellungen konnten nicht gelesen werden.');
+        return;
+    }
+
+    const cardId = activeCard.dataset.cardid;
+    const cardNode = getCardNodeById(cardId);
+    if (!cardNode) {
+        alert('Zu diesem Blatt wurde kein XML-Eintrag gefunden.');
+        return;
+    }
+
+    const currentView = getCurrentCenterViewSettings();
+
+    let centerNode = cardNode.querySelector('CenterAnsicht');
+    if (!centerNode) {
+        centerNode = xmlData.createElement('CenterAnsicht');
+        cardNode.appendChild(centerNode);
+    }
+
+    function upsertCenterChild(tagName, value) {
+        let child = centerNode.querySelector(tagName);
+        if (!child) {
+            child = xmlData.createElement(tagName);
+            centerNode.appendChild(child);
+        }
+        child.textContent = String(value ?? '');
+    }
+
+    function upsertCardChild(tagName, value) {
+        let child = cardNode.querySelector(tagName);
+        if (!child) {
+            child = xmlData.createElement(tagName);
+            cardNode.appendChild(child);
+        }
+        child.textContent = String(value ?? '');
+    }
+
+    upsertCenterChild('Zoom', Number(currentView.zoom || 1).toFixed(3));
+    upsertCenterChild('Align', currentView.align || 'left');
+    upsertCenterChild('ZoomFokus', currentView.zoomFocus || 'left-top');
+    upsertCenterChild('PosRelX', Number(currentView.posRelX ?? 0).toFixed(4));
+    upsertCenterChild('PosRelY', Number(currentView.posRelY ?? 0).toFixed(4));
+
+    // Access-Import-Flag: zeigt an, dass CenterAnsicht-Daten neu/aktualisiert sind.
+    upsertCardChild('CenterAnsichtChanged', '1');
+
+    saveXml(true);
+    setStatusText('Center-Einstellungen für dieses Blatt in XML gespeichert.');
+}
+
+function setStatusText(text) {
+    const hint = document.getElementById('saveDateHint');
+    if (!hint) return;
+    hint.textContent = text;
+    setTimeout(() => {
+        if (hint.textContent === text) {
+            hint.textContent = getModeHintText();
+        }
+    }, 2200);
 }
 
 let quadrantOffsets = { Q1: 0, Q2: 0, Q3: 0, Q4: 0 };
@@ -712,6 +827,219 @@ function drag(event) {
     console.log('Drag started: ' + event.currentTarget.id);
 }
 
+function getUserConfigForDropBehavior() {
+    if (typeof loadUserConfig === 'function') {
+        return loadUserConfig();
+    }
+    return {
+        useZoomSettingsOnDrop: true,
+        dropGlowDurationMs: 1400
+    };
+}
+
+function placeCardAtTopOfQuadrant(targetQuadrant, card) {
+    if (!targetQuadrant || !card) return;
+    const firstCard = targetQuadrant.querySelector('.card-container');
+    if (firstCard) {
+        targetQuadrant.insertBefore(card, firstCard);
+        return;
+    }
+    const controls = targetQuadrant.querySelector('.quadrant-stack-controls');
+    if (controls) {
+        targetQuadrant.insertBefore(card, controls);
+        return;
+    }
+    targetQuadrant.appendChild(card);
+}
+
+function applyDropGlow(cardElement, durationMs) {
+    if (!cardElement) return;
+    const duration = Math.max(0, Math.floor(Number(durationMs) || 0));
+    if (duration <= 0) return;
+
+    cardElement.classList.remove('drop-glow');
+    void cardElement.offsetWidth;
+    cardElement.classList.add('drop-glow');
+
+    setTimeout(() => {
+        cardElement.classList.remove('drop-glow');
+    }, duration);
+}
+
+function clearCenterAfterCardExit() {
+    if (typeof currentPdfDoc !== 'undefined') currentPdfDoc = null;
+    if (typeof currentPdfPath !== 'undefined') currentPdfPath = '';
+    if (typeof totalPages !== 'undefined') totalPages = 0;
+    if (typeof currentPageOffset !== 'undefined') currentPageOffset = 0;
+    const centerContainer = document.getElementById('center-content');
+    if (centerContainer) {
+        centerContainer.innerHTML = '';
+    }
+    if (typeof updatePageInfo === 'function') {
+        updatePageInfo([]);
+    }
+    if (typeof updateScrollButtons === 'function') {
+        updateScrollButtons();
+    }
+}
+
+function captureCenterVisualSnapshot() {
+    const centerContainer = document.getElementById('center-content');
+    const pageInfo = document.getElementById('pageInfo');
+    if (!centerContainer) return null;
+
+    const canvases = Array.from(centerContainer.querySelectorAll('#center-pages-host canvas'));
+    if (!canvases.length) return null;
+
+    const pages = canvases.map((canvas) => ({
+        dataUrl: canvas.toDataURL('image/png'),
+        width: canvas.style.width || '',
+        height: canvas.style.height || ''
+    }));
+
+    return {
+        pages,
+        pageInfoText: pageInfo ? pageInfo.textContent : '',
+        scrollLeft: centerContainer.scrollLeft || 0,
+        scrollTop: centerContainer.scrollTop || 0
+    };
+}
+
+function restoreCenterVisualSnapshot(snapshot) {
+    if (!snapshot || !Array.isArray(snapshot.pages) || !snapshot.pages.length) return false;
+    const centerContainer = document.getElementById('center-content');
+    if (!centerContainer) return false;
+
+    const host = document.createElement('div');
+    host.id = 'center-pages-host';
+    host.style.display = 'flex';
+    host.style.alignItems = 'flex-start';
+
+    snapshot.pages.forEach((page) => {
+        if (!page || !page.dataUrl) return;
+        const img = document.createElement('img');
+        img.src = page.dataUrl;
+        img.style.width = page.width || 'auto';
+        img.style.height = page.height || 'auto';
+        img.style.border = '1px solid #555';
+        img.style.borderRadius = '4px';
+        img.style.margin = '2px';
+        host.appendChild(img);
+    });
+
+    centerContainer.innerHTML = '';
+    centerContainer.appendChild(host);
+
+    if (Number.isFinite(Number(snapshot.scrollLeft))) {
+        centerContainer.scrollLeft = Number(snapshot.scrollLeft);
+    }
+    if (Number.isFinite(Number(snapshot.scrollTop))) {
+        centerContainer.scrollTop = Number(snapshot.scrollTop);
+    }
+
+    const pageInfo = document.getElementById('pageInfo');
+    if (pageInfo && typeof snapshot.pageInfoText === 'string') {
+        pageInfo.textContent = snapshot.pageInfoText;
+    }
+
+    if (typeof updateScrollButtons === 'function') {
+        setTimeout(() => updateScrollButtons(), 30);
+    }
+
+    return true;
+}
+
+function getBoardSnapshotForConfig() {
+    if (!xmlData) return null;
+
+    let xmlText = '';
+    try {
+        xmlText = new XMLSerializer().serializeToString(xmlData);
+    } catch {
+        return null;
+    }
+
+    return {
+        xmlText,
+        xmlFileName: xmlFileName || null,
+        quadrantOffsets: { ...quadrantOffsets },
+        quadrantMarkup: {
+            Q1: document.getElementById('Q1') ? document.getElementById('Q1').innerHTML : '',
+            Q2: document.getElementById('Q2') ? document.getElementById('Q2').innerHTML : '',
+            Q3: document.getElementById('Q3') ? document.getElementById('Q3').innerHTML : '',
+            Q4: document.getElementById('Q4') ? document.getElementById('Q4').innerHTML : ''
+        },
+        centerVisual: captureCenterVisualSnapshot(),
+        stackCount: getStackCount(),
+        lastCardIdFromCenter,
+        activeCenterCardId
+    };
+}
+
+function restoreBoardSnapshotFromConfig(snapshot) {
+    if (!snapshot || !snapshot.xmlText) return false;
+
+    try {
+        const parsedXml = new DOMParser().parseFromString(snapshot.xmlText, 'text/xml');
+        xmlData = parsedXml;
+        if (snapshot.xmlFileName) {
+            xmlFileName = snapshot.xmlFileName;
+        }
+    } catch {
+        return false;
+    }
+
+    if (snapshot.quadrantOffsets && typeof snapshot.quadrantOffsets === 'object') {
+        quadrantOffsets = {
+            Q1: Number.isFinite(Number(snapshot.quadrantOffsets.Q1)) ? Number(snapshot.quadrantOffsets.Q1) : 0,
+            Q2: Number.isFinite(Number(snapshot.quadrantOffsets.Q2)) ? Number(snapshot.quadrantOffsets.Q2) : 0,
+            Q3: Number.isFinite(Number(snapshot.quadrantOffsets.Q3)) ? Number(snapshot.quadrantOffsets.Q3) : 0,
+            Q4: Number.isFinite(Number(snapshot.quadrantOffsets.Q4)) ? Number(snapshot.quadrantOffsets.Q4) : 0
+        };
+    }
+
+    const stackInput = document.getElementById('stackCount');
+    if (stackInput && Number.isFinite(Number(snapshot.stackCount))) {
+        stackInput.value = String(Math.max(1, Math.min(MAX_STACK_CARDS, Number(snapshot.stackCount))));
+    }
+
+    lastCardIdFromCenter = snapshot.lastCardIdFromCenter ?? null;
+    activeCenterCardId = snapshot.activeCenterCardId ?? null;
+
+    const hasQuadrantMarkup = !!(snapshot.quadrantMarkup && typeof snapshot.quadrantMarkup === 'object');
+    if (hasQuadrantMarkup) {
+        ['Q1', 'Q2', 'Q3', 'Q4'].forEach((id) => {
+            const target = document.getElementById(id);
+            if (!target) return;
+            target.innerHTML = String(snapshot.quadrantMarkup[id] || '');
+            const cards = target.querySelectorAll('.card-container');
+            cards.forEach((card) => {
+                card.addEventListener('dragstart', drag);
+                card.addEventListener('dblclick', moveCardToQ2);
+            });
+        });
+        setupDropListeners();
+        updateStackLayout();
+    } else {
+        renderBoard();
+        updateStackLayout();
+    }
+
+    if (activeCenterCardId !== null && activeCenterCardId !== undefined) {
+        const centerCard = document.querySelector('.card-container[data-cardid="' + activeCenterCardId + '"]');
+        if (centerCard) {
+            centerCard.classList.add('in-center');
+        }
+    }
+
+    const centerVisualRestored = restoreCenterVisualSnapshot(snapshot.centerVisual);
+
+    return {
+        restored: true,
+        centerVisualRestored
+    };
+}
+
 function drop(event) {
     event.preventDefault();
     event.stopPropagation();
@@ -738,17 +1066,29 @@ function drop(event) {
             return;
         }
         if (card.dataset.pdf) {
+            const userConfig = getUserConfigForDropBehavior();
             card.classList.add('in-center');
-            showPdfPages(card.dataset.pdf);
             lastCardIdFromCenter = card.dataset.cardid;  // Merke für saveDate
+            activeCenterCardId = card.dataset.cardid;
+            if (userConfig.useZoomSettingsOnDrop) {
+                applyCenterSettingsFromXml(card.dataset.cardid);
+            }
+            showPdfPages(card.dataset.pdf);
             // Reset Button wenn neue Karte ins CENTER kommt
             setSaveDateState(false, getModeHintText());
             console.log('Moved to center, lastCardIdFromCenter = ' + lastCardIdFromCenter);
         }
     } else if (isQuadrant) {
-        event.currentTarget.appendChild(card);
+        const userConfig = getUserConfigForDropBehavior();
+        const cameFromCenter = card.classList.contains('in-center');
+        placeCardAtTopOfQuadrant(event.currentTarget, card);
         card.classList.remove('in-center');
+        applyDropGlow(card, userConfig.dropGlowDurationMs);
         lastCardIdFromCenter = card.dataset.cardid;  // Merke für saveDate auch nach ablegen
+        if (cameFromCenter) {
+            activeCenterCardId = null;
+            clearCenterAfterCardExit();
+        }
         saveDateToXml(card.dataset.cardid, targetId);
         if (isPlayMode) {
             savePlayedDateToXml(card.dataset.cardid);
@@ -932,16 +1272,24 @@ async function loadSavedFolder() {
 }
 
 function moveCardFromCenterTo(quadrantId) {
-    const card = document.querySelector('.card-container.in-center');
+    let card = null;
+    if (activeCenterCardId !== null && activeCenterCardId !== undefined) {
+        card = document.querySelector('.card-container[data-cardid="' + activeCenterCardId + '"]');
+    }
+    if (!card) {
+        card = document.querySelector('.card-container.in-center');
+    }
+    if (!card && lastCardIdFromCenter !== null && lastCardIdFromCenter !== undefined) {
+        card = document.querySelector('.card-container[data-cardid="' + lastCardIdFromCenter + '"]');
+    }
     const targetQuadrant = document.getElementById(quadrantId);
     if (card && targetQuadrant) {
-        const controls = targetQuadrant.querySelector('.quadrant-stack-controls');
-        if (controls) {
-            targetQuadrant.insertBefore(card, controls);
-        } else {
-            targetQuadrant.appendChild(card);
-        }
+        const userConfig = getUserConfigForDropBehavior();
+        placeCardAtTopOfQuadrant(targetQuadrant, card);
         card.classList.remove('in-center');
+        applyDropGlow(card, userConfig.dropGlowDurationMs);
+        activeCenterCardId = null;
+        clearCenterAfterCardExit();
         lastCardIdFromCenter = card.dataset.cardid;
         saveDateToXml(card.dataset.cardid, quadrantId);
         if (isPlayMode) {

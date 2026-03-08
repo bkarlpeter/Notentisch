@@ -137,11 +137,16 @@ Das Skript nutzt automatisch:
 - `WIDE / NORMAL`: vergroessert CENTER nach links; rechter Rand bleibt fix
 - CENTER-Ausrichtung: `Links/Rechts` per Button, persistent ueber `centerAlign`
 - CENTER-Scroll: Schrittweite ueber `scrollStep`, Scroll-Verhalten ueber `centerSmoothScroll`
+- `Save Zoom`: speichert die aktuellen Center-Werte des aktiven Blatts in die XML (`CenterAnsicht`)
+- `Benutze Zoom-Settings beim Drop`: steuert, ob beim Drop ins CENTER die Blatt-spezifischen XML-Werte angewendet werden
+- Config-Vorschau: nutzt zuerst lokalen PNG-Cache, dann XML/PDF-Fund (Ausschnitt) und sonst Bild-Fallback
 - `Blaetter`: sichtbare Karten pro Quadrant einstellen (max. 10)
 - `Ende`: beendet den lokalen Server und schliesst die Ansicht
 - Quadranten-`/`: im jeweiligen Stapel blaettern
 - Karte ins CENTER ziehen: PDF anzeigen
 - Karte aus CENTER in Quadrant verschieben (Drop oder Klick auf Q1-Q4): `Arbeitsstatus` aktualisieren
+- Beim Ablegen in einen Quadranten landet das Blatt immer oben im Stapel (Top-Insert) und der Kartenrahmen glüht kurz nach
+- Rücksprung von Config ins Board: Stapel + Center werden aus Session-Snapshot direkt wiederhergestellt
 - Modus `Spielen`: beim Ablegen wird `zuletztgespielt` gesetzt
 - Modus `Sichten`: beim Ablegen wird kein `zuletztgespielt` gesetzt
 - Beim Ablegen auf `Q1` bis `Q4` wird die XML automatisch gespeichert
@@ -152,6 +157,18 @@ Das Skript nutzt automatisch:
 - Persistiert wird in `localStorage` unter `notentischUserConfig`.
 - Bearbeitung erfolgt in `config.html` (inkl. Advanced-Felder fuer Center/Zoom).
 - Laufzeitnutzung erfolgt in `center-view.js` und `functions.js`.
+- `useZoomSettingsOnDrop` (bool): XML-`CenterAnsicht` beim Drop ins CENTER anwenden (`true`/`false`, Default `true`).
+- `dropGlowDurationMs` (integer): Dauer des Nachglüh-Rahmens nach Ablage in Quadrant (Millisekunden, Default `1400`).
+
+### CenterAnsicht je Blatt (XML)
+
+- `Save Zoom` schreibt pro Blatt in `<CenterAnsicht>`:
+  - `<Zoom>` (decimal)
+  - `<Align>` (`left|middle|right`)
+  - `<ZoomFokus>` (`left-top|right-top|center`)
+  - `<PosRelX>` (decimal 0..1)
+  - `<PosRelY>` (decimal 0..1)
+- Zusätzlich wird `<CenterAnsichtChanged>1</CenterAnsichtChanged>` gesetzt für Access-Übernahmefilter.
 
 ### Speichern
 
@@ -182,9 +199,11 @@ Erwartete Haupteintraege:
   - `<Speicherort>`
   - `<Arbeitsstatus>`
   - `<zuletztgespielt>` (optional, wird bei Bedarf erstellt)
+  - `<CenterAnsicht>` (optional mit `<Zoom>`, `<Align>`, `<ZoomFokus>`, `<PosRelX>`, `<PosRelY>`)
+  - `<CenterAnsichtChanged>` (optional, `1` = geänderte Center-Werte für Access-Übernahme)
 
 Status-Mapping der Quadranten:
-die blötter werden auf vier Felder rund um das Center verteilt ("Quadranten") enstpr. Status:
+die Blätter werden auf vier Felder rund um das Center verteilt ("Quadranten") enstpr. Status:
 - `zurueckgestellt` -> Q1
 - `wiederholen` -> Q2
 - `geuebt` -> Q3
@@ -205,11 +224,31 @@ die blötter werden auf vier Felder rund um das Center verteilt ("Quadranten") e
 
 - `test/` enthält automatisierte Tests für das Projekt (z.B. mit Mocha/Node.js).
 - Beispiel: `hello.test.js` prüft einfache Funktionen mit `assert`.
+- E2E-Smoketest für Config/Board-Rückkehr: `e2e_config_return_check.ps1`
 - Zum Ausführen der Tests im Projektordner:
 
 ```powershell
 cd test
 node hello.test.js
 ```
+
+### Config ↔ Board Rückkehr testen
+
+Automatischer Smoke-Check:
+
+```powershell
+./test/e2e_config_return_check.ps1
+```
+
+Der Check prüft:
+- Erreichbarkeit von `board.html`, `config.html`, `advanced_config.html` (HTTP 200)
+- Vorhandene Restore-Hooks in `functions.js` und `center-view.js`
+- Vorhandene Navigationselemente in `config.html`
+
+Manueller Kurztest (4 Schritte):
+1. `board.html` öffnen und ein Blatt ins CENTER ziehen.
+2. Zoom/Ausrichtung ändern (z.B. Mitte + Zoom +).
+3. Config über `C` öffnen, dann `Zurück zum Board`.
+4. Prüfen: gleiches Blatt, gleicher Zoom, gleiche Ausrichtung, gleicher CENTER-Modus.
 
 Du kannst eigene Tests ergänzen, um Funktionen und Module automatisch zu überprüfen. Für größere Test-Suiten empfiehlt sich ein Framework wie Mocha oder Jest.

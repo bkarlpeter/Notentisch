@@ -32,7 +32,13 @@
 
     function normalizeCenterAlign(value, fallback) {
         const input = String(value || '').trim().toLowerCase();
-        if (input === 'left' || input === 'right') return input;
+        if (input === 'left' || input === 'right' || input === 'middle') return input;
+        return fallback;
+    }
+
+    function normalizeCenterZoomFocus(value, fallback) {
+        const input = String(value || '').trim().toLowerCase();
+        if (input === 'left-top' || input === 'right-top' || input === 'center') return input;
         return fallback;
     }
 
@@ -77,6 +83,9 @@
         // Horizontale Grundausrichtung der Seiten im Center.
         centerAlign: 'left',
 
+        // Zoom-Fokuspunkt: links/oben, rechts/oben oder Center-Mitte.
+        centerZoomFocus: 'left-top',
+
         // Startzoom beim Reset/Fit-Höhe.
         centerDefaultZoom: 1.0,
 
@@ -105,7 +114,13 @@
         centerFitMonitorPages: 3,
 
         // Smooth-Scroll im Center aktivieren/deaktivieren.
-        centerSmoothScroll: true
+        centerSmoothScroll: true,
+
+        // Beim Drop ins Center gespeicherte Zoom-/Ausrichtungswerte aus XML automatisch anwenden.
+        useZoomSettingsOnDrop: true,
+
+        // Nachglühen-Rahmen beim Ablegen in Quadranten (Millisekunden).
+        dropGlowDurationMs: 1400
     };
 
     window.notentischNormalizeUserConfig = function notentischNormalizeUserConfig(rawConfig) {
@@ -126,6 +141,7 @@
             layoutPreset: normalizeLayoutPreset(parsed.layoutPreset, defaults.layoutPreset),
             showFullscreenButton: normalizeBoolean(parsed.showFullscreenButton, defaults.showFullscreenButton),
             centerAlign: normalizeCenterAlign(parsed.centerAlign, defaults.centerAlign),
+            centerZoomFocus: normalizeCenterZoomFocus(parsed.centerZoomFocus, defaults.centerZoomFocus),
             centerDefaultZoom: clampNumber(parsed.centerDefaultZoom, 0.05, 2.0, defaults.centerDefaultZoom),
             centerMinZoom: clampNumber(parsed.centerMinZoom, 0.05, 2.0, defaults.centerMinZoom),
             centerMaxZoom: clampNumber(parsed.centerMaxZoom, 0.2, 5.0, defaults.centerMaxZoom),
@@ -135,7 +151,9 @@
             centerZoomHoldIntervalMs: clampNumber(parsed.centerZoomHoldIntervalMs, 30, 400, defaults.centerZoomHoldIntervalMs),
             centerCanvasExtraWidth: clampNumber(parsed.centerCanvasExtraWidth, 0, 40, defaults.centerCanvasExtraWidth),
             centerFitMonitorPages: clampNumber(parsed.centerFitMonitorPages, 1, 6, defaults.centerFitMonitorPages),
-            centerSmoothScroll: normalizeBoolean(parsed.centerSmoothScroll, defaults.centerSmoothScroll)
+            centerSmoothScroll: normalizeBoolean(parsed.centerSmoothScroll, defaults.centerSmoothScroll),
+            useZoomSettingsOnDrop: normalizeBoolean(parsed.useZoomSettingsOnDrop, defaults.useZoomSettingsOnDrop),
+            dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, defaults.dropGlowDurationMs)
         };
     };
 })();

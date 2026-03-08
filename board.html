@@ -368,6 +368,17 @@
             z-index: 100 !important;
         }
 
+        .card-container.drop-glow {
+            z-index: 160 !important;
+        }
+
+        .card-container.drop-glow .card {
+            box-shadow:
+                0 0 0 2px rgba(52, 152, 219, 0.95),
+                0 0 22px rgba(52, 152, 219, 0.85),
+                0 8px 20px rgba(0,0,0,0.8);
+        }
+
         .card-container.in-center { display: none; }
 
         .card {
@@ -462,6 +473,7 @@
         
         <button class="btn toggle" onclick="toggleWide()" id="wideBtn">Norm</button>
         <button class="btn btn-small" onclick="toggleCenterAlign()" id="alignBtn">Links</button>
+        <button class="btn btn-small" onclick="saveCenterSettingsForActiveCard()" id="saveCenterSettingsBtn">Save Zoom</button>
         <span class="separator">|</span>
         <button class="btn btn-small" onclick="previousPage()">&lt;</button>
         <span id="pageInfo" class="page-info"></span>

@@ -1,4 +1,5 @@
 const USER_CONFIG_KEY = 'notentischUserConfig';
+const BOARD_SESSION_STATE_KEY = 'notentischBoardSessionState';
 const USER_CONFIG_DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS
     ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS }
     : {
@@ -13,6 +14,7 @@ const USER_CONFIG_DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS
         layoutPreset: 'standard',
         showFullscreenButton: true,
         centerAlign: 'left',
+        centerZoomFocus: 'left-top',
         centerDefaultZoom: 1.0,
         centerMinZoom: 0.4,
         centerMaxZoom: 2.6,
@@ -22,7 +24,9 @@ const USER_CONFIG_DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS
         centerZoomHoldIntervalMs: 90,
         centerCanvasExtraWidth: 6,
         centerFitMonitorPages: 3,
-        centerSmoothScroll: true
+        centerSmoothScroll: true,
+        useZoomSettingsOnDrop: true,
+        dropGlowDurationMs: 1400
     };
 
 function clampNumber(value, min, max, fallback) {
@@ -63,8 +67,14 @@ function normalizeScrollStep(value) {
 
 function normalizeCenterAlign(value) {
     const input = String(value || '').trim().toLowerCase();
-    if (input === 'left' || input === 'right') return input;
+    if (input === 'left' || input === 'right' || input === 'middle') return input;
     return USER_CONFIG_DEFAULTS.centerAlign;
+}
+
+function normalizeCenterZoomFocus(value) {
+    const input = String(value || '').trim().toLowerCase();
+    if (input === 'left-top' || input === 'right-top' || input === 'center') return input;
+    return USER_CONFIG_DEFAULTS.centerZoomFocus;
 }
 
 function normalizeBoolean(value, fallback) {
@@ -123,6 +133,7 @@ function loadUserConfig() {
             layoutPreset: normalizeLayoutPreset(parsed.layoutPreset),
             showFullscreenButton: normalizeBoolean(parsed.showFullscreenButton, USER_CONFIG_DEFAULTS.showFullscreenButton),
             centerAlign: normalizeCenterAlign(parsed.centerAlign),
+            centerZoomFocus: normalizeCenterZoomFocus(parsed.centerZoomFocus),
             centerDefaultZoom: clampNumber(parsed.centerDefaultZoom, 0.05, 2.0, USER_CONFIG_DEFAULTS.centerDefaultZoom),
             centerMinZoom: clampNumber(parsed.centerMinZoom, 0.05, 2.0, USER_CONFIG_DEFAULTS.centerMinZoom),
             centerMaxZoom: clampNumber(parsed.centerMaxZoom, 0.2, 5.0, USER_CONFIG_DEFAULTS.centerMaxZoom),
@@ -132,7 +143,9 @@ function loadUserConfig() {
             centerZoomHoldIntervalMs: clampNumber(parsed.centerZoomHoldIntervalMs, 30, 400, USER_CONFIG_DEFAULTS.centerZoomHoldIntervalMs),
             centerCanvasExtraWidth: clampNumber(parsed.centerCanvasExtraWidth, 0, 40, USER_CONFIG_DEFAULTS.centerCanvasExtraWidth),
             centerFitMonitorPages: clampNumber(parsed.centerFitMonitorPages, 1, 6, USER_CONFIG_DEFAULTS.centerFitMonitorPages),
-            centerSmoothScroll: normalizeBoolean(parsed.centerSmoothScroll, USER_CONFIG_DEFAULTS.centerSmoothScroll)
+            centerSmoothScroll: normalizeBoolean(parsed.centerSmoothScroll, USER_CONFIG_DEFAULTS.centerSmoothScroll),
+            useZoomSettingsOnDrop: normalizeBoolean(parsed.useZoomSettingsOnDrop, USER_CONFIG_DEFAULTS.useZoomSettingsOnDrop),
+            dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, USER_CONFIG_DEFAULTS.dropGlowDurationMs)
         };
     } catch (err) {
         return { ...USER_CONFIG_DEFAULTS };
@@ -217,6 +230,7 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     settings.zoomStep = userConfig.zoomStep;
     settings.scrollStep = userConfig.scrollStep;
     settings.centerDefaultZoom = userConfig.centerDefaultZoom;
+    settings.centerZoomFocus = userConfig.centerZoomFocus;
     settings.centerMinZoom = userConfig.centerMinZoom;
     settings.centerMaxZoom = userConfig.centerMaxZoom;
     settings.centerZoomDebounceMs = userConfig.centerZoomDebounceMs;
@@ -226,6 +240,8 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     settings.centerCanvasExtraWidth = userConfig.centerCanvasExtraWidth;
     settings.centerFitMonitorPages = userConfig.centerFitMonitorPages;
     settings.centerSmoothScroll = userConfig.centerSmoothScroll;
+    settings.useZoomSettingsOnDrop = userConfig.useZoomSettingsOnDrop;
+    settings.dropGlowDurationMs = userConfig.dropGlowDurationMs;
     settings.layoutPreset = userConfig.layoutPreset;
     settings.showFullscreenButton = userConfig.showFullscreenButton;
     if (typeof setCenterHorizontalAlign === 'function') {
@@ -244,7 +260,49 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
 }
 
 function openConfigPage() {
+    try {
+        const state = {
+            savedAt: Date.now(),
+            boardSnapshot: (typeof getBoardSnapshotForConfig === 'function')
+                ? getBoardSnapshotForConfig()
+                : null,
+            center: (typeof getCurrentCenterRuntimeState === 'function')
+                ? getCurrentCenterRuntimeState()
+                : null
+        };
+        sessionStorage.setItem(BOARD_SESSION_STATE_KEY, JSON.stringify(state));
+    } catch (err) {
+    }
     window.location.href = 'config.html';
+}
+
+function restoreBoardSessionState() {
+    let parsed = null;
+    try {
+        const raw = sessionStorage.getItem(BOARD_SESSION_STATE_KEY);
+        if (!raw) return;
+        parsed = JSON.parse(raw);
+    } catch (err) {
+        return;
+    }
+
+    if (!parsed || (!parsed.center && !parsed.boardSnapshot)) {
+        sessionStorage.removeItem(BOARD_SESSION_STATE_KEY);
+        return;
+    }
+
+    let boardRestoreResult = null;
+    if (parsed.boardSnapshot && typeof restoreBoardSnapshotFromConfig === 'function') {
+        boardRestoreResult = restoreBoardSnapshotFromConfig(parsed.boardSnapshot);
+    }
+
+    const centerVisualAlreadyRestored = !!(boardRestoreResult && typeof boardRestoreResult === 'object' && boardRestoreResult.centerVisualRestored);
+
+    if (parsed.center && typeof restoreCenterRuntimeState === 'function' && !centerVisualAlreadyRestored) {
+        restoreCenterRuntimeState(parsed.center);
+    }
+
+    sessionStorage.removeItem(BOARD_SESSION_STATE_KEY);
 }
 
 function syncFullscreenButtonState() {
@@ -340,6 +398,7 @@ const settings = {
     tintMethod: initialUserConfig.tintMethod,
     tintStrength: initialUserConfig.tintStrength,
     centerDefaultZoom: initialUserConfig.centerDefaultZoom,
+    centerZoomFocus: initialUserConfig.centerZoomFocus,
     centerMinZoom: initialUserConfig.centerMinZoom,
     centerMaxZoom: initialUserConfig.centerMaxZoom,
     centerZoomDebounceMs: initialUserConfig.centerZoomDebounceMs,
@@ -349,6 +408,8 @@ const settings = {
     centerCanvasExtraWidth: initialUserConfig.centerCanvasExtraWidth,
     centerFitMonitorPages: initialUserConfig.centerFitMonitorPages,
     centerSmoothScroll: initialUserConfig.centerSmoothScroll,
+    useZoomSettingsOnDrop: initialUserConfig.useZoomSettingsOnDrop,
+    dropGlowDurationMs: initialUserConfig.dropGlowDurationMs,
     layoutPreset: initialUserConfig.layoutPreset,
     showFullscreenButton: initialUserConfig.showFullscreenButton
 };
@@ -364,6 +425,7 @@ function initializeBoardUi() {
     if (typeof initializeCenterView === 'function') {
         initializeCenterView();
     }
+    restoreBoardSessionState();
 }
 
 if (document.readyState === 'loading') {
