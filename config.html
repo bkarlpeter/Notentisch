@@ -252,6 +252,16 @@
             return clampNumber(baseOpacity * normalizeTintStrength(strength), 0, 0.85, 0.08);
         }
 
+        function getTintProfile(method) {
+            switch (method) {
+                case 'paper-strong':
+                    return { minLum: 140, maxSat: 95, lumSpan: 110 };
+                case 'paper-only':
+                default:
+                    return { minLum: 155, maxSat: 72, lumSpan: 100 };
+            }
+        }
+
         function cmToPt(cm) {
             return (cm * 72) / 2.54;
         }
@@ -494,11 +504,49 @@
         function applyTintToCanvas(ctx, width, height, config) {
             const tint = hexToRgb(config.paperTintColor);
             const opacity = getEffectiveTintOpacity(config.paperTintPercent, config.tintStrength);
-            if (opacity > 0) {
+            if (opacity <= 0) return;
+
+            const profile = getTintProfile(config.tintMethod);
+            try {
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+                const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+                const pixels = imageData.data;
+
+                for (let i = 0; i < pixels.length; i += 4) {
+                    const alpha = pixels[i + 3];
+                    if (alpha === 0) continue;
+
+                    const red = pixels[i];
+                    const green = pixels[i + 1];
+                    const blue = pixels[i + 2];
+
+                    const maxChannel = Math.max(red, green, blue);
+                    const minChannel = Math.min(red, green, blue);
+                    const saturation = maxChannel - minChannel;
+                    const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+
+                    if (luminance < profile.minLum || saturation > profile.maxSat) continue;
+
+                    const paperStrength = clampNumber((luminance - profile.minLum) / profile.lumSpan, 0, 1, 0);
+                    const blend = opacity * paperStrength;
+                    if (blend <= 0) continue;
+
+                    pixels[i] = Math.round((red * (1 - blend)) + (tint.r * blend));
+                    pixels[i + 1] = Math.round((green * (1 - blend)) + (tint.g * blend));
+                    pixels[i + 2] = Math.round((blue * (1 - blend)) + (tint.b * blend));
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+                ctx.restore();
+            } catch {
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.globalCompositeOperation = 'multiply';
                 ctx.fillStyle = 'rgba(' + tint.r + ', ' + tint.g + ', ' + tint.b + ', ' + opacity + ')';
-                ctx.fillRect(0, 0, width, height);
-                ctx.globalCompositeOperation = 'source-over';
+                ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.restore();
             }
         }
 
