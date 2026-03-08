@@ -128,10 +128,15 @@ Das Skript nutzt automatisch:
 
 - `LADEN`: XML auswaehlen
 - `SPEICHERN`: XML-Datei im gewaehlten Zielordner speichern (Datei wird ueberschrieben)
-- `ZOOM - / ZOOM +`: PDF im CENTER zoomen (stufenweise)
-- `Breite`: skaliert so, dass alle sichtbaren Seiten in die aktuelle CENTER-Breite passen
-- `Höhe`: setzt die Seitenhoehe passend zur CENTER-Hoehe
+- `ZOOM - / ZOOM +`: PDF im CENTER zoomen in konfigurierbaren Schritten (`zoomStep`)
+- `ZOOM - / ZOOM +` gedrueckt halten: kontinuierlicher Zoom (steuerbar ueber `centerZoomHoldEnabled`, `centerZoomHoldDelayMs`, `centerZoomHoldIntervalMs`)
+- Zoom-Grenzen: werden ueber `centerMinZoom` und `centerMaxZoom` begrenzt
+- Zoom-Render-Verzoegerung: ueber `centerZoomDebounceMs`
+- `Breite`: skaliert so, dass sichtbare Seiten in die aktuelle CENTER-Breite passen (inkl. `centerCanvasExtraWidth`, `centerFitMonitorPages`)
+- `Höhe`: setzt den Zoom auf den konfigurierten Startwert (`centerDefaultZoom`)
 - `WIDE / NORMAL`: vergroessert CENTER nach links; rechter Rand bleibt fix
+- CENTER-Ausrichtung: `Links/Rechts` per Button, persistent ueber `centerAlign`
+- CENTER-Scroll: Schrittweite ueber `scrollStep`, Scroll-Verhalten ueber `centerSmoothScroll`
 - `Blaetter`: sichtbare Karten pro Quadrant einstellen (max. 10)
 - `Ende`: beendet den lokalen Server und schliesst die Ansicht
 - Quadranten-`/`: im jeweiligen Stapel blaettern
@@ -140,6 +145,13 @@ Das Skript nutzt automatisch:
 - Modus `Spielen`: beim Ablegen wird `zuletztgespielt` gesetzt
 - Modus `Sichten`: beim Ablegen wird kein `zuletztgespielt` gesetzt
 - Beim Ablegen auf `Q1` bis `Q4` wird die XML automatisch gespeichert
+
+### Center-/Zoom-Parameter (Basis fuer weitere Aenderungen)
+
+- Die zentralen Defaults und Grenzen liegen in `center-config.js`.
+- Persistiert wird in `localStorage` unter `notentischUserConfig`.
+- Bearbeitung erfolgt in `config.html` (inkl. Advanced-Felder fuer Center/Zoom).
+- Laufzeitnutzung erfolgt in `center-view.js` und `functions.js`.
 
 ### Speichern
 
