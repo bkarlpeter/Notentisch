@@ -1,5 +1,29 @@
 # Changelog - Notentisch
 
+## [v2026.03.08] - 08. März 2026
+
+### Neu
+- **Center-Ausrichtung umschaltbar**: Button `Links/Rechts` im Board (`alignBtn`) mit persistenter Speicherung.
+- **Kontinuierlicher Zoom**: Gedrückt halten auf `ZOOM - / ZOOM +` startet wiederholtes Zoomen.
+- **Konfigurierbare Zoom-/Scroll-Schritte**: `zoomStep` und `scrollStep` über Konfiguration und LocalStorage.
+
+### Verbessert
+- **Zoom-Verhalten**: Kleinere, feinere Zoomstufen und stabilere Zoom-Grenzen.
+- **Zoom-Anker**: Zoom bleibt visuell um den aktuellen Viewport-Mittelpunkt stabil.
+- **Kartenrückgabe aus Center**: Beim Zurücklegen nur Layout-Update statt vollständigem Stack-Rebuild.
+- **PDF-Pfad-Fallbacks**: Robustere Kandidatenbildung, Encoding und Caching bei Pfadversuchen.
+- **Config-Navigation im gleichen Tab**: Rückweg ohne unnötigen neuen Browser-Tab.
+
+### Behoben
+- **Center wird geleert beim Zurücklegen**: Rückgabe einer Karte aus dem Center leert die Ansicht nicht mehr erzwungen.
+- **Leere Card-Vorschauen**: Verbesserte Fallback-Pfadauflösung für PDF-basierte Thumbnails.
+
+### Technisch
+- `board.html`: IDs für Zoom-Buttons ergänzt, Script-Versionen angehoben.
+- `functions.js`: Config-Defaults erweitert (`centerAlign`, `zoomStep`, `scrollStep`), Continuous-Zoom-Binding ergänzt.
+- `filehandling.js`: Rückgabe-Logik aus Center auf Top-Insert + `updateStackLayout()` umgestellt.
+- `local_server.py`: No-Cache-Header ergänzt, um veraltete Browser-Caches zu vermeiden.
+
 ## [v2.1] - Februar 2026
 
 ### Neu 
