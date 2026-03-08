@@ -34,6 +34,21 @@ Wenn alle Schritte erfolgreich sind, ist das Projekt in deiner Umgebung funktion
 
 Interaktive Notenverwaltung mit 4 Quadranten, Drag & Drop, PDF-Viewer und XML-Import/Export.
 
+## Aktuelle stabile Version
+
+- **Release-Tag:** `v2026.03.08`
+- **Datum:** 08.03.2026
+- **Branch:** `main`
+
+Highlights dieser stabilen Version:
+- Umschaltbare Center-Ausrichtung (`Links/Rechts`) mit persistenter Speicherung
+- Feinere Zoomschritte + kontinuierlicher Zoom bei langem Tastendruck
+- Kein erzwungener Stack-Neuaufbau beim Zurücklegen aus dem Center
+- Robustere PDF-Pfad-Fallbacks für Card-Vorschau und Center-Anzeige
+- No-Cache-Header im lokalen Server gegen veraltete Browser-Stände
+
+Details siehe [CHANGELOG.md](CHANGELOG.md).
+
 ## Funktionen
 
 - 4 Quadranten nach Arbeitsstatus:
