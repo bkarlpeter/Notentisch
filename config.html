@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notentisch Config</title>
+    <style>
+        body {
+            margin: 0;
+            background: #121212;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            padding: 24px;
+            box-sizing: border-box;
+        }
+
+        .card {
+            width: min(640px, 100%);
+            background: #1b1b1b;
+            border: 1px solid #2f2f2f;
+            border-radius: 12px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin: 0 0 16px;
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .hint {
+            color: #a9a9a9;
+            font-size: 13px;
+            margin: 0 0 20px;
+        }
+
+        .value-help {
+            width: 220px;
+            flex: 0 0 220px;
+            background: #102030;
+            border: 1px solid #2f5f88;
+            border-radius: 8px;
+            padding: 8px 10px;
+            box-sizing: border-box;
+            font-size: 11.5px;
+            color: #d7e8f7;
+            line-height: 1.3;
+            box-shadow: 0 0 0 1px rgba(79, 154, 214, 0.2) inset;
+        }
+
+        .value-help strong {
+            color: #f2f6fa;
+        }
+
+        .value-help ul {
+            margin: 6px 0 0;
+            padding-left: 14px;
+        }
+
+        .value-help li {
+            margin: 0 0 6px;
+        }
+
+        @media (max-width: 760px) {
+            .header-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .value-help {
+                width: 100%;
+                flex: 1 1 auto;
+            }
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 220px;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        label {
+            font-weight: 600;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #3a3a3a;
+            background: #111;
+            color: #fff;
+        }
+
+        select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #3a3a3a;
+            background: #111;
+            color: #fff;
+        }
+
+        input[type="color"] {
+            width: 100%;
+            height: 40px;
+            box-sizing: border-box;
+            border-radius: 6px;
+            border: 1px solid #3a3a3a;
+            background: #111;
+            padding: 2px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 14px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            background: #3498db;
+            color: #fff;
+        }
+
+        button.secondary {
+            background: #3a3a3a;
+        }
+
+        #status {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #a9d8ff;
+            min-height: 18px;
+        }
+
+        .input-with-preview {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .input-with-preview input[type="number"] {
+            flex: 1 1 auto;
+            min-width: 0;
+            width: 90px;
+        }
+
+        .color-input-wrap {
+            width: 100%;
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .color-input-wrap input[type="color"] {
+            width: 56px;
+            flex: 0 0 56px;
+        }
+
+        #musicPreview {
+            width: 4cm;
+            height: 4cm;
+            border-radius: 8px;
+            border: 1px solid #3a3a3a;
+            background: #f7f3e8;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header-row">
+            <div>
+                <h1>Notentisch Einstellungen</h1>
+                <p class="hint">Diese Werte wirken direkt im Board (bei offener Board-Seite).</p>
+            </div>
+            <div class="value-help">
+                <strong>Bedeutung der Werte</strong>
+                <ul>
+                    <li><strong>PDF-Schärfe Faktor:</strong> 1.0 = normal, höher = schärfer.</li>
+                    <li><strong>Papierfärbung in %:</strong> 0 = keine Tönung, 5 = deutlich sichtbar.</li>
+                    <li><strong>Blatt-Tönung Stärke:</strong> Feinregler von dezent bis kräftig.</li>
+                    <li><strong>Papierfarbe:</strong> Farbton der Tönung über den Noten.</li>
+                    <li><strong>Layout 2:3:</strong> Center größer, Stapel schmaler.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="row">
+            <label for="pdfSharpness">PDF-Schärfe Faktor (0.8 - 2.5)</label>
+            <div class="input-with-preview">
+                <input id="pdfSharpness" type="number" min="0.8" max="2.5" step="0.1">
+                <canvas id="musicPreview" width="160" height="160" aria-label="Noten Vorschau"></canvas>
+            </div>
+        </div>
+
+        <div class="row">
+            <label for="paperTintPercent">Papier Beige in % (0 - 25)</label>
+            <input id="paperTintPercent" type="number" min="0" max="25" step="0.5">
+        </div>
+
+        <div class="row">
+            <label for="tintMethod">Färbe-Methode</label>
+            <select id="tintMethod">
+                <option value="paper-only">Blatt leicht</option>
+                <option value="paper-strong">Blatt stark</option>
+            </select>
+        </div>
+
+        <div class="row">
+            <label for="tintStrength">Blatt-Tönung Stärke (0.5 - 2.0)</label>
+            <input id="tintStrength" type="number" min="0.5" max="2.0" step="0.1">
+        </div>
+
+        <div class="row">
+            <label for="showFullscreenButton">Vollbild-Button im Board</label>
+            <select id="showFullscreenButton">
+                <option value="show">Anzeigen</option>
+                <option value="hide">Ausblenden</option>
+            </select>
+        </div>
+
+        <div class="row">
+            <label for="centerAlignBtn">Ausrichtung im Center (bei Drop)</label>
+            <button id="centerAlignBtn" type="button" class="secondary">Links</button>
+        </div>
+
+        <div class="row">
+            <label for="zoomStep">Zoom-Stufe (0.02 - 0.5)</label>
+            <input id="zoomStep" type="number" min="0.02" max="0.5" step="0.01">
+        </div>
+
+        <div class="row">
+            <label for="scrollStep">Scroll-Schritt in Pixel (60 - 800)</label>
+            <input id="scrollStep" type="number" min="60" max="800" step="10">
+        </div>
+
+        <!-- Advanced Center: Diese Parameter steuern das Verhalten im Center sehr fein. -->
+        <div class="row">
+            <label for="centerDefaultZoom">Center Start-Zoom (0.05 - 2.0)</label>
+            <input id="centerDefaultZoom" type="number" min="0.05" max="2.0" step="0.01">
+        </div>
+
+        <div class="row">
+            <label for="centerMinZoom">Center Min-Zoom (0.05 - 2.0)</label>
+            <input id="centerMinZoom" type="number" min="0.05" max="2.0" step="0.01">
+        </div>
+
+        <div class="row">
+            <label for="centerMaxZoom">Center Max-Zoom (0.2 - 5.0)</label>
+            <input id="centerMaxZoom" type="number" min="0.2" max="5.0" step="0.05">
+        </div>
+
+        <div class="row">
+            <label for="centerZoomDebounceMs">Zoom Render-Verzögerung in ms (20 - 600)</label>
+            <input id="centerZoomDebounceMs" type="number" min="20" max="600" step="10">
+        </div>
+
+        <div class="row">
+            <label for="centerZoomHoldEnabled">Dauerzoom bei langem Drücken</label>
+            <select id="centerZoomHoldEnabled">
+                <option value="show">Aktiv</option>
+                <option value="hide">Inaktiv</option>
+            </select>
+        </div>
+
+        <div class="row">
+            <label for="centerZoomHoldDelayMs">Dauerzoom Start-Verzögerung in ms (80 - 1000)</label>
+            <input id="centerZoomHoldDelayMs" type="number" min="80" max="1000" step="10">
+        </div>
+
+        <div class="row">
+            <label for="centerZoomHoldIntervalMs">Dauerzoom Intervall in ms (30 - 400)</label>
+            <input id="centerZoomHoldIntervalMs" type="number" min="30" max="400" step="5">
+        </div>
+
+        <div class="row">
+            <label for="centerCanvasExtraWidth">Canvas Zusatzbreite pro Seite in px (0 - 40)</label>
+            <input id="centerCanvasExtraWidth" type="number" min="0" max="40" step="1">
+        </div>
+
+        <div class="row">
+            <label for="centerFitMonitorPages">Fit-Breite Seitenzahl im 2:3 Layout (1 - 6)</label>
+            <input id="centerFitMonitorPages" type="number" min="1" max="6" step="1">
+        </div>
+
+        <div class="row">
+            <label for="centerSmoothScroll">Smooth-Scroll im Center</label>
+            <select id="centerSmoothScroll">
+                <option value="show">Aktiv</option>
+                <option value="hide">Inaktiv</option>
+            </select>
+        </div>
+
+        <div class="row">
+            <label for="paperTintColor">Papierfarbe</label>
+            <div class="color-input-wrap">
+                <input id="paperTintColor" type="color">
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="saveBtn" type="button">Speichern</button>
+            <button id="resetBtn" type="button" class="secondary">Zurücksetzen</button>
+            <button id="layoutStandardBtn" type="button" class="secondary">Layout Standard</button>
+            <button id="layoutMonitorBtn" type="button" class="secondary">Layout 2:3 (Breite = 3 Seiten)</button>
+            <button id="presetSoftBtn" type="button" class="secondary">Dezent</button>
+            <button id="defaultPresetBtn" type="button" class="secondary">Default</button>
+            <button id="presetStrongBtn" type="button" class="secondary">Kräftig</button>
+            <button id="backToBoardBtn" type="button" class="secondary">Zurück zum Board</button>
+        </div>
+        <div id="status"></div>
+    </div>
+
+    <script src="center-config.js?v=20260308"></script>
+    <script>
+        const USER_CONFIG_KEY = 'notentischUserConfig';
+        const DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS
+            ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS }
+            : {
+                configVersion: 1,
+                pdfSharpness: 1.0,
+                paperTintPercent: 3,
+                paperTintColor: '#f5ebd2',
+                tintMethod: 'paper-only',
+                tintStrength: 1.0,
+                zoomStep: 0.05,
+                scrollStep: 180,
+                layoutPreset: 'standard',
+                showFullscreenButton: true,
+                centerAlign: 'left',
+                centerDefaultZoom: 1.0,
+                centerMinZoom: 0.4,
+                centerMaxZoom: 2.6,
+                centerZoomDebounceMs: 90,
+                centerZoomHoldEnabled: true,
+                centerZoomHoldDelayMs: 320,
+                centerZoomHoldIntervalMs: 90,
+                centerCanvasExtraWidth: 6,
+                centerFitMonitorPages: 3,
+                centerSmoothScroll: true
+            };
+
+        const PLEASANT_TINT_PRESET = {
+            paperTintPercent: 8,
+            paperTintColor: '#f1e6c9',
+            tintMethod: 'paper-only',
+            tintStrength: 1.2
+        };
+
+        const SOFT_TINT_PRESET = {
+            paperTintPercent: 4,
+            paperTintColor: '#f7efd9',
+            tintMethod: 'paper-only',
+            tintStrength: 0.9
+        };
+
+        const STRONG_TINT_PRESET = {
+            paperTintPercent: 12,
+            paperTintColor: '#ead9b0',
+            tintMethod: 'paper-strong',
+            tintStrength: 1.4
+        };
+
+        let selectedLayoutPreset = DEFAULTS.layoutPreset;
+
+        const PREVIEW_IMAGE_PATH = 'Cards_Export/card_Alpenecho.png';
+        const PREVIEW_BOX_CM = 4;
+        const PREVIEW_VISIBLE_CM = 1;
+        const previewImage = new Image();
+        let previewImageReady = false;
+        previewImage.onload = () => {
+            previewImageReady = true;
+            drawMusicPreview(readFromForm());
+        };
+        previewImage.onerror = () => {
+            previewImageReady = false;
+            drawMusicPreview(readFromForm());
+        };
+        previewImage.src = PREVIEW_IMAGE_PATH;
+
+        function clampNumber(value, min, max, fallback) {
+            const parsed = Number(value);
+            if (!Number.isFinite(parsed)) return fallback;
+            return Math.min(max, Math.max(min, parsed));
+        }
+
+        function normalizeHexColor(value, fallback) {
+            const input = String(value || '').trim();
+            if (/^#[0-9a-fA-F]{6}$/.test(input)) return input.toLowerCase();
+            return fallback;
+        }
+
+        function normalizeTintMethod(value) {
+            const input = String(value || '').trim();
+            if (input === 'paper-only' || input === 'paper-strong') return input;
+            return DEFAULTS.tintMethod;
+        }
+
+        function normalizeTintStrength(value) {
+            return clampNumber(value, 0.5, 2.0, DEFAULTS.tintStrength);
+        }
+
+        function normalizeLayoutPreset(value) {
+            const input = String(value || '').trim();
+            if (input === 'monitor-2x3' || input === 'standard') return input;
+            return DEFAULTS.layoutPreset;
+        }
+
+        function normalizeZoomStep(value) {
+            return clampNumber(value, 0.02, 0.5, DEFAULTS.zoomStep);
+        }
+
+        function normalizeScrollStep(value) {
+            return clampNumber(value, 60, 800, DEFAULTS.scrollStep);
+        }
+
+        function normalizeCenterAlign(value) {
+            const input = String(value || '').trim().toLowerCase();
+            if (input === 'left' || input === 'right') return input;
+            return DEFAULTS.centerAlign;
+        }
+
+        function normalizeCenterDefaultZoom(value) {
+            return clampNumber(value, 0.05, 2.0, DEFAULTS.centerDefaultZoom);
+        }
+
+        function normalizeCenterMinZoom(value) {
+            return clampNumber(value, 0.05, 2.0, DEFAULTS.centerMinZoom);
+        }
+
+        function normalizeCenterMaxZoom(value) {
+            return clampNumber(value, 0.2, 5.0, DEFAULTS.centerMaxZoom);
+        }
+
+        function normalizeCenterZoomDebounceMs(value) {
+            return clampNumber(value, 20, 600, DEFAULTS.centerZoomDebounceMs);
+        }
+
+        function normalizeCenterZoomHoldDelayMs(value) {
+            return clampNumber(value, 80, 1000, DEFAULTS.centerZoomHoldDelayMs);
+        }
+
+        function normalizeCenterZoomHoldIntervalMs(value) {
+            return clampNumber(value, 30, 400, DEFAULTS.centerZoomHoldIntervalMs);
+        }
+
+        function normalizeCenterCanvasExtraWidth(value) {
+            return clampNumber(value, 0, 40, DEFAULTS.centerCanvasExtraWidth);
+        }
+
+        function normalizeCenterFitMonitorPages(value) {
+            return clampNumber(value, 1, 6, DEFAULTS.centerFitMonitorPages);
+        }
+
+        function normalizeBoolean(value, fallback) {
+            if (typeof value === 'boolean') return value;
+            if (value === 'true' || value === '1' || value === 1 || value === 'show') return true;
+            if (value === 'false' || value === '0' || value === 0 || value === 'hide') return false;
+            return fallback;
+        }
+
+        function hexToRgb(hexColor) {
+            const hex = normalizeHexColor(hexColor, DEFAULTS.paperTintColor).slice(1);
+            return {
+                r: parseInt(hex.slice(0, 2), 16),
+                g: parseInt(hex.slice(2, 4), 16),
+                b: parseInt(hex.slice(4, 6), 16)
+            };
+        }
+
+        function getTintOpacityFromPercent(percent) {
+            const normalized = clampNumber(percent / 25, 0, 1, DEFAULTS.paperTintPercent / 25);
+            return clampNumber(normalized * 0.6, 0, 0.6, 0.08);
+        }
+
+        function getEffectiveTintOpacity(percent, strength) {
+            const baseOpacity = getTintOpacityFromPercent(percent);
+            const normalizedStrength = normalizeTintStrength(strength);
+            return clampNumber(baseOpacity * normalizedStrength, 0, 0.85, 0.08);
+        }
+
+        function tintPaperPixels(ctx, width, height, tint, opacity) {
+            if (opacity <= 0) return;
+
+            try {
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const pixels = imageData.data;
+
+                for (let i = 0; i < pixels.length; i += 4) {
+                    const alpha = pixels[i + 3];
+                    if (alpha === 0) continue;
+
+                    const red = pixels[i];
+                    const green = pixels[i + 1];
+                    const blue = pixels[i + 2];
+
+                    const maxChannel = Math.max(red, green, blue);
+                    const minChannel = Math.min(red, green, blue);
+                    const saturation = maxChannel - minChannel;
+                    const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+
+                    if (luminance < 155 || saturation > 72) continue;
+
+                    const paperStrength = clampNumber((luminance - 155) / 100, 0, 1, 0);
+                    const blend = opacity * paperStrength;
+                    if (blend <= 0) continue;
+
+                    pixels[i] = Math.round((red * (1 - blend)) + (tint.r * blend));
+                    pixels[i + 1] = Math.round((green * (1 - blend)) + (tint.g * blend));
+                    pixels[i + 2] = Math.round((blue * (1 - blend)) + (tint.b * blend));
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+            } catch {
+                ctx.globalCompositeOperation = 'multiply';
+                ctx.fillStyle = 'rgba(' + tint.r + ', ' + tint.g + ', ' + tint.b + ', ' + opacity + ')';
+                ctx.fillRect(0, 0, width, height);
+                ctx.globalCompositeOperation = 'source-over';
+            }
+        }
+
+        function getTintProfile(method) {
+            switch (method) {
+                case 'paper-strong':
+                    return { minLum: 140, maxSat: 95, lumSpan: 110 };
+                case 'paper-only':
+                default:
+                    return { minLum: 155, maxSat: 72, lumSpan: 100 };
+            }
+        }
+
+        function tintPaperPixelsByMethod(ctx, width, height, tint, opacity, method) {
+            if (opacity <= 0) return;
+            const profile = getTintProfile(method);
+
+            try {
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const pixels = imageData.data;
+
+                for (let i = 0; i < pixels.length; i += 4) {
+                    const alpha = pixels[i + 3];
+                    if (alpha === 0) continue;
+
+                    const red = pixels[i];
+                    const green = pixels[i + 1];
+                    const blue = pixels[i + 2];
+
+                    const maxChannel = Math.max(red, green, blue);
+                    const minChannel = Math.min(red, green, blue);
+                    const saturation = maxChannel - minChannel;
+                    const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+
+                    if (luminance < profile.minLum || saturation > profile.maxSat) continue;
+
+                    const paperStrength = clampNumber((luminance - profile.minLum) / profile.lumSpan, 0, 1, 0);
+                    const blend = opacity * paperStrength;
+                    if (blend <= 0) continue;
+
+                    pixels[i] = Math.round((red * (1 - blend)) + (tint.r * blend));
+                    pixels[i + 1] = Math.round((green * (1 - blend)) + (tint.g * blend));
+                    pixels[i + 2] = Math.round((blue * (1 - blend)) + (tint.b * blend));
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+            } catch {
+                tintPaperPixels(ctx, width, height, tint, opacity);
+            }
+        }
+
+        function drawFallbackMusic(ctx, cssWidth, cssHeight) {
+            ctx.fillStyle = '#fbf8ef';
+            ctx.fillRect(0, 0, cssWidth, cssHeight);
+            ctx.strokeStyle = '#2a2a2a';
+            ctx.lineWidth = 1.2;
+            const top = 34;
+            const spacing = 12;
+            for (let i = 0; i < 5; i++) {
+                const y = top + i * spacing;
+                ctx.beginPath();
+                ctx.moveTo(24, y);
+                ctx.lineTo(cssWidth - 24, y);
+                ctx.stroke();
+            }
+            ctx.fillStyle = '#222';
+            ctx.font = '600 20px Segoe UI Symbol, Segoe UI, sans-serif';
+            ctx.fillText('♪  ♫', cssWidth - 90, top + spacing * 4 + 26);
+        }
+
+        function drawMusicPreview(config) {
+            const canvas = document.getElementById('musicPreview');
+            if (!canvas) return;
+
+            const cssWidth = canvas.clientWidth || 160;
+            const cssHeight = canvas.clientHeight || 160;
+            const outputScale = Math.max(1, (window.devicePixelRatio || 1) * config.pdfSharpness);
+
+            canvas.width = Math.floor(cssWidth * outputScale);
+            canvas.height = Math.floor(cssHeight * outputScale);
+
+            const ctx = canvas.getContext('2d');
+            ctx.setTransform(outputScale, 0, 0, outputScale, 0, 0);
+            ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+            if (previewImageReady) {
+                const srcW = Math.max(1, Math.floor(previewImage.width * 0.42));
+                const srcH = Math.max(1, Math.floor(previewImage.height * 0.30));
+                const srcX = Math.max(0, Math.min(previewImage.width - srcW, Math.floor(previewImage.width * 0.28)));
+                const srcY = Math.max(0, Math.min(previewImage.height - srcH, Math.floor(previewImage.height * 0.30)));
+
+                ctx.drawImage(previewImage, srcX, srcY, srcW, srcH, 0, 0, cssWidth, cssHeight);
+            } else {
+                drawFallbackMusic(ctx, cssWidth, cssHeight);
+            }
+
+            const tint = hexToRgb(config.paperTintColor);
+            const opacity = getEffectiveTintOpacity(config.paperTintPercent, config.tintStrength);
+            if (opacity > 0) {
+                tintPaperPixelsByMethod(ctx, canvas.width, canvas.height, tint, opacity, config.tintMethod);
+            }
+        }
+
+        function loadConfig() {
+            try {
+                const raw = localStorage.getItem(USER_CONFIG_KEY);
+                if (!raw) return { ...DEFAULTS };
+                const parsed = JSON.parse(raw);
+                if (typeof window.notentischNormalizeUserConfig === 'function') {
+                    return window.notentischNormalizeUserConfig(parsed);
+                }
+                return {
+                    ...parsed,
+                    pdfSharpness: clampNumber(parsed.pdfSharpness, 0.8, 2.5, DEFAULTS.pdfSharpness),
+                    paperTintPercent: clampNumber(parsed.paperTintPercent, 0, 25, DEFAULTS.paperTintPercent),
+                    paperTintColor: normalizeHexColor(parsed.paperTintColor, DEFAULTS.paperTintColor),
+                    tintMethod: normalizeTintMethod(parsed.tintMethod),
+                    tintStrength: normalizeTintStrength(parsed.tintStrength),
+                    zoomStep: normalizeZoomStep(parsed.zoomStep),
+                    scrollStep: normalizeScrollStep(parsed.scrollStep),
+                    layoutPreset: normalizeLayoutPreset(parsed.layoutPreset),
+                    showFullscreenButton: normalizeBoolean(parsed.showFullscreenButton, DEFAULTS.showFullscreenButton),
+                    centerAlign: normalizeCenterAlign(parsed.centerAlign),
+                    centerDefaultZoom: normalizeCenterDefaultZoom(parsed.centerDefaultZoom),
+                    centerMinZoom: normalizeCenterMinZoom(parsed.centerMinZoom),
+                    centerMaxZoom: normalizeCenterMaxZoom(parsed.centerMaxZoom),
+                    centerZoomDebounceMs: normalizeCenterZoomDebounceMs(parsed.centerZoomDebounceMs),
+                    centerZoomHoldEnabled: normalizeBoolean(parsed.centerZoomHoldEnabled, DEFAULTS.centerZoomHoldEnabled),
+                    centerZoomHoldDelayMs: normalizeCenterZoomHoldDelayMs(parsed.centerZoomHoldDelayMs),
+                    centerZoomHoldIntervalMs: normalizeCenterZoomHoldIntervalMs(parsed.centerZoomHoldIntervalMs),
+                    centerCanvasExtraWidth: normalizeCenterCanvasExtraWidth(parsed.centerCanvasExtraWidth),
+                    centerFitMonitorPages: normalizeCenterFitMonitorPages(parsed.centerFitMonitorPages),
+                    centerSmoothScroll: normalizeBoolean(parsed.centerSmoothScroll, DEFAULTS.centerSmoothScroll)
+                };
+            } catch {
+                return { ...DEFAULTS };
+            }
+        }
+
+        function saveConfig(config) {
+            localStorage.setItem(USER_CONFIG_KEY, JSON.stringify(config));
+        }
+
+        function applyToForm(config) {
+            document.getElementById('pdfSharpness').value = config.pdfSharpness;
+            document.getElementById('paperTintPercent').value = config.paperTintPercent;
+            document.getElementById('paperTintColor').value = normalizeHexColor(config.paperTintColor, DEFAULTS.paperTintColor);
+            document.getElementById('tintMethod').value = normalizeTintMethod(config.tintMethod);
+            document.getElementById('tintStrength').value = normalizeTintStrength(config.tintStrength);
+            document.getElementById('zoomStep').value = normalizeZoomStep(config.zoomStep);
+            document.getElementById('scrollStep').value = normalizeScrollStep(config.scrollStep);
+            document.getElementById('centerDefaultZoom').value = normalizeCenterDefaultZoom(config.centerDefaultZoom);
+            document.getElementById('centerMinZoom').value = normalizeCenterMinZoom(config.centerMinZoom);
+            document.getElementById('centerMaxZoom').value = normalizeCenterMaxZoom(config.centerMaxZoom);
+            document.getElementById('centerZoomDebounceMs').value = normalizeCenterZoomDebounceMs(config.centerZoomDebounceMs);
+            document.getElementById('centerZoomHoldEnabled').value = normalizeBoolean(config.centerZoomHoldEnabled, DEFAULTS.centerZoomHoldEnabled) ? 'show' : 'hide';
+            document.getElementById('centerZoomHoldDelayMs').value = normalizeCenterZoomHoldDelayMs(config.centerZoomHoldDelayMs);
+            document.getElementById('centerZoomHoldIntervalMs').value = normalizeCenterZoomHoldIntervalMs(config.centerZoomHoldIntervalMs);
+            document.getElementById('centerCanvasExtraWidth').value = normalizeCenterCanvasExtraWidth(config.centerCanvasExtraWidth);
+            document.getElementById('centerFitMonitorPages').value = normalizeCenterFitMonitorPages(config.centerFitMonitorPages);
+            document.getElementById('centerSmoothScroll').value = normalizeBoolean(config.centerSmoothScroll, DEFAULTS.centerSmoothScroll) ? 'show' : 'hide';
+            document.getElementById('showFullscreenButton').value = normalizeBoolean(config.showFullscreenButton, DEFAULTS.showFullscreenButton) ? 'show' : 'hide';
+            const alignBtn = document.getElementById('centerAlignBtn');
+            if (alignBtn) {
+                const alignValue = normalizeCenterAlign(config.centerAlign);
+                alignBtn.dataset.value = alignValue;
+                alignBtn.textContent = alignValue === 'right' ? 'Rechts' : 'Links';
+            }
+            selectedLayoutPreset = normalizeLayoutPreset(config.layoutPreset);
+            drawMusicPreview(config);
+        }
+
+        function readFromForm() {
+            const existing = loadConfig();
+            return {
+                ...existing,
+                pdfSharpness: clampNumber(document.getElementById('pdfSharpness').value, 0.8, 2.5, DEFAULTS.pdfSharpness),
+                paperTintPercent: clampNumber(document.getElementById('paperTintPercent').value, 0, 25, DEFAULTS.paperTintPercent),
+                paperTintColor: normalizeHexColor(document.getElementById('paperTintColor').value, DEFAULTS.paperTintColor),
+                tintMethod: normalizeTintMethod(document.getElementById('tintMethod').value),
+                tintStrength: normalizeTintStrength(document.getElementById('tintStrength').value),
+                zoomStep: normalizeZoomStep(document.getElementById('zoomStep').value),
+                scrollStep: normalizeScrollStep(document.getElementById('scrollStep').value),
+                centerDefaultZoom: normalizeCenterDefaultZoom(document.getElementById('centerDefaultZoom').value),
+                centerMinZoom: normalizeCenterMinZoom(document.getElementById('centerMinZoom').value),
+                centerMaxZoom: normalizeCenterMaxZoom(document.getElementById('centerMaxZoom').value),
+                centerZoomDebounceMs: normalizeCenterZoomDebounceMs(document.getElementById('centerZoomDebounceMs').value),
+                centerZoomHoldEnabled: normalizeBoolean(document.getElementById('centerZoomHoldEnabled').value, DEFAULTS.centerZoomHoldEnabled),
+                centerZoomHoldDelayMs: normalizeCenterZoomHoldDelayMs(document.getElementById('centerZoomHoldDelayMs').value),
+                centerZoomHoldIntervalMs: normalizeCenterZoomHoldIntervalMs(document.getElementById('centerZoomHoldIntervalMs').value),
+                centerCanvasExtraWidth: normalizeCenterCanvasExtraWidth(document.getElementById('centerCanvasExtraWidth').value),
+                centerFitMonitorPages: normalizeCenterFitMonitorPages(document.getElementById('centerFitMonitorPages').value),
+                centerSmoothScroll: normalizeBoolean(document.getElementById('centerSmoothScroll').value, DEFAULTS.centerSmoothScroll),
+                layoutPreset: normalizeLayoutPreset(selectedLayoutPreset),
+                showFullscreenButton: normalizeBoolean(document.getElementById('showFullscreenButton').value, DEFAULTS.showFullscreenButton),
+                centerAlign: normalizeCenterAlign((document.getElementById('centerAlignBtn')?.dataset.value) || existing.centerAlign)
+            };
+        }
+
+        function applyLayoutPreset(preset, message) {
+            selectedLayoutPreset = normalizeLayoutPreset(preset);
+            const fullscreenSelect = document.getElementById('showFullscreenButton');
+            if (fullscreenSelect) {
+                fullscreenSelect.value = selectedLayoutPreset === 'monitor-2x3' ? 'show' : 'hide';
+            }
+            saveFromFormWithStatus(message);
+        }
+
+        function setStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        function saveFromFormWithStatus(message) {
+            const config = readFromForm();
+            applyToForm(config);
+            saveConfig(config);
+            setStatus(message);
+        }
+
+        function applyTintPreset(preset, message) {
+            const current = readFromForm();
+            const next = {
+                ...current,
+                paperTintPercent: preset.paperTintPercent,
+                paperTintColor: preset.paperTintColor,
+                tintMethod: preset.tintMethod,
+                tintStrength: preset.tintStrength
+            };
+            applyToForm(next);
+            saveConfig(next);
+            setStatus(message);
+        }
+
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            saveFromFormWithStatus('Gespeichert.');
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            const resetConfig = { ...DEFAULTS };
+            applyToForm(resetConfig);
+            saveConfig(resetConfig);
+            setStatus('Auf Standard zurückgesetzt.');
+        });
+
+        document.getElementById('layoutStandardBtn').addEventListener('click', () => {
+            applyLayoutPreset('standard', 'Layout Standard gesetzt.');
+        });
+
+        document.getElementById('layoutMonitorBtn').addEventListener('click', () => {
+            applyLayoutPreset('monitor-2x3', 'Layout 2:3 gesetzt.');
+        });
+
+        document.getElementById('presetSoftBtn').addEventListener('click', () => {
+            applyTintPreset(SOFT_TINT_PRESET, 'Preset Dezent gesetzt.');
+        });
+
+        document.getElementById('defaultPresetBtn').addEventListener('click', () => {
+            applyTintPreset(PLEASANT_TINT_PRESET, 'Default-Preset gesetzt.');
+        });
+
+        document.getElementById('presetStrongBtn').addEventListener('click', () => {
+            applyTintPreset(STRONG_TINT_PRESET, 'Preset Kräftig gesetzt.');
+        });
+
+        document.getElementById('backToBoardBtn').addEventListener('click', () => {
+            if (window.history.length > 1) {
+                window.history.back();
+                return;
+            }
+
+            if (window.opener && !window.opener.closed) {
+                try {
+                    window.opener.location.href = 'board.html';
+                    window.opener.focus();
+                    window.close();
+                    return;
+                } catch (error) {
+                }
+            }
+
+            window.location.href = 'board.html';
+        });
+
+        document.getElementById('centerAlignBtn').addEventListener('click', () => {
+            const btn = document.getElementById('centerAlignBtn');
+            const current = normalizeCenterAlign(btn.dataset.value);
+            const next = current === 'left' ? 'right' : 'left';
+            btn.dataset.value = next;
+            btn.textContent = next === 'right' ? 'Rechts' : 'Links';
+            saveFromFormWithStatus('Automatisch gespeichert.');
+        });
+
+        ['pdfSharpness', 'paperTintPercent', 'paperTintColor', 'tintMethod', 'tintStrength', 'zoomStep', 'scrollStep', 'centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerSmoothScroll', 'showFullscreenButton'].forEach((id) => {
+            const field = document.getElementById(id);
+            if (!field) return;
+            field.addEventListener('input', () => saveFromFormWithStatus('Automatisch gespeichert.'));
+            field.addEventListener('change', () => saveFromFormWithStatus('Automatisch gespeichert.'));
+        });
+
+        window.addEventListener('resize', () => {
+            drawMusicPreview(readFromForm());
+        });
+
+        applyToForm(loadConfig());
+    </script>
+</body>
+</html>

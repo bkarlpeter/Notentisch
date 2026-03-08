@@ -1,0 +1,141 @@
+// Zentrale User-/Center-Konfiguration für Notentisch.
+//
+// Ziel:
+// - Alle relevanten Center-Parameter an einer Stelle dokumentieren.
+// - Einheitliche Defaults + Grenzen für Board und Config-Seite.
+// - Werte dauerhaft in localStorage (Key: notentischUserConfig) speichern.
+
+(function initializeNotentischConfig() {
+    function clampNumber(value, min, max, fallback) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return fallback;
+        return Math.min(max, Math.max(min, parsed));
+    }
+
+    function normalizeHexColor(value, fallback) {
+        const input = String(value || '').trim();
+        if (/^#[0-9a-fA-F]{6}$/.test(input)) return input.toLowerCase();
+        return fallback;
+    }
+
+    function normalizeTintMethod(value, fallback) {
+        const input = String(value || '').trim();
+        if (input === 'paper-only' || input === 'paper-strong') return input;
+        return fallback;
+    }
+
+    function normalizeLayoutPreset(value, fallback) {
+        const input = String(value || '').trim();
+        if (input === 'monitor-2x3' || input === 'standard') return input;
+        return fallback;
+    }
+
+    function normalizeCenterAlign(value, fallback) {
+        const input = String(value || '').trim().toLowerCase();
+        if (input === 'left' || input === 'right') return input;
+        return fallback;
+    }
+
+    function normalizeBoolean(value, fallback) {
+        if (typeof value === 'boolean') return value;
+        if (value === 'true' || value === '1' || value === 1 || value === 'show') return true;
+        if (value === 'false' || value === '0' || value === 0 || value === 'hide') return false;
+        return fallback;
+    }
+
+    window.NOTENTISCH_USER_CONFIG_DEFAULTS = {
+        // Versionsnummer für spätere Migrationen des Config-Formats.
+        configVersion: 1,
+
+        // Qualitätsschärfe der PDF-Canvas-Ausgabe (1.0 = normal).
+        pdfSharpness: 1.0,
+
+        // Papierfärbung in Prozent (0..25) für besseres Notenblatt-Feeling.
+        paperTintPercent: 3,
+
+        // Grundfarbe des Papier-Tints als Hex-Farbwert.
+        paperTintColor: '#f5ebd2',
+
+        // Tinting-Modus: "paper-only" (dezent) oder "paper-strong" (kräftiger).
+        tintMethod: 'paper-only',
+
+        // Zusätzliche Intensität des Tints (Multiplikator).
+        tintStrength: 1.0,
+
+        // Zoom-Schritt pro Klick auf +/-.
+        zoomStep: 0.05,
+
+        // Vertikaler Scroll-Schritt im Center in Pixeln.
+        scrollStep: 180,
+
+        // Layout-Preset für die Gesamtansicht.
+        layoutPreset: 'standard',
+
+        // Sichtbarkeit des Fullscreen-Buttons in der Leiste.
+        showFullscreenButton: true,
+
+        // Horizontale Grundausrichtung der Seiten im Center.
+        centerAlign: 'left',
+
+        // Startzoom beim Reset/Fit-Höhe.
+        centerDefaultZoom: 1.0,
+
+        // Untere Zoomgrenze im Center.
+        centerMinZoom: 0.4,
+
+        // Obere Zoomgrenze im Center.
+        centerMaxZoom: 2.6,
+
+        // Debounce-Zeit (ms) bis ein neuer Render nach Zoom ausgelöst wird.
+        centerZoomDebounceMs: 90,
+
+        // Aktiviert kontinuierlichen Zoom bei langem Drücken.
+        centerZoomHoldEnabled: true,
+
+        // Verzögerung (ms), bevor Dauerzoom startet.
+        centerZoomHoldDelayMs: 320,
+
+        // Intervall (ms) für Dauerzoom-Wiederholung.
+        centerZoomHoldIntervalMs: 90,
+
+        // Zusätzlicher horizontaler Platzbedarf je gerenderter Seite (Rahmen/Margin).
+        centerCanvasExtraWidth: 6,
+
+        // Anzahl Seiten für Fit-Breite im 2:3-Preset (wenn nicht wide/full).
+        centerFitMonitorPages: 3,
+
+        // Smooth-Scroll im Center aktivieren/deaktivieren.
+        centerSmoothScroll: true
+    };
+
+    window.notentischNormalizeUserConfig = function notentischNormalizeUserConfig(rawConfig) {
+        const defaults = window.NOTENTISCH_USER_CONFIG_DEFAULTS;
+        const parsed = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
+
+        return {
+            ...defaults,
+            ...parsed,
+            configVersion: clampNumber(parsed.configVersion, 1, 999, defaults.configVersion),
+            pdfSharpness: clampNumber(parsed.pdfSharpness, 0.8, 2.5, defaults.pdfSharpness),
+            paperTintPercent: clampNumber(parsed.paperTintPercent, 0, 25, defaults.paperTintPercent),
+            paperTintColor: normalizeHexColor(parsed.paperTintColor, defaults.paperTintColor),
+            tintMethod: normalizeTintMethod(parsed.tintMethod, defaults.tintMethod),
+            tintStrength: clampNumber(parsed.tintStrength, 0.5, 2.0, defaults.tintStrength),
+            zoomStep: clampNumber(parsed.zoomStep, 0.02, 0.5, defaults.zoomStep),
+            scrollStep: clampNumber(parsed.scrollStep, 60, 800, defaults.scrollStep),
+            layoutPreset: normalizeLayoutPreset(parsed.layoutPreset, defaults.layoutPreset),
+            showFullscreenButton: normalizeBoolean(parsed.showFullscreenButton, defaults.showFullscreenButton),
+            centerAlign: normalizeCenterAlign(parsed.centerAlign, defaults.centerAlign),
+            centerDefaultZoom: clampNumber(parsed.centerDefaultZoom, 0.05, 2.0, defaults.centerDefaultZoom),
+            centerMinZoom: clampNumber(parsed.centerMinZoom, 0.05, 2.0, defaults.centerMinZoom),
+            centerMaxZoom: clampNumber(parsed.centerMaxZoom, 0.2, 5.0, defaults.centerMaxZoom),
+            centerZoomDebounceMs: clampNumber(parsed.centerZoomDebounceMs, 20, 600, defaults.centerZoomDebounceMs),
+            centerZoomHoldEnabled: normalizeBoolean(parsed.centerZoomHoldEnabled, defaults.centerZoomHoldEnabled),
+            centerZoomHoldDelayMs: clampNumber(parsed.centerZoomHoldDelayMs, 80, 1000, defaults.centerZoomHoldDelayMs),
+            centerZoomHoldIntervalMs: clampNumber(parsed.centerZoomHoldIntervalMs, 30, 400, defaults.centerZoomHoldIntervalMs),
+            centerCanvasExtraWidth: clampNumber(parsed.centerCanvasExtraWidth, 0, 40, defaults.centerCanvasExtraWidth),
+            centerFitMonitorPages: clampNumber(parsed.centerFitMonitorPages, 1, 6, defaults.centerFitMonitorPages),
+            centerSmoothScroll: normalizeBoolean(parsed.centerSmoothScroll, defaults.centerSmoothScroll)
+        };
+    };
+})();
