@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notentisch Advanced</title>
+    <style>
+        body { margin: 0; background: #121212; color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 24px; box-sizing: border-box; }
+        .card { width: min(760px, 100%); background: #1b1b1b; border: 1px solid #2f2f2f; border-radius: 12px; padding: 20px; box-sizing: border-box; }
+        h1 { font-size: 20px; margin: 0 0 10px; }
+        .hint { color: #a9a9a9; font-size: 13px; margin: 0 0 16px; }
+        .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+        .field { border: 1px solid #2f2f2f; border-radius: 8px; padding: 10px; background: #171717; display: flex; flex-direction: column; gap: 8px; }
+        label { font-weight: 600; }
+        input[type="number"], select { width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px; border: 1px solid #3a3a3a; background: #111; color: #fff; }
+        .actions { display: flex; gap: 10px; margin-top: 18px; }
+        button { padding: 10px 14px; border-radius: 6px; border: none; cursor: pointer; font-weight: 700; background: #3498db; color: #fff; }
+        button.secondary { background: #3a3a3a; }
+        #status { margin-top: 12px; font-size: 13px; color: #a9d8ff; min-height: 18px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Advanced Settings</h1>
+        <p class="hint">Erweiterte Zoom-/Center-Parameter. Änderungen werden direkt gespeichert.</p>
+
+        <div class="grid">
+            <div class="field"><label for="centerZoomFocus">Zoom-Fokuspunkt</label><select id="centerZoomFocus"><option value="left-top">Links/Oben</option><option value="right-top">Rechts/Oben</option><option value="center">Center-Mitte</option></select></div>
+            <div class="field"><label for="centerDefaultZoom">Center Start-Zoom</label><input id="centerDefaultZoom" type="number" min="0.05" max="2.0" step="0.01"></div>
+            <div class="field"><label for="centerMinZoom">Center Min-Zoom</label><input id="centerMinZoom" type="number" min="0.05" max="2.0" step="0.01"></div>
+            <div class="field"><label for="centerMaxZoom">Center Max-Zoom</label><input id="centerMaxZoom" type="number" min="0.2" max="5.0" step="0.05"></div>
+            <div class="field"><label for="centerZoomDebounceMs">Zoom Render-Verzögerung (ms)</label><input id="centerZoomDebounceMs" type="number" min="20" max="600" step="10"></div>
+            <div class="field"><label for="centerZoomHoldEnabled">Dauerzoom bei langem Drücken</label><select id="centerZoomHoldEnabled"><option value="show">Aktiv</option><option value="hide">Inaktiv</option></select></div>
+            <div class="field"><label for="centerZoomHoldDelayMs">Dauerzoom Start-Verzögerung (ms)</label><input id="centerZoomHoldDelayMs" type="number" min="80" max="1000" step="10"></div>
+            <div class="field"><label for="centerZoomHoldIntervalMs">Dauerzoom Intervall (ms)</label><input id="centerZoomHoldIntervalMs" type="number" min="30" max="400" step="5"></div>
+            <div class="field"><label for="centerCanvasExtraWidth">Canvas Zusatzbreite pro Seite (px)</label><input id="centerCanvasExtraWidth" type="number" min="0" max="40" step="1"></div>
+            <div class="field"><label for="centerFitMonitorPages">Fit-Breite Seitenzahl im 2:3 Layout</label><input id="centerFitMonitorPages" type="number" min="1" max="6" step="1"></div>
+            <div class="field"><label for="centerSmoothScroll">Smooth-Scroll im Center</label><select id="centerSmoothScroll"><option value="show">Aktiv</option><option value="hide">Inaktiv</option></select></div>
+            <div class="field"><label for="dropGlowDurationMs">Nachglühen Rahmen bei Ablage (ms)</label><input id="dropGlowDurationMs" type="number" min="0" max="10000" step="50"></div>
+        </div>
+
+        <div class="actions">
+            <button id="saveBtn" type="button">Speichern</button>
+            <button id="backBtn" type="button" class="secondary">Zurück zu Config</button>
+        </div>
+        <div id="status"></div>
+    </div>
+
+    <script src="center-config.js?v=20260308"></script>
+    <script>
+        const USER_CONFIG_KEY = 'notentischUserConfig';
+        const DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS } : {};
+
+        function clampNumber(value, min, max, fallback) {
+            const parsed = Number(value);
+            if (!Number.isFinite(parsed)) return fallback;
+            return Math.min(max, Math.max(min, parsed));
+        }
+
+        function normalizeBoolean(value, fallback) {
+            if (typeof value === 'boolean') return value;
+            if (value === 'true' || value === '1' || value === 1 || value === 'show') return true;
+            if (value === 'false' || value === '0' || value === 0 || value === 'hide') return false;
+            return fallback;
+        }
+
+        function normalizeCenterZoomFocus(value) {
+            const input = String(value || '').trim().toLowerCase();
+            if (input === 'left-top' || input === 'right-top' || input === 'center') return input;
+            return DEFAULTS.centerZoomFocus;
+        }
+
+        function loadConfig() {
+            try {
+                const raw = localStorage.getItem(USER_CONFIG_KEY);
+                if (!raw) return { ...DEFAULTS };
+                const parsed = JSON.parse(raw);
+                if (typeof window.notentischNormalizeUserConfig === 'function') return window.notentischNormalizeUserConfig(parsed);
+                return { ...DEFAULTS, ...parsed };
+            } catch {
+                return { ...DEFAULTS };
+            }
+        }
+
+        function saveConfig(config) { localStorage.setItem(USER_CONFIG_KEY, JSON.stringify(config)); }
+
+        function applyToForm(config) {
+            document.getElementById('centerZoomFocus').value = normalizeCenterZoomFocus(config.centerZoomFocus);
+            document.getElementById('centerDefaultZoom').value = clampNumber(config.centerDefaultZoom, 0.05, 2.0, DEFAULTS.centerDefaultZoom);
+            document.getElementById('centerMinZoom').value = clampNumber(config.centerMinZoom, 0.05, 2.0, DEFAULTS.centerMinZoom);
+            document.getElementById('centerMaxZoom').value = clampNumber(config.centerMaxZoom, 0.2, 5.0, DEFAULTS.centerMaxZoom);
+            document.getElementById('centerZoomDebounceMs').value = clampNumber(config.centerZoomDebounceMs, 20, 600, DEFAULTS.centerZoomDebounceMs);
+            document.getElementById('centerZoomHoldEnabled').value = normalizeBoolean(config.centerZoomHoldEnabled, DEFAULTS.centerZoomHoldEnabled) ? 'show' : 'hide';
+            document.getElementById('centerZoomHoldDelayMs').value = clampNumber(config.centerZoomHoldDelayMs, 80, 1000, DEFAULTS.centerZoomHoldDelayMs);
+            document.getElementById('centerZoomHoldIntervalMs').value = clampNumber(config.centerZoomHoldIntervalMs, 30, 400, DEFAULTS.centerZoomHoldIntervalMs);
+            document.getElementById('centerCanvasExtraWidth').value = clampNumber(config.centerCanvasExtraWidth, 0, 40, DEFAULTS.centerCanvasExtraWidth);
+            document.getElementById('centerFitMonitorPages').value = clampNumber(config.centerFitMonitorPages, 1, 6, DEFAULTS.centerFitMonitorPages);
+            document.getElementById('centerSmoothScroll').value = normalizeBoolean(config.centerSmoothScroll, DEFAULTS.centerSmoothScroll) ? 'show' : 'hide';
+            document.getElementById('dropGlowDurationMs').value = clampNumber(config.dropGlowDurationMs, 0, 10000, DEFAULTS.dropGlowDurationMs);
+        }
+
+        function readFromForm() {
+            const existing = loadConfig();
+            return {
+                ...existing,
+                centerZoomFocus: normalizeCenterZoomFocus(document.getElementById('centerZoomFocus').value),
+                centerDefaultZoom: clampNumber(document.getElementById('centerDefaultZoom').value, 0.05, 2.0, DEFAULTS.centerDefaultZoom),
+                centerMinZoom: clampNumber(document.getElementById('centerMinZoom').value, 0.05, 2.0, DEFAULTS.centerMinZoom),
+                centerMaxZoom: clampNumber(document.getElementById('centerMaxZoom').value, 0.2, 5.0, DEFAULTS.centerMaxZoom),
+                centerZoomDebounceMs: clampNumber(document.getElementById('centerZoomDebounceMs').value, 20, 600, DEFAULTS.centerZoomDebounceMs),
+                centerZoomHoldEnabled: normalizeBoolean(document.getElementById('centerZoomHoldEnabled').value, DEFAULTS.centerZoomHoldEnabled),
+                centerZoomHoldDelayMs: clampNumber(document.getElementById('centerZoomHoldDelayMs').value, 80, 1000, DEFAULTS.centerZoomHoldDelayMs),
+                centerZoomHoldIntervalMs: clampNumber(document.getElementById('centerZoomHoldIntervalMs').value, 30, 400, DEFAULTS.centerZoomHoldIntervalMs),
+                centerCanvasExtraWidth: clampNumber(document.getElementById('centerCanvasExtraWidth').value, 0, 40, DEFAULTS.centerCanvasExtraWidth),
+                centerFitMonitorPages: clampNumber(document.getElementById('centerFitMonitorPages').value, 1, 6, DEFAULTS.centerFitMonitorPages),
+                centerSmoothScroll: normalizeBoolean(document.getElementById('centerSmoothScroll').value, DEFAULTS.centerSmoothScroll),
+                dropGlowDurationMs: clampNumber(document.getElementById('dropGlowDurationMs').value, 0, 10000, DEFAULTS.dropGlowDurationMs)
+            };
+        }
+
+        function saveWithStatus(msg) {
+            const cfg = readFromForm();
+            saveConfig(cfg);
+            applyToForm(cfg);
+            document.getElementById('status').textContent = msg;
+        }
+
+        ['centerZoomFocus', 'centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerSmoothScroll', 'dropGlowDurationMs'].forEach((id) => {
+            const el = document.getElementById(id);
+            el.addEventListener('input', () => saveWithStatus('Automatisch gespeichert.'));
+            el.addEventListener('change', () => saveWithStatus('Automatisch gespeichert.'));
+        });
+
+        document.getElementById('saveBtn').addEventListener('click', () => saveWithStatus('Gespeichert.'));
+        document.getElementById('backBtn').addEventListener('click', () => { window.location.href = 'config.html'; });
+
+        applyToForm(loadConfig());
+    </script>
+</body>
+</html>
