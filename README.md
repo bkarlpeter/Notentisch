@@ -3,6 +3,8 @@
 
 👉 Lies die ausführliche Installationsanleitung in [INSTALL.md](INSTALL.md) (inkl. Problemlösung und Setup-Hinweisen).
 
+👉 Für den Access/XML-Austausch siehe [Zusammenarbeit Access-HTML.md](Zusammenarbeit%20Access-HTML.md) (aktueller Stand in der Datei).
+
 ---
 
 ## Projekt-Funktions-Check (Test der Umgebung)
