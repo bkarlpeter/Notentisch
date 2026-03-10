@@ -45,6 +45,9 @@ Interaktive Notenverwaltung mit 4 Quadranten, Drag & Drop, PDF-Viewer und XML-Im
 Highlights dieser stabilen Version:
 - Umschaltbare Center-Ausrichtung (`Links/Rechts`) mit persistenter Speicherung
 - Feinere Zoomschritte + kontinuierlicher Zoom bei langem Tastendruck
+- `Auto Zoom` als Toggle (auto anwenden beim Drop ins Center + auto speichern beim Verlassen)
+- 3-stufige Helligkeit fuer die Seitenanzeige (`dunkel|normal|hell`) in Advanced
+- `Auto-Fullscreen beim Start` als schaltbare Advanced-Option
 - Kein erzwungener Stack-Neuaufbau beim Zurücklegen aus dem Center
 - Robustere PDF-Pfad-Fallbacks für Card-Vorschau und Center-Anzeige
 - No-Cache-Header im lokalen Server gegen veraltete Browser-Stände
@@ -103,6 +106,7 @@ cmd /c mklink /J "Blätter" "D:\Pfad\zu\deinen\PDFs"
 ### 3) App starten
 
 - Doppelklick auf `Notentisch.bat`
+- Hinweis: `Notentisch.bat` setzt fuer die laufende Session Bildschirm-Timeout und Standby auf `Nie` (AC/DC) und stellt die vorherigen Werte beim Server-Ende automatisch wieder her.
 - oder im Projektordner:
 
 ```powershell
@@ -139,8 +143,10 @@ Das Skript nutzt automatisch:
 - `WIDE / NORMAL`: vergroessert CENTER nach links; rechter Rand bleibt fix
 - CENTER-Ausrichtung: `Links/Rechts` per Button, persistent ueber `centerAlign`
 - CENTER-Scroll: Schrittweite ueber `scrollStep`, Scroll-Verhalten ueber `centerSmoothScroll`
-- `Save Zoom`: speichert die aktuellen Center-Werte des aktiven Blatts in die XML (`CenterAnsicht`)
-- `Benutze Zoom-Settings beim Drop`: steuert, ob beim Drop ins CENTER die Blatt-spezifischen XML-Werte angewendet werden
+- `Auto Zoom`: Toggle fuer blattbezogene Center-Werte (blau = aus, gruen = aktiv)
+  - aktiv: Beim Drop ins CENTER werden gespeicherte `CenterAnsicht`-Werte angewendet
+  - aktiv: Beim Verlassen des CENTER (Drop/Klick nach Q1-Q4) werden aktuelle Center-Werte automatisch in XML gespeichert
+  - aus: Keine automatische Anwendung und keine automatische Speicherung von `CenterAnsicht`
 - Config-Vorschau: nutzt zuerst lokalen PNG-Cache, dann XML/PDF-Fund (Ausschnitt) und sonst Bild-Fallback
 - `Blaetter`: sichtbare Karten pro Quadrant einstellen (max. 10)
 - `Ende`: beendet den lokalen Server und schliesst die Ansicht
@@ -161,10 +167,12 @@ Das Skript nutzt automatisch:
 - Laufzeitnutzung erfolgt in `center-view.js` und `functions.js`.
 - `useZoomSettingsOnDrop` (bool): XML-`CenterAnsicht` beim Drop ins CENTER anwenden (`true`/`false`, Default `true`).
 - `dropGlowDurationMs` (integer): Dauer des Nachglüh-Rahmens nach Ablage in Quadrant (Millisekunden, Default `1400`).
+- `pageInfoTone` (`dunkel|normal|hell`): Helligkeitsstufe fuer die Seitenanzeige in der Leiste (Advanced).
+- `autoFullscreenOnStart` (bool): Fordert beim Start automatisch Vollbild an (Advanced, Default `true`).
 
 ### CenterAnsicht je Blatt (XML)
 
-- `Save Zoom` schreibt pro Blatt in `<CenterAnsicht>`:
+- `Auto Zoom` (wenn aktiv) schreibt pro Blatt in `<CenterAnsicht>` beim Verlassen des CENTER:
   - `<Zoom>` (decimal)
   - `<Align>` (`left|middle|right`)
   - `<ZoomFokus>` (`left-top|right-top|center`)
@@ -217,7 +225,7 @@ die Blätter werden auf vier Felder rund um das Center verteilt ("Quadranten") e
 - `functions.js` - PDF-Anzeige, Zoom, Seiten-/Scroll-Navigation, Pfadaufloesung
 - `filehandling.js` - XML I/O, Karten-Rendering, Drag & Drop, Statusspeicherung
 - `extract_cards.ps1` - Card-Bilder aus PDFs generieren (Poppler)
-- `Notentisch.bat` - Batch-Launcher fuer Windows (startet `local_server.py` + Browser)
+- `Notentisch.bat` - Batch-Launcher fuer Windows (startet `local_server.py` + Browser; setzt waehrend der Session Energiespar-Timeouts auf `Nie` und restauriert danach)
 - `notentisch.vbs` - VB-Wrapper fuer unsichtbaren Start
 - `local_server.py` - lokaler HTTP-Server mit Shutdown-Endpoint (`/__shutdown__`)
 - `Cards_Export/` - Ordner fuer statische Card-Bilder (`card_*.png`)

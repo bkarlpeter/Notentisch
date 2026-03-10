@@ -11,8 +11,10 @@ const USER_CONFIG_DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS
         tintStrength: 1.0,
         zoomStep: 0.05,
         scrollStep: 180,
+        pageInfoTone: 'normal',
         layoutPreset: 'standard',
         showFullscreenButton: true,
+        autoFullscreenOnStart: true,
         centerAlign: 'left',
         centerZoomFocus: 'left-top',
         centerDefaultZoom: 1.0,
@@ -77,6 +79,12 @@ function normalizeCenterZoomFocus(value) {
     return USER_CONFIG_DEFAULTS.centerZoomFocus;
 }
 
+function normalizePageInfoTone(value) {
+    const input = String(value || '').trim().toLowerCase();
+    if (input === 'dunkel' || input === 'normal' || input === 'hell') return input;
+    return USER_CONFIG_DEFAULTS.pageInfoTone || 'normal';
+}
+
 function normalizeBoolean(value, fallback) {
     if (typeof value === 'boolean') return value;
     if (value === 'true' || value === '1' || value === 1 || value === 'show') return true;
@@ -130,8 +138,10 @@ function loadUserConfig() {
             tintStrength: normalizeTintStrength(parsed.tintStrength),
             zoomStep: normalizeZoomStep(parsed.zoomStep),
             scrollStep: normalizeScrollStep(parsed.scrollStep),
+            pageInfoTone: normalizePageInfoTone(parsed.pageInfoTone),
             layoutPreset: normalizeLayoutPreset(parsed.layoutPreset),
             showFullscreenButton: normalizeBoolean(parsed.showFullscreenButton, USER_CONFIG_DEFAULTS.showFullscreenButton),
+            autoFullscreenOnStart: normalizeBoolean(parsed.autoFullscreenOnStart, USER_CONFIG_DEFAULTS.autoFullscreenOnStart),
             centerAlign: normalizeCenterAlign(parsed.centerAlign),
             centerZoomFocus: normalizeCenterZoomFocus(parsed.centerZoomFocus),
             centerDefaultZoom: clampNumber(parsed.centerDefaultZoom, 0.05, 2.0, USER_CONFIG_DEFAULTS.centerDefaultZoom),
@@ -174,6 +184,30 @@ function applyCenterAppearance() {
     const centerContainer = document.getElementById('center-content');
     if (!centerContainer) return;
     centerContainer.style.background = 'rgba(52, 152, 219, 0.12)';
+}
+
+function applyPageInfoTone(tone) {
+    const root = document.documentElement;
+    if (!root) return;
+
+    const normalizedTone = normalizePageInfoTone(tone);
+    if (normalizedTone === 'dunkel') {
+        root.style.setProperty('--page-info-bg', '#1f1f1f');
+        root.style.setProperty('--page-info-border', '#3c4d60');
+        root.style.setProperty('--page-info-text', '#cbd8e6');
+        return;
+    }
+
+    if (normalizedTone === 'hell') {
+        root.style.setProperty('--page-info-bg', '#36414c');
+        root.style.setProperty('--page-info-border', '#6f879d');
+        root.style.setProperty('--page-info-text', '#edf5ff');
+        return;
+    }
+
+    root.style.setProperty('--page-info-bg', '#2a2a2a');
+    root.style.setProperty('--page-info-border', '#4b5f73');
+    root.style.setProperty('--page-info-text', '#d8e6f3');
 }
 
 function applyPaperTintOverlay(context, canvas) {
@@ -229,6 +263,7 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     settings.tintStrength = userConfig.tintStrength;
     settings.zoomStep = userConfig.zoomStep;
     settings.scrollStep = userConfig.scrollStep;
+    settings.pageInfoTone = userConfig.pageInfoTone;
     settings.centerDefaultZoom = userConfig.centerDefaultZoom;
     settings.centerZoomFocus = userConfig.centerZoomFocus;
     settings.centerMinZoom = userConfig.centerMinZoom;
@@ -244,10 +279,12 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     settings.dropGlowDurationMs = userConfig.dropGlowDurationMs;
     settings.layoutPreset = userConfig.layoutPreset;
     settings.showFullscreenButton = userConfig.showFullscreenButton;
+    settings.autoFullscreenOnStart = userConfig.autoFullscreenOnStart;
     if (typeof setCenterHorizontalAlign === 'function') {
         setCenterHorizontalAlign(userConfig.centerAlign);
     }
     applyLayoutPreset(settings.layoutPreset);
+    applyPageInfoTone(settings.pageInfoTone);
     applyFullscreenButtonVisibility(settings.showFullscreenButton);
     applyCenterAppearance();
     if (typeof applyCenterHorizontalAlign === 'function') {
@@ -322,6 +359,23 @@ function applyFullscreenButtonVisibility(visible) {
     btn.style.display = visible ? '' : 'none';
 }
 
+async function applyDefaultFullscreenState() {
+    if (document.fullscreenElement) {
+        syncFullscreenButtonState();
+        return;
+    }
+
+    try {
+        const root = document.documentElement;
+        if (root && root.requestFullscreen) {
+            await root.requestFullscreen();
+        }
+    } catch (err) {
+    }
+
+    syncFullscreenButtonState();
+}
+
 async function toggleFullscreenMode() {
     try {
         if (!document.fullscreenElement) {
@@ -392,6 +446,7 @@ const settings = {
     scrollStep: initialUserConfig.scrollStep,
     pageLabelPrefix: 'Blatt',
     zoomStep: initialUserConfig.zoomStep,
+    pageInfoTone: initialUserConfig.pageInfoTone,
     pdfSharpness: initialUserConfig.pdfSharpness,
     paperTintPercent: initialUserConfig.paperTintPercent,
     paperTintColor: initialUserConfig.paperTintColor,
@@ -411,7 +466,8 @@ const settings = {
     useZoomSettingsOnDrop: initialUserConfig.useZoomSettingsOnDrop,
     dropGlowDurationMs: initialUserConfig.dropGlowDurationMs,
     layoutPreset: initialUserConfig.layoutPreset,
-    showFullscreenButton: initialUserConfig.showFullscreenButton
+    showFullscreenButton: initialUserConfig.showFullscreenButton,
+    autoFullscreenOnStart: initialUserConfig.autoFullscreenOnStart
 };
 
 window.addEventListener('storage', (event) => {
@@ -426,6 +482,11 @@ function initializeBoardUi() {
         initializeCenterView();
     }
     restoreBoardSessionState();
+    if (settings.autoFullscreenOnStart) {
+        setTimeout(() => {
+            applyDefaultFullscreenState();
+        }, 0);
+    }
 }
 
 if (document.readyState === 'loading') {

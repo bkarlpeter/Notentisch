@@ -42,6 +42,12 @@
         return fallback;
     }
 
+    function normalizePageInfoTone(value, fallback) {
+        const input = String(value || '').trim().toLowerCase();
+        if (input === 'dunkel' || input === 'normal' || input === 'hell') return input;
+        return fallback;
+    }
+
     function normalizeBoolean(value, fallback) {
         if (typeof value === 'boolean') return value;
         if (value === 'true' || value === '1' || value === 1 || value === 'show') return true;
@@ -74,11 +80,17 @@
         // Vertikaler Scroll-Schritt im Center in Pixeln.
         scrollStep: 180,
 
+        // Helligkeitsstufe der Seitenanzeige (dunkel/normal/hell).
+        pageInfoTone: 'normal',
+
         // Layout-Preset für die Gesamtansicht.
         layoutPreset: 'standard',
 
         // Sichtbarkeit des Fullscreen-Buttons in der Leiste.
         showFullscreenButton: true,
+
+        // Vollbild beim Start automatisch anfordern.
+        autoFullscreenOnStart: true,
 
         // Horizontale Grundausrichtung der Seiten im Center.
         centerAlign: 'left',
@@ -138,8 +150,10 @@
             tintStrength: clampNumber(parsed.tintStrength, 0.5, 2.0, defaults.tintStrength),
             zoomStep: clampNumber(parsed.zoomStep, 0.02, 0.5, defaults.zoomStep),
             scrollStep: clampNumber(parsed.scrollStep, 60, 800, defaults.scrollStep),
+            pageInfoTone: normalizePageInfoTone(parsed.pageInfoTone, defaults.pageInfoTone),
             layoutPreset: normalizeLayoutPreset(parsed.layoutPreset, defaults.layoutPreset),
             showFullscreenButton: normalizeBoolean(parsed.showFullscreenButton, defaults.showFullscreenButton),
+            autoFullscreenOnStart: normalizeBoolean(parsed.autoFullscreenOnStart, defaults.autoFullscreenOnStart),
             centerAlign: normalizeCenterAlign(parsed.centerAlign, defaults.centerAlign),
             centerZoomFocus: normalizeCenterZoomFocus(parsed.centerZoomFocus, defaults.centerZoomFocus),
             centerDefaultZoom: clampNumber(parsed.centerDefaultZoom, 0.05, 2.0, defaults.centerDefaultZoom),

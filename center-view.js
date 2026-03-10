@@ -403,10 +403,10 @@ function bindContinuousZoomButtons() {
         stopContinuousZoom();
         if (continuousZoomDidRun) {
             suppressNextZoomClick = true;
-        }
-        const focusMode = normalizeCenterZoomFocusMode(settings.centerZoomFocus);
-        if (focusMode !== 'center') {
-            queueZoomRender();
+            const focusMode = normalizeCenterZoomFocusMode(settings.centerZoomFocus);
+            if (focusMode !== 'center') {
+                queueZoomRender();
+            }
         }
     };
 

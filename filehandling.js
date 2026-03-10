@@ -8,6 +8,7 @@ let saveDateBlinkTimer = null;
 let saveWarnBlinkTimer = null;
 let hasUnsavedChanges = false;
 let isPlayMode = true;
+let saveCenterSettingsModeActive = false;
 
 function persistSafetyBackup() {}
 
@@ -383,29 +384,12 @@ function applyCenterSettingsFromXml(cardId) {
     }
 }
 
-function saveCenterSettingsForActiveCard() {
-    if (!xmlData) {
-        alert('Bitte zuerst XML laden.');
-        return;
-    }
+function writeCenterSettingsToCardNode(cardId) {
+    if (!xmlData) return false;
+    if (typeof getCurrentCenterViewSettings !== 'function') return false;
 
-    const activeCard = document.querySelector('.card-container.in-center');
-    if (!activeCard) {
-        alert('Bitte zuerst ein Blatt ins CENTER legen.');
-        return;
-    }
-
-    if (typeof getCurrentCenterViewSettings !== 'function') {
-        alert('Center-Einstellungen konnten nicht gelesen werden.');
-        return;
-    }
-
-    const cardId = activeCard.dataset.cardid;
     const cardNode = getCardNodeById(cardId);
-    if (!cardNode) {
-        alert('Zu diesem Blatt wurde kein XML-Eintrag gefunden.');
-        return;
-    }
+    if (!cardNode) return false;
 
     const currentView = getCurrentCenterViewSettings();
 
@@ -439,11 +423,25 @@ function saveCenterSettingsForActiveCard() {
     upsertCenterChild('PosRelX', Number(currentView.posRelX ?? 0).toFixed(4));
     upsertCenterChild('PosRelY', Number(currentView.posRelY ?? 0).toFixed(4));
 
-    // Access-Import-Flag: zeigt an, dass CenterAnsicht-Daten neu/aktualisiert sind.
     upsertCardChild('CenterAnsichtChanged', '1');
+    markUnsavedChange();
+    return true;
+}
 
-    saveXml(true);
-    setStatusText('Center-Einstellungen für dieses Blatt in XML gespeichert.');
+function updateSaveCenterSettingsButtonState() {
+    const btn = document.getElementById('saveCenterSettingsBtn');
+    if (!btn) return;
+
+    btn.style.background = saveCenterSettingsModeActive ? '#27ae60' : '#3498db';
+    btn.style.color = '#fff';
+}
+
+function toggleSaveCenterSettingsMode() {
+    saveCenterSettingsModeActive = !saveCenterSettingsModeActive;
+    updateSaveCenterSettingsButtonState();
+    setStatusText(saveCenterSettingsModeActive
+        ? 'Save Zoom aktiv: automatische Übernahme/Speicherung.'
+        : 'Save Zoom aus: keine automatische Übernahme/Speicherung.');
 }
 
 function setStatusText(text) {
@@ -881,6 +879,7 @@ function clearCenterAfterCardExit() {
     if (typeof updateScrollButtons === 'function') {
         updateScrollButtons();
     }
+    updateSaveCenterSettingsButtonState();
 }
 
 function captureCenterVisualSnapshot() {
@@ -1070,7 +1069,7 @@ function drop(event) {
             card.classList.add('in-center');
             lastCardIdFromCenter = card.dataset.cardid;  // Merke für saveDate
             activeCenterCardId = card.dataset.cardid;
-            if (userConfig.useZoomSettingsOnDrop) {
+            if (saveCenterSettingsModeActive) {
                 applyCenterSettingsFromXml(card.dataset.cardid);
             }
             showPdfPages(card.dataset.pdf);
@@ -1081,6 +1080,9 @@ function drop(event) {
     } else if (isQuadrant) {
         const userConfig = getUserConfigForDropBehavior();
         const cameFromCenter = card.classList.contains('in-center');
+        if (cameFromCenter && saveCenterSettingsModeActive) {
+            writeCenterSettingsToCardNode(card.dataset.cardid);
+        }
         placeCardAtTopOfQuadrant(event.currentTarget, card);
         card.classList.remove('in-center');
         applyDropGlow(card, userConfig.dropGlowDurationMs);
@@ -1285,6 +1287,9 @@ function moveCardFromCenterTo(quadrantId) {
     const targetQuadrant = document.getElementById(quadrantId);
     if (card && targetQuadrant) {
         const userConfig = getUserConfigForDropBehavior();
+        if (saveCenterSettingsModeActive && card.classList.contains('in-center')) {
+            writeCenterSettingsToCardNode(card.dataset.cardid);
+        }
         placeCardAtTopOfQuadrant(targetQuadrant, card);
         card.classList.remove('in-center');
         applyDropGlow(card, userConfig.dropGlowDurationMs);
@@ -1354,6 +1359,7 @@ if (document.readyState === 'loading') {
         loadSavedFolder();
         applyModeButtonState();
         restoreSafetyBackupIfAvailable();
+        updateSaveCenterSettingsButtonState();
         window.addEventListener('resize', handleViewportResize);
     });
 } else {
@@ -1363,6 +1369,7 @@ if (document.readyState === 'loading') {
     loadSavedFolder();
     applyModeButtonState();
     restoreSafetyBackupIfAvailable();
+    updateSaveCenterSettingsButtonState();
     window.addEventListener('resize', handleViewportResize);
 }
 

@@ -15,6 +15,9 @@
             --center-max-width: 1400px;
             --card-height: 250px;
             --visible-zone: 10px;
+            --page-info-bg: #2a2a2a;
+            --page-info-border: #4b5f73;
+            --page-info-text: #d8e6f3;
         }
 
         body {
@@ -234,13 +237,18 @@
 
         .btn {
             cursor: pointer;
-            padding: 10px;
+            padding: 0 10px;
             border-radius: 6px;
             border: none;
             background: #3498db;
             color: white;
             font-weight: bold;
             width: 100px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
         }
 
         .btn:hover { background: #2980b9; }
@@ -263,7 +271,7 @@
 
         .btn-small {
             width: auto;
-            padding: 6px 8px;
+            padding: 0 8px;
         }
 
         .btn-zoom {
@@ -291,7 +299,7 @@
         .btn-end {
             width: auto;
             min-width: 58px;
-            padding: 8px 10px;
+            padding: 0 10px;
             background: #7a2d2d;
             border: 1px solid #9a3a3a;
         }
@@ -325,16 +333,48 @@
         .page-info {
             min-width: 80px;
             text-align: center;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--page-info-bg);
+            color: var(--page-info-text);
+            border: 1px solid var(--page-info-border);
+            border-radius: 6px;
+            padding: 0 8px;
+            box-sizing: border-box;
+        }
+
+        #alignBtn {
+            width: 100px;
+        }
+
+        #saveDateHint {
+            margin-left: auto;
+            display: inline-block;
+            min-width: 280px;
+            text-align: right;
+            white-space: nowrap;
+            font-size: 12px;
         }
 
         .stack-label {
             display: flex;
             align-items: center;
             gap: 5px;
+            margin-left: 100px;
+            white-space: nowrap;
         }
 
         .stack-input {
             width: 50px;
+        }
+
+        .stack-max-text {
+            display: inline-block;
+            min-width: 62px;
+            font-size: 11px;
+            white-space: nowrap;
         }
 
         .hidden-file-input {
@@ -473,7 +513,7 @@
         
         <button class="btn toggle" onclick="toggleWide()" id="wideBtn">Norm</button>
         <button class="btn btn-small" onclick="toggleCenterAlign()" id="alignBtn">Links</button>
-        <button class="btn btn-small" onclick="saveCenterSettingsForActiveCard()" id="saveCenterSettingsBtn">Save Zoom</button>
+        <button class="btn btn-small" onclick="toggleSaveCenterSettingsMode()" id="saveCenterSettingsBtn">Auto Zoom</button>
         <span class="separator">|</span>
         <button class="btn btn-small" onclick="previousPage()">&lt;</button>
         <span id="pageInfo" class="page-info"></span>
@@ -482,11 +522,11 @@
         <label class="stack-label">
             Blätter: 
             <input type="number" id="stackCount" value="8" min="1" max="10" class="stack-input">
-            (max 10)
+            <span class="stack-max-text">(max 10)</span>
         </label>
         
         <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)" class="hidden-file-input">
-        <span id="saveDateHint" class="separator" style="margin-left: auto;">Modus: Spielen (Datum automatisch)</span>
+        <span id="saveDateHint" class="separator">Modus: Spielen (Datum automatisch)</span>
         <button class="btn btn-config" onclick="openConfigPage()" title="Config">C</button>
         <button class="btn btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreenMode()" title="Vollbild (F11 / Esc)">F11</button>
         <button class="btn btn-end" id="endBtn" onclick="requestShutdownAndExit()" title="Server beenden und schließen">Ende</button>
