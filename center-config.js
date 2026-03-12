@@ -132,7 +132,16 @@
         useZoomSettingsOnDrop: true,
 
         // Nachglühen-Rahmen beim Ablegen in Quadranten (Millisekunden).
-        dropGlowDurationMs: 1400
+        dropGlowDurationMs: 1400,
+
+        // Grundfarbe der Steuerleisten-Buttons im Ausgangszustand (Hex).
+        btnBaseColor: '#3498db',
+
+        // Farbe fuer den ersten Toggle-Schritt.
+        btnToggleColor1: '#27ae60',
+
+        // Farbe fuer den zweiten Toggle-Schritt.
+        btnToggleColor2: '#52be80'
     };
 
     window.notentischNormalizeUserConfig = function notentischNormalizeUserConfig(rawConfig) {
@@ -167,7 +176,10 @@
             centerFitMonitorPages: clampNumber(parsed.centerFitMonitorPages, 1, 6, defaults.centerFitMonitorPages),
             centerSmoothScroll: normalizeBoolean(parsed.centerSmoothScroll, defaults.centerSmoothScroll),
             useZoomSettingsOnDrop: normalizeBoolean(parsed.useZoomSettingsOnDrop, defaults.useZoomSettingsOnDrop),
-            dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, defaults.dropGlowDurationMs)
+            dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, defaults.dropGlowDurationMs),
+            btnBaseColor: normalizeHexColor(parsed.btnBaseColor, defaults.btnBaseColor),
+            btnToggleColor1: normalizeHexColor(parsed.btnToggleColor1, defaults.btnToggleColor1),
+            btnToggleColor2: normalizeHexColor(parsed.btnToggleColor2, defaults.btnToggleColor2)
         };
     };
 })();

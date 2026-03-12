@@ -155,7 +155,10 @@ function loadUserConfig() {
             centerFitMonitorPages: clampNumber(parsed.centerFitMonitorPages, 1, 6, USER_CONFIG_DEFAULTS.centerFitMonitorPages),
             centerSmoothScroll: normalizeBoolean(parsed.centerSmoothScroll, USER_CONFIG_DEFAULTS.centerSmoothScroll),
             useZoomSettingsOnDrop: normalizeBoolean(parsed.useZoomSettingsOnDrop, USER_CONFIG_DEFAULTS.useZoomSettingsOnDrop),
-            dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, USER_CONFIG_DEFAULTS.dropGlowDurationMs)
+            dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, USER_CONFIG_DEFAULTS.dropGlowDurationMs),
+            btnBaseColor: normalizeHexColor(parsed.btnBaseColor, USER_CONFIG_DEFAULTS.btnBaseColor),
+            btnToggleColor1: normalizeHexColor(parsed.btnToggleColor1, USER_CONFIG_DEFAULTS.btnToggleColor1),
+            btnToggleColor2: normalizeHexColor(parsed.btnToggleColor2, USER_CONFIG_DEFAULTS.btnToggleColor2)
         };
     } catch (err) {
         return { ...USER_CONFIG_DEFAULTS };
@@ -280,6 +283,10 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     settings.layoutPreset = userConfig.layoutPreset;
     settings.showFullscreenButton = userConfig.showFullscreenButton;
     settings.autoFullscreenOnStart = userConfig.autoFullscreenOnStart;
+    settings.btnBaseColor = userConfig.btnBaseColor;
+    settings.btnToggleColor1 = userConfig.btnToggleColor1;
+    settings.btnToggleColor2 = userConfig.btnToggleColor2;
+    applyBtnBaseColor(settings.btnBaseColor);
     if (typeof setCenterHorizontalAlign === 'function') {
         setCenterHorizontalAlign(userConfig.centerAlign);
     }
@@ -294,6 +301,18 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     if (shouldRerender && typeof currentPdfDoc !== 'undefined' && currentPdfDoc && typeof renderPdfPages === 'function') {
         renderPdfPages();
     }
+}
+
+function applyBtnBaseColor(color) {
+    const valid = /^#[0-9a-fA-F]{6}$/.test(color) ? color : '#3498db';
+    document.documentElement.style.setProperty('--btn-base', valid);
+}
+
+function getToggleStepColor(step) {
+    const isSecondStep = Number(step) === 2;
+    const fallback = isSecondStep ? '#52be80' : '#27ae60';
+    const configured = isSecondStep ? settings.btnToggleColor2 : settings.btnToggleColor1;
+    return /^#[0-9a-fA-F]{6}$/.test(String(configured || '')) ? configured : fallback;
 }
 
 function openConfigPage() {
@@ -328,15 +347,22 @@ function restoreBoardSessionState() {
         return;
     }
 
+    try {
+        // Signal fuer filehandling.js: den automatischen XML-Autoload nach Config-Rueckkehr genau einmal ueberspringen.
+        sessionStorage.setItem('notentischSkipAutoLoadSavedFolder', '1');
+    } catch (err) {
+    }
+
     let boardRestoreResult = null;
     if (parsed.boardSnapshot && typeof restoreBoardSnapshotFromConfig === 'function') {
         boardRestoreResult = restoreBoardSnapshotFromConfig(parsed.boardSnapshot);
     }
 
-    const centerVisualAlreadyRestored = !!(boardRestoreResult && typeof boardRestoreResult === 'object' && boardRestoreResult.centerVisualRestored);
-
-    if (parsed.center && typeof restoreCenterRuntimeState === 'function' && !centerVisualAlreadyRestored) {
-        restoreCenterRuntimeState(parsed.center);
+    // restoreCenterRuntimeState wird immer aufgerufen, damit showPdfPages das PDF lädt
+    // und currentPdfDoc gesetzt wird. Ohne dies bricht queueZoomRender() mit
+    // "if (!currentPdfDoc) return" ab und Zoom funktioniert nicht.
+    if (parsed.center && typeof restoreCenterRuntimeState === 'function') {
+        restoreCenterRuntimeState(parsed.center, { preserveConfiguredFocus: true });
     }
 
     sessionStorage.removeItem(BOARD_SESSION_STATE_KEY);
@@ -467,7 +493,10 @@ const settings = {
     dropGlowDurationMs: initialUserConfig.dropGlowDurationMs,
     layoutPreset: initialUserConfig.layoutPreset,
     showFullscreenButton: initialUserConfig.showFullscreenButton,
-    autoFullscreenOnStart: initialUserConfig.autoFullscreenOnStart
+    autoFullscreenOnStart: initialUserConfig.autoFullscreenOnStart,
+    btnBaseColor: initialUserConfig.btnBaseColor,
+    btnToggleColor1: initialUserConfig.btnToggleColor1,
+    btnToggleColor2: initialUserConfig.btnToggleColor2
 };
 
 window.addEventListener('storage', (event) => {

@@ -240,7 +240,7 @@
             padding: 0 10px;
             border-radius: 6px;
             border: none;
-            background: #3498db;
+            background: var(--btn-base, #3498db);
             color: white;
             font-weight: bold;
             width: 100px;
@@ -251,21 +251,20 @@
             box-sizing: border-box;
         }
 
-        .btn:hover { background: #2980b9; }
+        .btn:hover { filter: brightness(0.88); }
 
         .btn.toggle {
             width: 100px;
             padding: 10px;
-            background: #3498db;
+            background: var(--btn-base, #3498db);
         }
 
         .btn.toggle:hover {
-            filter: brightness(0.95);
+            filter: brightness(0.92);
         }
 
         .btn.toggle.full-state:hover {
-            background: #d68910;
-            filter: none;
+            filter: brightness(0.92);
         }
 
 
@@ -535,10 +534,10 @@
 </div>
 
     <!-- SCRIPTS -->
-    <script src="center-config.js?v=20260308"></script>
-    <script src="functions.js?v=20260322b"></script>
-    <script src="center-view.js?v=20260308"></script>
-    <script src="filehandling.js?v=20260316b"></script>
+    <script src="center-config.js?v=20260312a"></script>
+    <script src="functions.js?v=20260312c"></script>
+    <script src="center-view.js?v=20260312e"></script>
+    <script src="filehandling.js?v=20260312b"></script>
 
 </body>
 </html>

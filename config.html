@@ -14,8 +14,18 @@
         .field { border: 1px solid #2f2f2f; border-radius: 8px; padding: 10px; background: #171717; display: flex; flex-direction: column; gap: 8px; }
         label { font-weight: 600; }
         input[type="number"], select { width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px; border: 1px solid #3a3a3a; background: #111; color: #fff; }
-        input[type="color"] { width: 56px; height: 40px; border-radius: 6px; border: 1px solid #3a3a3a; background: #111; padding: 2px; }
+        input[type="color"] { width: 56px; height: 40px; border-radius: 6px; border: 1px solid #3a3a3a; background: #111; padding: 2px; cursor: pointer; }
         .field-preview { grid-column: span 2; }
+        .field-btn-color { grid-column: span 2; }
+        @media (max-width: 760px) { .field-btn-color { grid-column: span 1; } }
+        .btn-color-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .btn-color-hex { width: 82px; box-sizing: border-box; padding: 8px; border-radius: 6px; border: 1px solid #3a3a3a; background: #111; color: #fff; font-family: 'Courier New', monospace; font-size: 13px; }
+        .btn-color-swatches { display: flex; align-items: center; gap: 6px; margin-left: 6px; }
+        .swatch-group { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+        .swatch-box { width: 32px; height: 28px; border-radius: 5px; border: 1px solid #555; display: inline-block; }
+        .swatch-lbl { font-size: 10px; color: #888; white-space: nowrap; }
+        #swatchToggle1 { background: #27ae60; }
+        #swatchToggle2 { background: #52be80; }
         @media (max-width: 760px) { .field-preview { grid-column: span 1; } }
         .preview-grid {
             display: grid;

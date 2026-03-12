@@ -94,7 +94,7 @@ function setSaveDateState(enabled, hintText) {
     const hint = document.getElementById('saveDateHint');
     if (btn) {
         btn.disabled = !enabled;
-        btn.style.backgroundColor = enabled ? '#3498db' : '#6a7480';
+        btn.style.backgroundColor = enabled ? '' : '#6a7480';
         btn.style.color = 'white';
         btn.style.fontWeight = enabled ? 'bold' : 'normal';
         btn.style.marginLeft = 'auto';
@@ -432,7 +432,7 @@ function updateSaveCenterSettingsButtonState() {
     const btn = document.getElementById('saveCenterSettingsBtn');
     if (!btn) return;
 
-    btn.style.background = saveCenterSettingsModeActive ? '#27ae60' : '#3498db';
+    btn.style.background = saveCenterSettingsModeActive ? getToggleStepColor(1) : '';
     btn.style.color = '#fff';
 }
 
@@ -1104,7 +1104,7 @@ function drop(event) {
 function resetSaveDateButtonStyle() {
     const btn = document.getElementById('saveDateBtn');
     if (!btn) return;
-    btn.style.backgroundColor = btn.disabled ? '#555' : '#3498db';
+    btn.style.backgroundColor = btn.disabled ? '#555' : '';
     btn.style.color = 'white';
     btn.style.fontWeight = btn.disabled ? 'normal' : 'bold';
     btn.style.outline = '';
@@ -1321,6 +1321,18 @@ function handleViewportResize() {
     updateStackLayout();
 }
 
+function shouldSkipAutoLoadSavedFolder() {
+    try {
+        if (sessionStorage.getItem('notentischSkipAutoLoadSavedFolder') === '1') {
+            sessionStorage.removeItem('notentischSkipAutoLoadSavedFolder');
+            return true;
+        }
+        return !!sessionStorage.getItem('notentischBoardSessionState');
+    } catch {
+        return false;
+    }
+}
+
 
 function saveDateNow() {
     // Verwende die cardId die beim Verschieben aus CENTER gespeichert wurde
@@ -1356,7 +1368,9 @@ if (document.readyState === 'loading') {
         setupDropListeners();
         initializeStackControls();
         updateStackLayout();
-        loadSavedFolder();
+        if (!shouldSkipAutoLoadSavedFolder()) {
+            loadSavedFolder();
+        }
         applyModeButtonState();
         restoreSafetyBackupIfAvailable();
         updateSaveCenterSettingsButtonState();
@@ -1366,7 +1380,9 @@ if (document.readyState === 'loading') {
     setupDropListeners();
     initializeStackControls();
     updateStackLayout();
-    loadSavedFolder();
+    if (!shouldSkipAutoLoadSavedFolder()) {
+        loadSavedFolder();
+    }
     applyModeButtonState();
     restoreSafetyBackupIfAvailable();
     updateSaveCenterSettingsButtonState();

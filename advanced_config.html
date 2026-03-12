@@ -14,6 +14,16 @@
         .field { border: 1px solid #2f2f2f; border-radius: 8px; padding: 10px; background: #171717; display: flex; flex-direction: column; gap: 8px; }
         label { font-weight: 600; }
         input[type="number"], select { width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px; border: 1px solid #3a3a3a; background: #111; color: #fff; }
+        input[type="color"] { width: 56px; height: 40px; border-radius: 6px; border: 1px solid #3a3a3a; background: #111; padding: 2px; cursor: pointer; }
+        .field-btn-color { grid-column: span 2; }
+        @media (max-width: 760px) { .field-btn-color { grid-column: span 1; } }
+        .btn-color-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .btn-color-name { min-width: 92px; color: #c8c8c8; font-size: 13px; }
+        .btn-color-hex { width: 88px; box-sizing: border-box; padding: 8px; border-radius: 6px; border: 1px solid #3a3a3a; background: #111; color: #fff; font-family: 'Courier New', monospace; font-size: 13px; }
+        .btn-color-swatches { display: flex; align-items: center; gap: 6px; margin-left: 6px; }
+        .swatch-group { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+        .swatch-box { width: 32px; height: 28px; border-radius: 5px; border: 1px solid #555; display: inline-block; }
+        .swatch-lbl { font-size: 10px; color: #888; white-space: nowrap; }
         .actions { display: flex; gap: 10px; margin-top: 18px; }
         button { padding: 10px 14px; border-radius: 6px; border: none; cursor: pointer; font-weight: 700; background: #3498db; color: #fff; }
         button.secondary { background: #3a3a3a; }
@@ -27,7 +37,6 @@
         <p class="hint">Erweiterte Zoom-/Center-Parameter. Änderungen werden direkt gespeichert.</p>
 
         <div class="grid">
-            <div class="field"><label for="centerZoomFocus">Zoom-Fokuspunkt</label><select id="centerZoomFocus"><option value="left-top">Links/Oben</option><option value="right-top">Rechts/Oben</option><option value="center">Center-Mitte</option></select></div>
             <div class="field"><label for="centerDefaultZoom">Center Start-Zoom</label><input id="centerDefaultZoom" type="number" min="0.05" max="2.0" step="0.01"></div>
             <div class="field"><label for="centerMinZoom">Center Min-Zoom</label><input id="centerMinZoom" type="number" min="0.05" max="2.0" step="0.01"></div>
             <div class="field"><label for="centerMaxZoom">Center Max-Zoom</label><input id="centerMaxZoom" type="number" min="0.2" max="5.0" step="0.05"></div>
@@ -41,6 +50,41 @@
             <div class="field"><label for="pageInfoTone">Seitenanzeige Helligkeit</label><select id="pageInfoTone"><option value="dunkel">Dunkel</option><option value="normal">Normal</option><option value="hell">Hell</option></select></div>
             <div class="field"><label for="autoFullscreenOnStart">Auto-Fullscreen beim Start</label><select id="autoFullscreenOnStart"><option value="show">Aktiv</option><option value="hide">Inaktiv</option></select></div>
             <div class="field"><label for="dropGlowDurationMs">Nachglühen Rahmen bei Ablage (ms)</label><input id="dropGlowDurationMs" type="number" min="0" max="10000" step="50"></div>
+
+            <div class="field field-btn-color">
+                <label>Button Grundfarbe (Ausgangszustand)</label>
+                <div class="btn-color-row">
+                    <span class="btn-color-name">Basis</span>
+                    <input type="color" id="btnBaseColorPicker" title="Farbe wählen">
+                    <input type="text" id="btnBaseColorHex" class="btn-color-hex" maxlength="7" placeholder="#3498db" spellcheck="false">
+                </div>
+                <div class="btn-color-row">
+                    <span class="btn-color-name">Toggle 1</span>
+                    <input type="color" id="btnToggleColor1Picker" title="Farbe wählen">
+                    <input type="text" id="btnToggleColor1Hex" class="btn-color-hex" maxlength="7" placeholder="#27ae60" spellcheck="false">
+                </div>
+                <div class="btn-color-row">
+                    <span class="btn-color-name">Toggle 2</span>
+                    <input type="color" id="btnToggleColor2Picker" title="Farbe wählen">
+                    <input type="text" id="btnToggleColor2Hex" class="btn-color-hex" maxlength="7" placeholder="#52be80" spellcheck="false">
+                </div>
+                <div class="btn-color-row">
+                    <div class="btn-color-swatches">
+                        <div class="swatch-group">
+                            <span class="swatch-box" id="swatchBase"></span>
+                            <span class="swatch-lbl">Basis</span>
+                        </div>
+                        <div class="swatch-group">
+                            <span class="swatch-box" id="swatchToggle1"></span>
+                            <span class="swatch-lbl">1. Toggle</span>
+                        </div>
+                        <div class="swatch-group">
+                            <span class="swatch-box" id="swatchToggle2"></span>
+                            <span class="swatch-lbl">2. Toggle</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="actions">
@@ -68,10 +112,10 @@
             return fallback;
         }
 
-        function normalizeCenterZoomFocus(value) {
-            const input = String(value || '').trim().toLowerCase();
-            if (input === 'left-top' || input === 'right-top' || input === 'center') return input;
-            return DEFAULTS.centerZoomFocus;
+        function normalizeHexColor(value, fallback) {
+            const input = String(value || '').trim();
+            if (/^#[0-9a-fA-F]{6}$/.test(input)) return input.toLowerCase();
+            return fallback;
         }
 
         function normalizePageInfoTone(value) {
@@ -95,7 +139,6 @@
         function saveConfig(config) { localStorage.setItem(USER_CONFIG_KEY, JSON.stringify(config)); }
 
         function applyToForm(config) {
-            document.getElementById('centerZoomFocus').value = normalizeCenterZoomFocus(config.centerZoomFocus);
             document.getElementById('centerDefaultZoom').value = clampNumber(config.centerDefaultZoom, 0.05, 2.0, DEFAULTS.centerDefaultZoom);
             document.getElementById('centerMinZoom').value = clampNumber(config.centerMinZoom, 0.05, 2.0, DEFAULTS.centerMinZoom);
             document.getElementById('centerMaxZoom').value = clampNumber(config.centerMaxZoom, 0.2, 5.0, DEFAULTS.centerMaxZoom);
@@ -109,13 +152,26 @@
             document.getElementById('pageInfoTone').value = normalizePageInfoTone(config.pageInfoTone);
             document.getElementById('autoFullscreenOnStart').value = normalizeBoolean(config.autoFullscreenOnStart, DEFAULTS.autoFullscreenOnStart) ? 'show' : 'hide';
             document.getElementById('dropGlowDurationMs').value = clampNumber(config.dropGlowDurationMs, 0, 10000, DEFAULTS.dropGlowDurationMs);
+            const baseColor = normalizeHexColor(config.btnBaseColor, DEFAULTS.btnBaseColor || '#3498db');
+            const toggleColor1 = normalizeHexColor(config.btnToggleColor1, DEFAULTS.btnToggleColor1 || '#27ae60');
+            const toggleColor2 = normalizeHexColor(config.btnToggleColor2, DEFAULTS.btnToggleColor2 || '#52be80');
+
+            document.getElementById('btnBaseColorPicker').value = baseColor;
+            document.getElementById('btnBaseColorHex').value = baseColor;
+            document.getElementById('btnToggleColor1Picker').value = toggleColor1;
+            document.getElementById('btnToggleColor1Hex').value = toggleColor1;
+            document.getElementById('btnToggleColor2Picker').value = toggleColor2;
+            document.getElementById('btnToggleColor2Hex').value = toggleColor2;
+
+            updateColorSwatch('swatchBase', baseColor, '#3498db');
+            updateColorSwatch('swatchToggle1', toggleColor1, '#27ae60');
+            updateColorSwatch('swatchToggle2', toggleColor2, '#52be80');
         }
 
         function readFromForm() {
             const existing = loadConfig();
             return {
                 ...existing,
-                centerZoomFocus: normalizeCenterZoomFocus(document.getElementById('centerZoomFocus').value),
                 centerDefaultZoom: clampNumber(document.getElementById('centerDefaultZoom').value, 0.05, 2.0, DEFAULTS.centerDefaultZoom),
                 centerMinZoom: clampNumber(document.getElementById('centerMinZoom').value, 0.05, 2.0, DEFAULTS.centerMinZoom),
                 centerMaxZoom: clampNumber(document.getElementById('centerMaxZoom').value, 0.2, 5.0, DEFAULTS.centerMaxZoom),
@@ -128,7 +184,10 @@
                 centerSmoothScroll: normalizeBoolean(document.getElementById('centerSmoothScroll').value, DEFAULTS.centerSmoothScroll),
                 pageInfoTone: normalizePageInfoTone(document.getElementById('pageInfoTone').value),
                 autoFullscreenOnStart: normalizeBoolean(document.getElementById('autoFullscreenOnStart').value, DEFAULTS.autoFullscreenOnStart),
-                dropGlowDurationMs: clampNumber(document.getElementById('dropGlowDurationMs').value, 0, 10000, DEFAULTS.dropGlowDurationMs)
+                dropGlowDurationMs: clampNumber(document.getElementById('dropGlowDurationMs').value, 0, 10000, DEFAULTS.dropGlowDurationMs),
+                btnBaseColor: normalizeHexColor(document.getElementById('btnBaseColorHex').value, DEFAULTS.btnBaseColor || '#3498db'),
+                btnToggleColor1: normalizeHexColor(document.getElementById('btnToggleColor1Hex').value, DEFAULTS.btnToggleColor1 || '#27ae60'),
+                btnToggleColor2: normalizeHexColor(document.getElementById('btnToggleColor2Hex').value, DEFAULTS.btnToggleColor2 || '#52be80')
             };
         }
 
@@ -139,7 +198,46 @@
             document.getElementById('status').textContent = msg;
         }
 
-        ['centerZoomFocus', 'centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerSmoothScroll', 'pageInfoTone', 'autoFullscreenOnStart', 'dropGlowDurationMs'].forEach((id) => {
+        function updateColorSwatch(swatchId, hex, fallback) {
+            const swatch = document.getElementById(swatchId);
+            if (swatch) swatch.style.background = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : fallback;
+        }
+
+        function bindColorInputs(pickerId, hexId, swatchId, fallback) {
+            const picker = document.getElementById(pickerId);
+            const hexInput = document.getElementById(hexId);
+            if (!picker || !hexInput) return;
+
+            picker.addEventListener('input', (e) => {
+                const hex = e.target.value;
+                hexInput.value = hex;
+                updateColorSwatch(swatchId, hex, fallback);
+                saveWithStatus('Automatisch gespeichert.');
+            });
+
+            hexInput.addEventListener('input', (e) => {
+                const hex = e.target.value.trim();
+                updateColorSwatch(swatchId, hex, fallback);
+                if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+                    picker.value = hex.toLowerCase();
+                    saveWithStatus('Automatisch gespeichert.');
+                }
+            });
+
+            hexInput.addEventListener('change', (e) => {
+                const hex = normalizeHexColor(e.target.value, fallback);
+                e.target.value = hex;
+                picker.value = hex;
+                updateColorSwatch(swatchId, hex, fallback);
+                saveWithStatus('Automatisch gespeichert.');
+            });
+        }
+
+        bindColorInputs('btnBaseColorPicker', 'btnBaseColorHex', 'swatchBase', DEFAULTS.btnBaseColor || '#3498db');
+        bindColorInputs('btnToggleColor1Picker', 'btnToggleColor1Hex', 'swatchToggle1', DEFAULTS.btnToggleColor1 || '#27ae60');
+        bindColorInputs('btnToggleColor2Picker', 'btnToggleColor2Hex', 'swatchToggle2', DEFAULTS.btnToggleColor2 || '#52be80');
+
+        ['centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerSmoothScroll', 'pageInfoTone', 'autoFullscreenOnStart', 'dropGlowDurationMs'].forEach((id) => {
             const el = document.getElementById(id);
             el.addEventListener('input', () => saveWithStatus('Automatisch gespeichert.'));
             el.addEventListener('change', () => saveWithStatus('Automatisch gespeichert.'));
