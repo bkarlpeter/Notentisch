@@ -43,8 +43,9 @@ Interaktive Notenverwaltung mit 4 Quadranten, Drag & Drop, PDF-Viewer und XML-Im
 - **Branch:** `main`
 
 Highlights dieser stabilen Version:
-- Umschaltbare Center-Ausrichtung (`Links/Rechts`) mit persistenter Speicherung
+- Umschaltbare Center-Ausrichtung (`Links/Mitte/Rechts`) mit persistenter Speicherung
 - Feinere Zoomschritte + kontinuierlicher Zoom bei langem Tastendruck
+- Zoom-Fokus ist fest auf `links-oben` gesetzt (kein Fokus-Umschalter mehr)
 - `Auto Zoom` als Toggle (auto anwenden beim Drop ins Center + auto speichern beim Verlassen)
 - 3-stufige Helligkeit fuer die Seitenanzeige (`dunkel|normal|hell`) in Advanced
 - `Auto-Fullscreen beim Start` als schaltbare Advanced-Option
@@ -141,7 +142,7 @@ Das Skript nutzt automatisch:
 - `Breite`: skaliert so, dass sichtbare Seiten in die aktuelle CENTER-Breite passen (inkl. `centerCanvasExtraWidth`, `centerFitMonitorPages`)
 - `Höhe`: setzt den Zoom auf den konfigurierten Startwert (`centerDefaultZoom`)
 - `WIDE / NORMAL`: vergroessert CENTER nach links; rechter Rand bleibt fix
-- CENTER-Ausrichtung: `Links/Rechts` per Button, persistent ueber `centerAlign`
+- CENTER-Ausrichtung: `Links/Mitte/Rechts` per Button, persistent ueber `centerAlign`
 - CENTER-Scroll: Schrittweite ueber `scrollStep`, Scroll-Verhalten ueber `centerSmoothScroll`
 - `Auto Zoom`: Toggle fuer blattbezogene Center-Werte (blau = aus, gruen = aktiv)
   - aktiv: Beim Drop ins CENTER werden gespeicherte `CenterAnsicht`-Werte angewendet
@@ -169,13 +170,14 @@ Das Skript nutzt automatisch:
 - `dropGlowDurationMs` (integer): Dauer des Nachglüh-Rahmens nach Ablage in Quadrant (Millisekunden, Default `1400`).
 - `pageInfoTone` (`dunkel|normal|hell`): Helligkeitsstufe fuer die Seitenanzeige in der Leiste (Advanced).
 - `autoFullscreenOnStart` (bool): Fordert beim Start automatisch Vollbild an (Advanced, Default `true`).
+- `centerZoomFocus`: ist systemseitig fest auf `left-top` normalisiert (kein Umschalter in Advanced).
 
 ### CenterAnsicht je Blatt (XML)
 
 - `Auto Zoom` (wenn aktiv) schreibt pro Blatt in `<CenterAnsicht>` beim Verlassen des CENTER:
   - `<Zoom>` (decimal)
   - `<Align>` (`left|middle|right`)
-  - `<ZoomFokus>` (`left-top|right-top|center`)
+  - `<ZoomFokus>` (`left-top`, fest)
   - `<PosRelX>` (decimal 0..1)
   - `<PosRelY>` (decimal 0..1)
 - Zusätzlich wird `<CenterAnsichtChanged>1</CenterAnsichtChanged>` gesetzt für Access-Übernahmefilter.
@@ -209,7 +211,7 @@ Erwartete Haupteintraege:
   - `<Speicherort>`
   - `<Arbeitsstatus>`
   - `<zuletztgespielt>` (optional, wird bei Bedarf erstellt)
-  - `<CenterAnsicht>` (optional mit `<Zoom>`, `<Align>`, `<ZoomFokus>`, `<PosRelX>`, `<PosRelY>`)
+  - `<CenterAnsicht>` (optional mit `<Zoom>`, `<Align>`, `<ZoomFokus=left-top>`, `<PosRelX>`, `<PosRelY>`)
   - `<CenterAnsichtChanged>` (optional, `1` = geänderte Center-Werte für Access-Übernahme)
 
 Status-Mapping der Quadranten:

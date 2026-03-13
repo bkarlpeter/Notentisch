@@ -255,6 +255,7 @@ function openIndexedDB() {
 function applyLoadedXml(xmlText, fileName, directHandle) {
     const parser = new DOMParser();
     xmlData = parser.parseFromString(xmlText, 'text/xml');
+    resetCardRenderCache();
     xmlFileName = fileName || 'Notentisch.xml';
     if (directHandle) {
         xmlFileHandle = directHandle;
@@ -337,11 +338,28 @@ async function handleFile(event) {
 }
 
 const MAX_STACK_CARDS = 10;
+const STACK_COUNT_KEY = 'notentischStackCount';
+const QUADRANT_IDS = ['Q1', 'Q2', 'Q3', 'Q4'];
+const cardElementCache = new Map();
+let cardNodeCache = null;
+let prefetchTimer = null;
+
+function resetCardRenderCache() {
+    cardElementCache.clear();
+    cardNodeCache = null;
+    if (prefetchTimer) {
+        clearTimeout(prefetchTimer);
+        prefetchTimer = null;
+    }
+}
 
 
 function getCardNodes() {
     if (!xmlData) return [];
-    return xmlData.querySelectorAll('NotenTisch, Notentisch');
+    if (!cardNodeCache) {
+        cardNodeCache = Array.from(xmlData.querySelectorAll('NotenTisch, Notentisch'));
+    }
+    return cardNodeCache;
 }
 
 function getCardNodeById(cardId) {
@@ -490,6 +508,72 @@ function createCardElement(cardInfo) {
     return div;
 }
 
+function getCardCacheSignature(cardInfo) {
+    return String(cardInfo.titel || '') + '|' + String(cardInfo.speicherort || '');
+}
+
+function getOrCreateCardElement(cardInfo) {
+    const cardId = Number(cardInfo.idx);
+    const signature = getCardCacheSignature(cardInfo);
+    const cached = cardElementCache.get(cardId);
+
+    if (cached && cached.signature === signature && cached.element) {
+        return cached.element;
+    }
+
+    const element = createCardElement(cardInfo);
+    cardElementCache.set(cardId, { signature, element });
+    return element;
+}
+
+function scheduleCardPrefetch(groupedByQuadrant, limit) {
+    if (prefetchTimer) clearTimeout(prefetchTimer);
+
+    prefetchTimer = setTimeout(() => {
+        prefetchTimer = null;
+        const queue = [];
+
+        QUADRANT_IDS.forEach((quadrantId) => {
+            const cards = groupedByQuadrant[quadrantId] || [];
+            if (!cards.length) return;
+
+            const maxOffset = Math.max(0, cards.length - limit);
+            const offset = Math.max(0, Math.min(quadrantOffsets[quadrantId] || 0, maxOffset));
+            const start = Math.min(cards.length, offset + limit);
+            const end = Math.min(cards.length, start + limit);
+
+            for (let i = start; i < end; i++) {
+                queue.push(cards[i]);
+            }
+        });
+
+        if (!queue.length) return;
+
+        let index = 0;
+        const batchSize = 6;
+        const runBatch = () => {
+            const stop = Math.min(index + batchSize, queue.length);
+            for (; index < stop; index++) {
+                getOrCreateCardElement(queue[index]);
+            }
+
+            if (index < queue.length) {
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(runBatch);
+                } else {
+                    setTimeout(runBatch, 16);
+                }
+            }
+        };
+
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(runBatch);
+        } else {
+            setTimeout(runBatch, 16);
+        }
+    }, 40);
+}
+
 function createQuadrantStackControls(quadrantId, limit, totalCount) {
     const quadrant = document.getElementById(quadrantId);
     if (!quadrant) return;
@@ -542,15 +626,20 @@ function createQuadrantStackControls(quadrantId, limit, totalCount) {
 
 function getStackCount() {
     const input = document.getElementById('stackCount');
-    const raw = parseInt(input?.value || '8', 10);
-    const safe = Number.isFinite(raw) ? Math.max(1, Math.min(MAX_STACK_CARDS, raw)) : 8;
+    const rawInput = String(input?.value || '').trim();
+    const parsedInput = rawInput === '' ? NaN : parseInt(rawInput, 10);
+    const stored = parseInt(localStorage.getItem(STACK_COUNT_KEY) || '', 10);
+    const raw = Number.isFinite(parsedInput)
+        ? parsedInput
+        : (Number.isFinite(stored) ? stored : 8);
+    const safe = Math.max(1, Math.min(MAX_STACK_CARDS, raw));
     if (input) input.value = String(safe);
     return safe;
 }
 
 function updateStackLayout() {
     const root = document.documentElement;
-    const quadrants = ['Q1', 'Q2', 'Q3', 'Q4']
+    const quadrants = QUADRANT_IDS
         .map(id => document.getElementById(id))
         .filter(Boolean);
 
@@ -574,20 +663,53 @@ function initializeStackControls() {
     const input = document.getElementById('stackCount');
     if (!input || input.dataset.bound === 'true') return;
 
-    const onChange = () => {
-        getStackCount();
+    // Gespeicherten Wert laden
+    const stored = parseInt(localStorage.getItem(STACK_COUNT_KEY) || '', 10);
+    if (Number.isFinite(stored)) {
+        input.value = String(Math.max(1, Math.min(MAX_STACK_CARDS, stored)));
+    }
+
+    let renderDebounceTimer = null;
+
+    const persistAndLayout = (countOverride = null) => {
+        const count = Number.isFinite(countOverride) ? countOverride : getStackCount();
+        try { localStorage.setItem(STACK_COUNT_KEY, String(count)); } catch (err) {}
         updateStackLayout();
+    };
+
+    const renderNow = () => {
+        if (renderDebounceTimer) {
+            clearTimeout(renderDebounceTimer);
+            renderDebounceTimer = null;
+        }
         if (xmlData) renderBoard();
     };
 
-    input.addEventListener('input', onChange);
+    const onInput = () => {
+        const raw = String(input.value || '').trim();
+        // Beim Tippen keine schweren Layout-/Render-Operationen ausführen.
+        // Das verhindert Sprünge bei Übergängen wie 10 -> 8.
+        if (raw === '') return;
+        const parsed = parseInt(raw, 10);
+        if (!Number.isFinite(parsed)) return;
+
+        const clamped = Math.max(1, Math.min(MAX_STACK_CARDS, parsed));
+        try { localStorage.setItem(STACK_COUNT_KEY, String(clamped)); } catch (err) {}
+    };
+
+    const onChange = () => {
+        persistAndLayout();
+        renderNow();
+    };
+
+    input.addEventListener('input', onInput);
     input.addEventListener('change', onChange);
     input.dataset.bound = 'true';
 }
 function renderBoard() {
     if (!xmlData) return;
 
-    const quadrants = ['Q1', 'Q2', 'Q3', 'Q4'];
+    const quadrants = QUADRANT_IDS;
     const grouped = { Q1: [], Q2: [], Q3: [], Q4: [] };
 
     quadrants.forEach(q => {
@@ -622,12 +744,13 @@ function renderBoard() {
 
         const visibleCards = grouped[quad].slice(safeOffset, safeOffset + limit);
         visibleCards.forEach((cardInfo) => {
-            target.appendChild(createCardElement(cardInfo));
+            target.appendChild(getOrCreateCardElement(cardInfo));
         });
 
         createQuadrantStackControls(quad, limit, total);
     });
 
+    scheduleCardPrefetch(grouped, limit);
     setupDropListeners();
     updateStackLayout();
 }
@@ -913,6 +1036,8 @@ function restoreCenterVisualSnapshot(snapshot) {
     host.id = 'center-pages-host';
     host.style.display = 'flex';
     host.style.alignItems = 'flex-start';
+    host.style.flex = '0 0 auto';
+    host.style.width = 'max-content';
 
     snapshot.pages.forEach((page) => {
         if (!page || !page.dataUrl) return;
@@ -968,7 +1093,7 @@ function getBoardSnapshotForConfig() {
             Q3: document.getElementById('Q3') ? document.getElementById('Q3').innerHTML : '',
             Q4: document.getElementById('Q4') ? document.getElementById('Q4').innerHTML : ''
         },
-        centerVisual: captureCenterVisualSnapshot(),
+        centerVisual: (() => { try { return captureCenterVisualSnapshot(); } catch (e) { return null; } })(),
         stackCount: getStackCount(),
         lastCardIdFromCenter,
         activeCenterCardId
@@ -981,6 +1106,7 @@ function restoreBoardSnapshotFromConfig(snapshot) {
     try {
         const parsedXml = new DOMParser().parseFromString(snapshot.xmlText, 'text/xml');
         xmlData = parsedXml;
+        resetCardRenderCache();
         if (snapshot.xmlFileName) {
             xmlFileName = snapshot.xmlFileName;
         }

@@ -47,10 +47,6 @@ function setCenterHorizontalAlign(value) {
 }
 
 function normalizeCenterZoomFocusMode(value) {
-    const input = String(value || '').trim().toLowerCase();
-    if (input === 'left-top' || input === 'right-top' || input === 'center') return input;
-    if (centerHorizontalAlign === 'right') return 'right-top';
-    if (centerHorizontalAlign === 'middle') return 'center';
     return 'left-top';
 }
 
@@ -69,6 +65,37 @@ function getEffectiveFocusMode() {
     return normalizeCenterZoomFocusMode(settings.centerZoomFocus);
 }
 
+function getCenterHostMetrics(container) {
+    const host = getCenterPagesHost();
+    if (!container || !host) {
+        return { left: 0, top: 0, width: 1, height: 1 };
+    }
+
+    const rect = host.getBoundingClientRect();
+    const width = Math.max(1, Math.round(rect.width || host.scrollWidth || host.clientWidth || 1));
+    const height = Math.max(1, Math.round(rect.height || host.scrollHeight || host.clientHeight || 1));
+
+    return {
+        left: Number(host.offsetLeft) || 0,
+        top: Number(host.offsetTop) || 0,
+        width,
+        height
+    };
+}
+
+function getFocusAnchorPoint(mode, hostMetrics) {
+    if (mode === 'right-top') {
+        return { x: hostMetrics.width, y: 0 };
+    }
+    if (mode === 'center') {
+        return {
+            x: hostMetrics.width / 2,
+            y: hostMetrics.height / 2
+        };
+    }
+    return { x: 0, y: 0 };
+}
+
 function applyFocusAnchorByMode(container, smooth = false) {
     if (!container) return;
 
@@ -81,12 +108,16 @@ function applyFocusAnchorByMode(container, smooth = false) {
     if (focusMode === 'right-top') {
         targetLeft = maxScrollLeft;
     } else if (focusMode === 'center') {
-        targetLeft = Math.max(0, Math.round(maxScrollLeft / 2));
-        targetTop = Math.max(0, Math.round(maxScrollTop / 2));
+        targetLeft = Math.round(maxScrollLeft / 2);
+        targetTop = Math.round(maxScrollTop / 2);
     }
 
     const behavior = smooth ? 'smooth' : 'auto';
-    container.scrollTo({ top: targetTop, left: targetLeft, behavior });
+    container.scrollTo({
+        top: Math.max(0, Math.min(maxScrollTop, targetTop)),
+        left: Math.max(0, Math.min(maxScrollLeft, targetLeft)),
+        behavior
+    });
 }
 
 function applyLiveZoomPreview() {
@@ -232,49 +263,60 @@ function applyCenterViewSettings(viewSettings, options = {}) {
 
 function captureViewAnchor(container) {
     if (!container) return null;
-
-    const totalWidth = Math.max(1, container.scrollWidth);
-    const totalHeight = Math.max(1, container.scrollHeight);
     const focusMode = getEffectiveFocusMode();
-    const anchorX = focusMode === 'right-top'
-        ? (container.scrollLeft + container.clientWidth)
-        : (focusMode === 'center'
-            ? (container.scrollLeft + (container.clientWidth / 2))
-            : container.scrollLeft);
-    const anchorY = focusMode === 'center'
-        ? (container.scrollTop + (container.clientHeight / 2))
-        : container.scrollTop;
+    const hostMetrics = getCenterHostMetrics(container);
+
+    if (focusMode === 'left-top') {
+        return {
+            viewportX: 0,
+            viewportY: 0,
+            contentX: 0,
+            contentY: 0,
+            clientWidth: container.clientWidth,
+            clientHeight: container.clientHeight,
+            mode: focusMode
+        };
+    }
+
+    const point = getFocusAnchorPoint(focusMode, hostMetrics);
 
     return {
-        xRatio: anchorX / totalWidth,
-        yRatio: anchorY / totalHeight,
+        viewportX: hostMetrics.left - container.scrollLeft + point.x,
+        viewportY: hostMetrics.top - container.scrollTop + point.y,
+        contentX: point.x,
+        contentY: point.y,
+        clientWidth: container.clientWidth,
+        clientHeight: container.clientHeight,
         mode: focusMode
     };
 }
 
-function applyViewAnchor(container, anchor) {
+function applyViewAnchor(container, anchor, zoomRatio) {
     if (!container || !anchor) return;
-
-    const totalWidth = Math.max(1, container.scrollWidth);
-    const totalHeight = Math.max(1, container.scrollHeight);
+    const R = (zoomRatio > 0 && Number.isFinite(zoomRatio)) ? zoomRatio : 1;
+    const hostMetrics = getCenterHostMetrics(container);
     const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
     const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
-    const mode = anchor.mode || 'center';
-    const anchorX = anchor.xRatio * totalWidth;
-    const anchorY = anchor.yRatio * totalHeight;
+    const mode = getEffectiveFocusMode() || anchor.mode || 'left-top';
 
-    const targetLeft = mode === 'right-top'
-        ? Math.max(0, Math.min(maxScrollLeft, anchorX - container.clientWidth))
-        : (mode === 'center'
-            ? Math.max(0, Math.min(maxScrollLeft, anchorX - (container.clientWidth / 2)))
-            : Math.max(0, Math.min(maxScrollLeft, anchorX)));
+    let targetLeft;
+    if (mode === 'right-top') {
+        targetLeft = maxScrollLeft;
+    } else if (mode === 'center') {
+        targetLeft = Math.round(maxScrollLeft / 2);
+    } else {
+        targetLeft = 0;
+    }
 
-    const targetTop = mode === 'center'
-        ? Math.max(0, Math.min(maxScrollTop, anchorY - (container.clientHeight / 2)))
-        : Math.max(0, Math.min(maxScrollTop, anchorY));
+    let targetTop;
+    if (mode === 'center') {
+        targetTop = Math.round(maxScrollTop / 2);
+    } else {
+        targetTop = hostMetrics.top + (R * (anchor.contentY || 0)) - (anchor.viewportY || 0);
+    }
 
-    container.scrollLeft = targetLeft;
-    container.scrollTop = targetTop;
+    container.scrollLeft = Math.max(0, Math.min(maxScrollLeft, targetLeft));
+    container.scrollTop = Math.max(0, Math.min(maxScrollTop, targetTop));
 }
 
 function applyCenterHorizontalAlign(smooth = false, keepPosition = false) {
@@ -284,7 +326,22 @@ function applyCenterHorizontalAlign(smooth = false, keepPosition = false) {
 
     const isRight = centerHorizontalAlign === 'right';
     const isMiddle = centerHorizontalAlign === 'middle';
-    container.style.justifyContent = isRight ? 'flex-end' : (isMiddle ? 'center' : 'flex-start');
+    const desiredJustify = isRight ? 'flex-end' : (isMiddle ? 'center' : 'flex-start');
+
+    // Wenn der Inhalt breiter als der Viewport ist, führt center/right in Flex-Containern
+    // zu abgeschnittenem linken Überstand, der nicht zurückgescrollt werden kann.
+    // Dann erzwingen wir flex-start und lassen Alignment nur wirken, wenn es passt.
+    const host = getCenterPagesHost();
+    let effectiveJustify = desiredJustify;
+    if (host) {
+        const hostWidth = Math.max(host.scrollWidth || 0, host.offsetWidth || 0, host.clientWidth || 0);
+        const viewportWidth = Math.max(0, container.clientWidth || 0);
+        if (hostWidth > (viewportWidth + 1)) {
+            effectiveJustify = 'flex-start';
+        }
+    }
+
+    container.style.justifyContent = effectiveJustify;
 
     if (button) {
         if (isRight) {
@@ -335,8 +392,6 @@ function queueZoomRender() {
 
     const centerContainer = document.getElementById('center-content');
     nextRenderViewAnchor = captureViewAnchor(centerContainer);
-
-    // Keine Live-Preview: verhindert Zwischenzustand und reduziert sichtbares Zucken.
 
     zoomRenderTimer = setTimeout(() => {
         renderPdfPages();
@@ -717,12 +772,15 @@ function renderPdfPages() {
     const token = currentRenderToken;
     const renderAnchor = nextRenderViewAnchor;
     nextRenderViewAnchor = null;
+    const capturedRenderedZoom = renderedZoom;
 
     const previousHost = getCenterPagesHost();
     const pagesHost = document.createElement('div');
     pagesHost.id = 'center-pages-host-next';
     pagesHost.style.display = 'flex';
     pagesHost.style.alignItems = 'flex-start';
+    pagesHost.style.flex = '0 0 auto';
+    pagesHost.style.width = 'max-content';
     pagesHost.style.transformOrigin = getTransformOriginForFocusMode();
     pagesHost.style.transform = 'none';
 
@@ -749,7 +807,8 @@ function renderPdfPages() {
                 applyRelativeScrollPosition(centerContainer, pendingRelativeScrollPosition);
                 pendingRelativeScrollPosition = null;
             } else if (renderAnchor) {
-                applyViewAnchor(centerContainer, renderAnchor);
+                const zoomRatio = capturedRenderedZoom > 0 ? currentZoom / capturedRenderedZoom : 1;
+                applyViewAnchor(centerContainer, renderAnchor, zoomRatio);
             } else {
                 applyFocusAnchorByMode(centerContainer, false);
             }

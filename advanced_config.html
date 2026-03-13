@@ -94,7 +94,7 @@
         <div id="status"></div>
     </div>
 
-    <script src="center-config.js?v=20260308"></script>
+    <script src="center-config.js?v=20260313b"></script>
     <script>
         const USER_CONFIG_KEY = 'notentischUserConfig';
         const DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS } : {};
@@ -172,6 +172,7 @@
             const existing = loadConfig();
             return {
                 ...existing,
+                centerZoomFocus: 'left-top',
                 centerDefaultZoom: clampNumber(document.getElementById('centerDefaultZoom').value, 0.05, 2.0, DEFAULTS.centerDefaultZoom),
                 centerMinZoom: clampNumber(document.getElementById('centerMinZoom').value, 0.05, 2.0, DEFAULTS.centerMinZoom),
                 centerMaxZoom: clampNumber(document.getElementById('centerMaxZoom').value, 0.2, 5.0, DEFAULTS.centerMaxZoom),

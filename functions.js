@@ -74,9 +74,7 @@ function normalizeCenterAlign(value) {
 }
 
 function normalizeCenterZoomFocus(value) {
-    const input = String(value || '').trim().toLowerCase();
-    if (input === 'left-top' || input === 'right-top' || input === 'center') return input;
-    return USER_CONFIG_DEFAULTS.centerZoomFocus;
+    return 'left-top';
 }
 
 function normalizePageInfoTone(value) {
@@ -326,7 +324,15 @@ function openConfigPage() {
                 ? getCurrentCenterRuntimeState()
                 : null
         };
-        sessionStorage.setItem(BOARD_SESSION_STATE_KEY, JSON.stringify(state));
+        try {
+            sessionStorage.setItem(BOARD_SESSION_STATE_KEY, JSON.stringify(state));
+        } catch {
+            // Quota überschritten – nochmal ohne centerVisual versuchen
+            if (state.boardSnapshot) state.boardSnapshot.centerVisual = null;
+            try {
+                sessionStorage.setItem(BOARD_SESSION_STATE_KEY, JSON.stringify(state));
+            } catch { /* give up */ }
+        }
     } catch (err) {
     }
     window.location.href = 'config.html';

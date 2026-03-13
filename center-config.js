@@ -37,9 +37,7 @@
     }
 
     function normalizeCenterZoomFocus(value, fallback) {
-        const input = String(value || '').trim().toLowerCase();
-        if (input === 'left-top' || input === 'right-top' || input === 'center') return input;
-        return fallback;
+        return 'left-top';
     }
 
     function normalizePageInfoTone(value, fallback) {
