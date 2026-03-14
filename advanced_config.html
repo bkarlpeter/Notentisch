@@ -50,6 +50,7 @@
             <div class="field"><label for="pageInfoTone">Seitenanzeige Helligkeit</label><select id="pageInfoTone"><option value="dunkel">Dunkel</option><option value="normal">Normal</option><option value="hell">Hell</option></select></div>
             <div class="field"><label for="autoFullscreenOnStart">Auto-Fullscreen beim Start</label><select id="autoFullscreenOnStart"><option value="show">Aktiv</option><option value="hide">Inaktiv</option></select></div>
             <div class="field"><label for="dropGlowDurationMs">Nachglühen Rahmen bei Ablage (ms)</label><input id="dropGlowDurationMs" type="number" min="0" max="10000" step="50"></div>
+            <div class="field"><label for="stackBatchOverlapCount">Stapel-Überlappung je Batch (Karten)</label><input id="stackBatchOverlapCount" type="number" min="0" max="9" step="1"></div>
 
             <div class="field field-btn-color">
                 <label>Button Grundfarbe (Ausgangszustand)</label>
@@ -94,7 +95,7 @@
         <div id="status"></div>
     </div>
 
-    <script src="center-config.js?v=20260313b"></script>
+    <script src="center-config.js?v=20260314a"></script>
     <script>
         const USER_CONFIG_KEY = 'notentischUserConfig';
         const DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS } : {};
@@ -152,6 +153,7 @@
             document.getElementById('pageInfoTone').value = normalizePageInfoTone(config.pageInfoTone);
             document.getElementById('autoFullscreenOnStart').value = normalizeBoolean(config.autoFullscreenOnStart, DEFAULTS.autoFullscreenOnStart) ? 'show' : 'hide';
             document.getElementById('dropGlowDurationMs').value = clampNumber(config.dropGlowDurationMs, 0, 10000, DEFAULTS.dropGlowDurationMs);
+            document.getElementById('stackBatchOverlapCount').value = clampNumber(config.stackBatchOverlapCount, 0, 9, DEFAULTS.stackBatchOverlapCount ?? 2);
             const baseColor = normalizeHexColor(config.btnBaseColor, DEFAULTS.btnBaseColor || '#3498db');
             const toggleColor1 = normalizeHexColor(config.btnToggleColor1, DEFAULTS.btnToggleColor1 || '#27ae60');
             const toggleColor2 = normalizeHexColor(config.btnToggleColor2, DEFAULTS.btnToggleColor2 || '#52be80');
@@ -186,6 +188,7 @@
                 pageInfoTone: normalizePageInfoTone(document.getElementById('pageInfoTone').value),
                 autoFullscreenOnStart: normalizeBoolean(document.getElementById('autoFullscreenOnStart').value, DEFAULTS.autoFullscreenOnStart),
                 dropGlowDurationMs: clampNumber(document.getElementById('dropGlowDurationMs').value, 0, 10000, DEFAULTS.dropGlowDurationMs),
+                stackBatchOverlapCount: clampNumber(document.getElementById('stackBatchOverlapCount').value, 0, 9, DEFAULTS.stackBatchOverlapCount ?? 2),
                 btnBaseColor: normalizeHexColor(document.getElementById('btnBaseColorHex').value, DEFAULTS.btnBaseColor || '#3498db'),
                 btnToggleColor1: normalizeHexColor(document.getElementById('btnToggleColor1Hex').value, DEFAULTS.btnToggleColor1 || '#27ae60'),
                 btnToggleColor2: normalizeHexColor(document.getElementById('btnToggleColor2Hex').value, DEFAULTS.btnToggleColor2 || '#52be80')
@@ -238,7 +241,7 @@
         bindColorInputs('btnToggleColor1Picker', 'btnToggleColor1Hex', 'swatchToggle1', DEFAULTS.btnToggleColor1 || '#27ae60');
         bindColorInputs('btnToggleColor2Picker', 'btnToggleColor2Hex', 'swatchToggle2', DEFAULTS.btnToggleColor2 || '#52be80');
 
-        ['centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerSmoothScroll', 'pageInfoTone', 'autoFullscreenOnStart', 'dropGlowDurationMs'].forEach((id) => {
+        ['centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerSmoothScroll', 'pageInfoTone', 'autoFullscreenOnStart', 'dropGlowDurationMs', 'stackBatchOverlapCount'].forEach((id) => {
             const el = document.getElementById(id);
             el.addEventListener('input', () => saveWithStatus('Automatisch gespeichert.'));
             el.addEventListener('change', () => saveWithStatus('Automatisch gespeichert.'));

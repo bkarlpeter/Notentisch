@@ -150,8 +150,9 @@ Das Skript nutzt automatisch:
   - aus: Keine automatische Anwendung und keine automatische Speicherung von `CenterAnsicht`
 - Config-Vorschau: nutzt zuerst lokalen PNG-Cache, dann XML/PDF-Fund (Ausschnitt) und sonst Bild-Fallback
 - `Blaetter`: sichtbare Karten pro Quadrant einstellen (max. 10)
+- `Stapel-Überlappung je Batch` (Advanced): bestimmt die Überlappung beim Blaettern im Quadrantenstapel
+- Quadranten-`/`: Schrittweite = `Stapelgröße - Stapel-Überlappung` (mindestens `1`)
 - `Ende`: beendet den lokalen Server und schliesst die Ansicht
-- Quadranten-`/`: im jeweiligen Stapel blaettern
 - Karte ins CENTER ziehen: PDF anzeigen
 - Karte aus CENTER in Quadrant verschieben (Drop oder Klick auf Q1-Q4): `Arbeitsstatus` aktualisieren
 - Beim Ablegen in einen Quadranten landet das Blatt immer oben im Stapel (Top-Insert) und der Kartenrahmen glüht kurz nach
@@ -171,6 +172,7 @@ Das Skript nutzt automatisch:
 - `pageInfoTone` (`dunkel|normal|hell`): Helligkeitsstufe fuer die Seitenanzeige in der Leiste (Advanced).
 - `autoFullscreenOnStart` (bool): Fordert beim Start automatisch Vollbild an (Advanced, Default `true`).
 - `centerZoomFocus`: ist systemseitig fest auf `left-top` normalisiert (kein Umschalter in Advanced).
+- `stackBatchOverlapCount` (integer): Überlappung zwischen zwei Stapel-Batches in den Quadranten (`0..9`, Default `2`).
 
 ### CenterAnsicht je Blatt (XML)
 

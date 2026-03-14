@@ -132,6 +132,9 @@
         // Nachglühen-Rahmen beim Ablegen in Quadranten (Millisekunden).
         dropGlowDurationMs: 1400,
 
+        // Überlappung zwischen zwei Stapel-Batches (Anzahl Karten).
+        stackBatchOverlapCount: 2,
+
         // Grundfarbe der Steuerleisten-Buttons im Ausgangszustand (Hex).
         btnBaseColor: '#3498db',
 
@@ -175,6 +178,7 @@
             centerSmoothScroll: normalizeBoolean(parsed.centerSmoothScroll, defaults.centerSmoothScroll),
             useZoomSettingsOnDrop: normalizeBoolean(parsed.useZoomSettingsOnDrop, defaults.useZoomSettingsOnDrop),
             dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, defaults.dropGlowDurationMs),
+            stackBatchOverlapCount: clampNumber(parsed.stackBatchOverlapCount, 0, 9, defaults.stackBatchOverlapCount),
             btnBaseColor: normalizeHexColor(parsed.btnBaseColor, defaults.btnBaseColor),
             btnToggleColor1: normalizeHexColor(parsed.btnToggleColor1, defaults.btnToggleColor1),
             btnToggleColor2: normalizeHexColor(parsed.btnToggleColor2, defaults.btnToggleColor2)

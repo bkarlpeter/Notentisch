@@ -526,7 +526,23 @@ function getOrCreateCardElement(cardInfo) {
     return element;
 }
 
-function scheduleCardPrefetch(groupedByQuadrant, limit) {
+function getConfiguredBatchOverlap(limit) {
+    const safeLimit = Math.max(1, Number(limit) || 1);
+    let overlap = 2;
+
+    if (typeof loadUserConfig === 'function') {
+        try {
+            const cfg = loadUserConfig();
+            overlap = Number(cfg?.stackBatchOverlapCount);
+        } catch (err) {
+        }
+    }
+
+    if (!Number.isFinite(overlap)) overlap = 2;
+    return Math.max(0, Math.min(safeLimit - 1, Math.floor(overlap)));
+}
+
+function scheduleCardPrefetch(groupedByQuadrant, limit, overlapCount) {
     if (prefetchTimer) clearTimeout(prefetchTimer);
 
     prefetchTimer = setTimeout(() => {
@@ -539,7 +555,8 @@ function scheduleCardPrefetch(groupedByQuadrant, limit) {
 
             const maxOffset = Math.max(0, cards.length - limit);
             const offset = Math.max(0, Math.min(quadrantOffsets[quadrantId] || 0, maxOffset));
-            const start = Math.min(cards.length, offset + limit);
+            const offsetStep = Math.max(1, limit - overlapCount);
+            const start = Math.min(cards.length, offset + offsetStep);
             const end = Math.min(cards.length, start + limit);
 
             for (let i = start; i < end; i++) {
@@ -574,13 +591,13 @@ function scheduleCardPrefetch(groupedByQuadrant, limit) {
     }, 40);
 }
 
-function createQuadrantStackControls(quadrantId, limit, totalCount) {
+function createQuadrantStackControls(quadrantId, limit, totalCount, overlapCount) {
     const quadrant = document.getElementById(quadrantId);
     if (!quadrant) return;
 
     const maxOffset = Math.max(0, totalCount - limit);
     const currentOffset = Math.max(0, Math.min(quadrantOffsets[quadrantId] || 0, maxOffset));
-    const offsetStep = Math.max(1, Math.round(limit / 2));
+    const offsetStep = Math.max(1, limit - overlapCount);
     quadrantOffsets[quadrantId] = currentOffset;
 
     if (totalCount <= limit) return;
@@ -719,6 +736,7 @@ function renderBoard() {
 
     const cards = getCardNodes();
     const limit = getStackCount();
+    const overlapCount = getConfiguredBatchOverlap(limit);
 
     cards.forEach((cardEl, idx) => {
         const titel = cardEl.querySelector('Titel')?.textContent || 'Unbekannt';
@@ -747,10 +765,10 @@ function renderBoard() {
             target.appendChild(getOrCreateCardElement(cardInfo));
         });
 
-        createQuadrantStackControls(quad, limit, total);
+        createQuadrantStackControls(quad, limit, total, overlapCount);
     });
 
-    scheduleCardPrefetch(grouped, limit);
+    scheduleCardPrefetch(grouped, limit, overlapCount);
     setupDropListeners();
     updateStackLayout();
 }

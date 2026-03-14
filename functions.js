@@ -28,7 +28,8 @@ const USER_CONFIG_DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS
         centerFitMonitorPages: 3,
         centerSmoothScroll: true,
         useZoomSettingsOnDrop: true,
-        dropGlowDurationMs: 1400
+        dropGlowDurationMs: 1400,
+        stackBatchOverlapCount: 2
     };
 
 function clampNumber(value, min, max, fallback) {
@@ -154,6 +155,7 @@ function loadUserConfig() {
             centerSmoothScroll: normalizeBoolean(parsed.centerSmoothScroll, USER_CONFIG_DEFAULTS.centerSmoothScroll),
             useZoomSettingsOnDrop: normalizeBoolean(parsed.useZoomSettingsOnDrop, USER_CONFIG_DEFAULTS.useZoomSettingsOnDrop),
             dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, USER_CONFIG_DEFAULTS.dropGlowDurationMs),
+            stackBatchOverlapCount: clampNumber(parsed.stackBatchOverlapCount, 0, 9, USER_CONFIG_DEFAULTS.stackBatchOverlapCount),
             btnBaseColor: normalizeHexColor(parsed.btnBaseColor, USER_CONFIG_DEFAULTS.btnBaseColor),
             btnToggleColor1: normalizeHexColor(parsed.btnToggleColor1, USER_CONFIG_DEFAULTS.btnToggleColor1),
             btnToggleColor2: normalizeHexColor(parsed.btnToggleColor2, USER_CONFIG_DEFAULTS.btnToggleColor2)
