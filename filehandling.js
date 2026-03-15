@@ -778,8 +778,13 @@ function setupDropListeners() {
     dropTargets.forEach(id => {
         const el = document.getElementById(id);
         if (el && !el.dataset.dropBound) {
-            el.addEventListener('dragover', (e) => e.preventDefault());
-            el.addEventListener('drop', drop);
+            // Inline-Handler in board.html nutzen, um doppelte Drop-Verarbeitung zu vermeiden.
+            if (typeof el.ondragover !== 'function') {
+                el.addEventListener('dragover', (e) => e.preventDefault());
+            }
+            if (typeof el.ondrop !== 'function') {
+                el.addEventListener('drop', drop);
+            }
             el.dataset.dropBound = 'true';
         }
     });
@@ -1010,6 +1015,9 @@ function clearCenterAfterCardExit() {
     if (typeof currentPdfPath !== 'undefined') currentPdfPath = '';
     if (typeof totalPages !== 'undefined') totalPages = 0;
     if (typeof currentPageOffset !== 'undefined') currentPageOffset = 0;
+    if (typeof discardCenterPendingScrollState === 'function') {
+        discardCenterPendingScrollState();
+    }
     const centerContainer = document.getElementById('center-content');
     if (centerContainer) {
         centerContainer.innerHTML = '';
@@ -1210,10 +1218,14 @@ function drop(event) {
         }
         if (card.dataset.pdf) {
             const userConfig = getUserConfigForDropBehavior();
+            const shouldApplyStoredCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+            if (typeof discardCenterPendingScrollState === 'function') {
+                discardCenterPendingScrollState();
+            }
             card.classList.add('in-center');
             lastCardIdFromCenter = card.dataset.cardid;  // Merke für saveDate
             activeCenterCardId = card.dataset.cardid;
-            if (saveCenterSettingsModeActive) {
+            if (shouldApplyStoredCenterView) {
                 applyCenterSettingsFromXml(card.dataset.cardid);
             }
             showPdfPages(card.dataset.pdf);
@@ -1223,8 +1235,9 @@ function drop(event) {
         }
     } else if (isQuadrant) {
         const userConfig = getUserConfigForDropBehavior();
+        const shouldPersistCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
         const cameFromCenter = card.classList.contains('in-center');
-        if (cameFromCenter && saveCenterSettingsModeActive) {
+        if (cameFromCenter && shouldPersistCenterView) {
             writeCenterSettingsToCardNode(card.dataset.cardid);
         }
         placeCardAtTopOfQuadrant(event.currentTarget, card);
@@ -1431,7 +1444,8 @@ function moveCardFromCenterTo(quadrantId) {
     const targetQuadrant = document.getElementById(quadrantId);
     if (card && targetQuadrant) {
         const userConfig = getUserConfigForDropBehavior();
-        if (saveCenterSettingsModeActive && card.classList.contains('in-center')) {
+        const shouldPersistCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+        if (shouldPersistCenterView && card.classList.contains('in-center')) {
             writeCenterSettingsToCardNode(card.dataset.cardid);
         }
         placeCardAtTopOfQuadrant(targetQuadrant, card);

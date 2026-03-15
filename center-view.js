@@ -16,6 +16,11 @@ let suppressNextZoomClick = false;
 let continuousZoomDidRun = false;
 let pendingRelativeScrollPosition = null;
 
+function discardCenterPendingScrollState() {
+    pendingRelativeScrollPosition = null;
+    nextRenderViewAnchor = null;
+}
+
 function clampRelative(value) {
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) return 0;
@@ -391,7 +396,11 @@ function queueZoomRender() {
     if (zoomRenderTimer) clearTimeout(zoomRenderTimer);
 
     const centerContainer = document.getElementById('center-content');
-    nextRenderViewAnchor = captureViewAnchor(centerContainer);
+    // Aktuelle relative Scrollposition sichern, damit nach dem Re-Render
+    // dieselbe Stelle sichtbar bleibt (statt auf left-top zu springen).
+    const relPos = getRelativeScrollPosition(centerContainer);
+    pendingRelativeScrollPosition = { x: relPos.x, y: relPos.y };
+    nextRenderViewAnchor = null;
 
     zoomRenderTimer = setTimeout(() => {
         renderPdfPages();
