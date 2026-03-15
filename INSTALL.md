@@ -20,6 +20,7 @@ Kompletten Ordner "Notentisch" kopieren. Wichtig sind u.a.:
 - filehandling.js
 - Notentisch.bat
 - extract_cards.ps1
+- create_xml_from_pdfs.ps1
 - Cards_Export/
 - Blätter/
 
@@ -45,8 +46,12 @@ Falls "Blätter" auf dem Zielrechner nicht funktioniert (z.B. alte Junction):
 
 ### 5. XML laden
 1. In der App auf "LADEN" klicken
-2. XML-Datei auswählen
-3. Karten erscheinen in den Quadranten
+2. XML-Datei auswählen → Karten erscheinen in den Quadranten
+
+**Noch keine XML vorhanden?** Beim Abbrechen des Datei-Dialogs erscheint ein Angebot, eine neue XML direkt aus einem PDF-Ordner zu erstellen. Alternativ:
+```powershell
+.\create_xml_from_pdfs.ps1 -PdfDir "C:\Pfad\zu\PDFs" -OutputXml "Notentisch.xml"
+```
 
 ---
 
