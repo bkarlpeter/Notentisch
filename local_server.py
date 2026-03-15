@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import hmac
+import json
 import os
+import secrets
 import sys
 import threading
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -15,15 +18,44 @@ class NotentischHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == '/__shutdown__':
+            # Shutdown nur mit gültigem Session-Token erlauben.
+            # Das reduziert unbeabsichtigte Stopps durch andere lokale Browser-Tabs/Tools.
+            if not self._is_valid_shutdown_request():
+                self.send_error(403, 'Forbidden')
+                return
             self._handle_shutdown()
             return
         super().do_POST()
 
     def do_GET(self):
+        if self.path == '/__session__':
+            # Der Browser holt hier das aktuelle Shutdown-Token für diese Server-Session.
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            payload = {'shutdownToken': getattr(self.server, 'shutdown_token', '')}
+            self.wfile.write(json.dumps(payload).encode('utf-8'))
+            return
         if self.path == '/__shutdown__':
-            self._handle_shutdown()
+            # Shutdown via GET ist bewusst deaktiviert.
+            self.send_error(405, 'Method Not Allowed')
             return
         super().do_GET()
+
+    def _is_valid_shutdown_request(self) -> bool:
+        token = self.headers.get('X-Notentisch-Token', '')
+        expected = getattr(self.server, 'shutdown_token', '')
+        if not expected or not token:
+            return False
+
+        # Timing-sicherer Vergleich für den Session-Token.
+        if not hmac.compare_digest(token, expected):
+            return False
+
+        content_length = int(self.headers.get('Content-Length', '0') or '0')
+        body = self.rfile.read(content_length) if content_length > 0 else b''
+        return body.decode('utf-8', errors='ignore').strip() == 'shutdown'
 
     def _handle_shutdown(self):
         self.send_response(200)
@@ -48,6 +80,8 @@ def main() -> int:
     os.chdir(webroot)
 
     server = ThreadingHTTPServer(('127.0.0.1', port), NotentischHandler)
+    # Pro Start ein neues Token, damit alte Requests nicht wiederverwendet werden können.
+    server.shutdown_token = secrets.token_urlsafe(24)
     print(f'Server gestartet: http://localhost:{port}/board.html')
 
     try:

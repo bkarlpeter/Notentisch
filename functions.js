@@ -1,5 +1,6 @@
 const USER_CONFIG_KEY = 'notentischUserConfig';
 const BOARD_SESSION_STATE_KEY = 'notentischBoardSessionState';
+let shutdownSessionToken = null;
 const USER_CONFIG_DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS
     ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS }
     : {
@@ -436,24 +437,40 @@ async function requestShutdownAndExit() {
     }
 
     const shutdownUrl = window.location.origin + '/__shutdown__';
-    let sent = false;
+    let token = shutdownSessionToken;
 
     try {
-        if (navigator.sendBeacon) {
-            const payload = new Blob(['shutdown'], { type: 'text/plain' });
-            sent = navigator.sendBeacon(shutdownUrl, payload);
+        if (!token) {
+            // Token lazy laden, damit die Seite auch ohne Server (z. B. statische Tests)
+            // weiterhin startet und nur der Shutdown geschützt ist.
+            const sessionResponse = await fetch(window.location.origin + '/__session__', {
+                method: 'GET',
+                cache: 'no-store'
+            });
+            if (sessionResponse.ok) {
+                const sessionInfo = await sessionResponse.json();
+                token = String(sessionInfo.shutdownToken || '').trim();
+                shutdownSessionToken = token || null;
+            }
         }
 
-        if (!sent) {
-            await fetch(shutdownUrl, {
-                method: 'POST',
-                cache: 'no-store',
-                keepalive: true,
-                headers: { 'Content-Type': 'text/plain' },
-                body: 'shutdown'
-            });
+        if (!token) {
+            throw new Error('Shutdown-Token fehlt');
         }
+
+        // Nur Requests mit Session-Token akzeptiert der lokale Server.
+        await fetch(shutdownUrl, {
+            method: 'POST',
+            cache: 'no-store',
+            keepalive: true,
+            headers: {
+                'Content-Type': 'text/plain',
+                'X-Notentisch-Token': token
+            },
+            body: 'shutdown'
+        });
     } catch (err) {
+        alert('Server konnte nicht sicher beendet werden. Bitte Fenster schließen oder Server manuell stoppen.');
     }
 
     try {

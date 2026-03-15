@@ -5,6 +5,25 @@
 
 👉 Für den Access/XML-Austausch siehe [Zusammenarbeit Access-HTML.md](Zusammenarbeit%20Access-HTML.md) (aktueller Stand in der Datei).
 
+## Inhaltsverzeichnis
+
+- [Projekt-Funktions-Check (Test der Umgebung)](#projekt-funktions-check-test-der-umgebung)
+- [Digitaler Notentisch](#digitaler-notentisch)
+- [Aktuelle stabile Version](#aktuelle-stabile-version)
+- [Sicherheitscheck (Stand: 16.03.2026)](#sicherheitscheck-stand-16032026)
+- [Funktionen](#funktionen)
+- [Start auf einem anderen Windows-System](#start-auf-einem-anderen-windows-system)
+- [XML aus PDF-Verzeichnis erstellen oder ergänzen](#xml-aus-pdf-verzeichnis-erstellen-oder-ergänzen)
+- [Card-Bilder generieren](#card-bilder-generieren)
+- [Bedienung](#bedienung)
+- [Center-/Zoom-Parameter (Basis fuer weitere Aenderungen)](#center-zoom-parameter-basis-fuer-weitere-aenderungen)
+- [CenterAnsicht je Blatt (XML)](#centeransicht-je-blatt-xml)
+- [Speichern](#speichern)
+- [Use Case](#use-case)
+- [Dateiformat (XML)](#dateiformat-xml)
+- [Projektdateien](#projektdateien)
+- [Test-Ordner](#test-ordner)
+
 ---
 
 ## Projekt-Funktions-Check (Test der Umgebung)
@@ -54,6 +73,49 @@ Highlights dieser stabilen Version:
 - No-Cache-Header im lokalen Server gegen veraltete Browser-Stände
 
 Details siehe [CHANGELOG.md](CHANGELOG.md).
+
+## Sicherheitscheck (Stand: 16.03.2026)
+
+Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. technischer Ablauftests, Ergebnisse und bereits umgesetzter Gegenmassnahmen.
+
+### Gepruefte Risiken
+
+- Fehlfunktion/Verfuegbarkeit: Unbeabsichtigtes Stoppen des lokalen Servers ueber den Shutdown-Endpoint.
+- Systemeingriffe: Setup mit Adminrechten, Ausfuehrungspolicy und automatischem Installer-Download.
+- Integritaet von Setup-Downloads: Risiko durch manipulierten oder falsch signierten Installer.
+
+### Ablauftests
+
+- Shutdown-Test ohne Token: `POST /__shutdown__` ohne Auth-Header muss blockiert werden.
+- Shutdown-Test mit gueltigem Session-Token: `POST /__shutdown__` mit Header `X-Notentisch-Token` muss funktionieren.
+- Syntax-/Laufzeitcheck nach Anpassungen fuer `local_server.py` sowie der neuen Setup-Sicherheitslogik.
+
+### Testergebnisse
+
+- Ohne Token wird der Shutdown korrekt mit HTTP `403` abgelehnt.
+- Mit gueltigem Token wird der Shutdown korrekt mit HTTP `200` akzeptiert.
+- Der lokale Server bleibt auf `127.0.0.1` gebunden (kein externer Netz-Zugriff auf den Endpoint).
+
+### Umgesetzte Sicherheitsmassnahmen
+
+- **Token-gesicherter Shutdown-Flow**:
+  - Neuer Session-Endpoint `/__session__` liefert ein pro Serverstart neu erzeugtes Token.
+  - `/__shutdown__` akzeptiert nur noch `POST` mit `X-Notentisch-Token` und Body `shutdown`.
+  - `GET /__shutdown__` ist deaktiviert (`405 Method Not Allowed`).
+- **Timing-sicherer Tokenvergleich** auf Serverseite, um triviale Vergleichsangriffe zu reduzieren.
+- **Setup-Haertung fuer Python-Download**:
+  - Signaturpruefung (Authenticode) vor Ausfuehrung des Installers.
+  - Erwarteter Signierer: *Python Software Foundation*.
+  - Optional vorbereiteter SHA256-Vergleich (bei fest hinterlegtem Hash).
+- **Reduzierter Policy-Eingriff im Setup**:
+  - Entfernt: zusaetzliches `Set-ExecutionPolicy` im Skriptlauf.
+  - Begruendung: Das Setup wird bereits explizit mit `-ExecutionPolicy Bypass` gestartet.
+
+### Restrisiken / Hinweise
+
+- CDN-Einbindung von PDF.js bleibt ein Supply-Chain-Risiko (bei kompromittiertem externen CDN).
+- Admin-Setup bleibt ein bewusstes Betriebsmodell; daher Setup-Skripte nur aus vertrauenswuerdiger Quelle ausfuehren.
+- Energieprofil-Aenderungen durch `Notentisch.bat` koennen bei hartem Abbruch temporär bestehen bleiben, bis erneut sauber beendet oder manuell zurueckgesetzt wird.
 
 ## Funktionen
 
