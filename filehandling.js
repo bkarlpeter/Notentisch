@@ -275,6 +275,95 @@ async function openAndLoadXmlHandle(handle) {
     await saveXmlDirectFileHandle(handle);
 }
 
+// ---------------------------------------------------------------------------
+// Optionaler PDF-Import: erzeugt eine neue XML aus einem Blätter-Ordner oder
+// ergänzt fehlende Einträge. Wird nur aufgerufen wenn kein XML geladen wurde.
+// ---------------------------------------------------------------------------
+async function offerPdfImportIfMissing() {
+    if (!window.showDirectoryPicker) return; // API nicht verfügbar
+
+    const isFresh = !xmlData;
+    const msg = isFresh
+        ? 'Kein XML gewählt. Soll eine neue XML aus einem PDF-Ordner erstellt werden?'
+        : 'Sollen neue PDFs aus dem Blätter-Ordner als Einträge ergänzt werden?\n\n(Nur fehlende Titel werden hinzugefügt – vorhandene Einträge bleiben unverändert.)';
+
+    const doImport = confirm(msg);
+    if (!doImport) return;
+
+    // Frische XML-Struktur anlegen wenn noch keine vorhanden
+    if (isFresh) {
+        const timestamp = new Date().toISOString().replace('T', 'T').slice(0, 19);
+        const parser = new DOMParser();
+        xmlData = parser.parseFromString(
+            '<?xml version="1.0" encoding="UTF-8"?><dataroot xmlns:od="urn:schemas-microsoft-com:officedata" generated="' + timestamp + '"></dataroot>',
+            'text/xml'
+        );
+        resetCardRenderCache();
+        xmlFileName = 'Notentisch-Neu.xml';
+        xmlFileHandle = null;
+    }
+
+    let dirHandle;
+    try {
+        dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+    } catch (err) {
+        if (err && err.name !== 'AbortError') console.warn('PDF-Import abgebrochen:', err);
+        return;
+    }
+
+    // Alle bekannten PDF-Dateinamen aus der XML sammeln (normalisiert)
+    const knownFileNames = new Set();
+    xmlData.querySelectorAll('NotenTisch, Notentisch').forEach(node => {
+        const sp = node.querySelector('Speicherort')?.textContent || '';
+        sp.split('#').forEach(part => {
+            const p = part.trim();
+            if (p.toLowerCase().endsWith('.pdf')) {
+                knownFileNames.add(p.split(/[\\/]/).pop().toLowerCase().trim());
+            }
+        });
+    });
+
+    // PDFs im gewählten Ordner einlesen
+    const newEntries = [];
+    let maxId = 0;
+    xmlData.querySelectorAll('NotenTisch, Notentisch').forEach(node => {
+        const id = parseInt(node.querySelector('NotID')?.textContent || '0', 10);
+        if (id > maxId) maxId = id;
+    });
+
+    for await (const entry of dirHandle.values()) {
+        if (entry.kind !== 'file') continue;
+        if (!entry.name.toLowerCase().endsWith('.pdf')) continue;
+        if (knownFileNames.has(entry.name.toLowerCase().trim())) continue;
+
+        const title = entry.name.replace(/\.pdf$/i, '');
+        // Speicherort: Titel#Dateiname.pdf# (relativ, da Vollpfad im Browser unbekannt)
+        const speicherort = title + '#' + entry.name + '#';
+
+        maxId++;
+        const node = xmlData.createElement('NotenTisch');
+        node.innerHTML =
+            '<NotID>' + maxId + '</NotID>' +
+            '<Arbeitsstatus>zur\u00fcckgestellt</Arbeitsstatus>' +
+            '<Titel>' + title.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</Titel>' +
+            '<zuletztgespielt/>' +
+            '<Speicherort>' + speicherort.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</Speicherort>';
+        newEntries.push(node);
+    }
+
+    if (newEntries.length === 0) {
+        alert('Keine neuen PDFs gefunden – alle sind bereits in der XML enthalten.');
+        return;
+    }
+
+    const root = xmlData.documentElement;
+    newEntries.forEach(n => root.appendChild(n));
+    resetCardRenderCache();
+    renderBoard();
+    markUnsavedChange();
+    alert(newEntries.length + ' neue Einträge hinzugefügt. Bitte XML speichern.');
+}
+
 async function handleLoadButton() {
     if (window.showOpenFilePicker) {
         let storedHandle = null;
@@ -319,6 +408,9 @@ async function handleLoadButton() {
         } catch (err) {
             if (err && err.name !== 'AbortError') {
                 console.error('Fehler beim XML-Laden:', err);
+            } else {
+                // Kein XML gewählt – PDF-Import anbieten
+                await offerPdfImportIfMissing();
             }
             return;
         }
@@ -456,6 +548,7 @@ function updateSaveCenterSettingsButtonState() {
 
 function toggleSaveCenterSettingsMode() {
     saveCenterSettingsModeActive = !saveCenterSettingsModeActive;
+    try { localStorage.setItem('saveCenterSettingsModeActive', saveCenterSettingsModeActive ? '1' : '0'); } catch (e) {}
     updateSaveCenterSettingsButtonState();
     setStatusText(saveCenterSettingsModeActive
         ? 'Save Zoom aktiv: automatische Übernahme/Speicherung.'
@@ -963,6 +1056,160 @@ function loadCardImage(imgElement, titel, pdfPath) {
     }
 
     tryNextImage();
+}
+
+// ---------------------------------------------------------------------------
+// Suchfunktion
+// ---------------------------------------------------------------------------
+let pendingSearchMatch = null;
+
+function openSearchOverlay() {
+    const overlay = document.getElementById('search-overlay');
+    const input   = document.getElementById('search-input');
+    if (!overlay) return;
+    pendingSearchMatch = null;
+    overlay.classList.add('visible');
+    if (input) { input.value = ''; input.focus(); }
+    renderSearchResults([]);
+    setSearchMessage('');
+    const fertigBtn = document.querySelector('#search-panel .search-btn-row .btn');
+    if (fertigBtn) fertigBtn.textContent = 'Abbrechen';
+}
+
+function closeSearchOverlay() {
+    if (pendingSearchMatch) {
+        executeSearchDrop(pendingSearchMatch);
+        pendingSearchMatch = null;
+    }
+    const overlay = document.getElementById('search-overlay');
+    if (overlay) overlay.classList.remove('visible');
+}
+
+function searchKeyDown(event) {
+    if (event.key === 'Escape') {
+        pendingSearchMatch = null;
+        const overlay = document.getElementById('search-overlay');
+        if (overlay) overlay.classList.remove('visible');
+    }
+}
+
+const STATUS_LABELS = {
+    'gelernt':        'Stapel Gelernt (Q4)',
+    'geübt':          'Stapel Geübt (Q3)',
+    'wiederholen':    'Stapel Wiederholen (Q2)',
+    'zurückgestellt': 'Stapel Zurückgestellt (Q1)'
+};
+
+function getStatusLabel(status) {
+    const s = (status || '').toLowerCase();
+    if (s.includes('gelernt'))     return STATUS_LABELS['gelernt'];
+    if (s.includes('geübt'))       return STATUS_LABELS['geübt'];
+    if (s.includes('wiederholen')) return STATUS_LABELS['wiederholen'];
+    return STATUS_LABELS['zurückgestellt'];
+}
+
+function setSearchMessage(msg) {
+    const el = document.getElementById('search-message');
+    if (el) el.textContent = msg;
+}
+
+function renderSearchResults(matches) {
+    const list = document.getElementById('search-result-list');
+    if (!list) return;
+    list.innerHTML = '';
+    matches.forEach(m => {
+        const li = document.createElement('li');
+        li.innerHTML =
+            '<div class="result-title">' + m.titel.replace(/</g, '&lt;') + '</div>' +
+            '<div class="result-status">' + getStatusLabel(m.status) + '</div>';
+        li.addEventListener('click', () => pickSearchResult(m));
+        list.appendChild(li);
+    });
+}
+
+function searchCards() {
+    const input = document.getElementById('search-input');
+    const query = (input ? input.value : '').trim().toLowerCase();
+    setSearchMessage('');
+    if (!xmlData || query.length < 1) { renderSearchResults([]); return; }
+
+    const nodes = getCardNodes();
+    const matches = [];
+    nodes.forEach((node, idx) => {
+        const titel  = node.querySelector('Titel')?.textContent || '';
+        const status = node.querySelector('Arbeitsstatus')?.textContent || '';
+        const speicherort = node.querySelector('Speicherort')?.textContent || '';
+        if (titel.toLowerCase().includes(query)) {
+            matches.push({ idx, titel, status, speicherort });
+        }
+    });
+    renderSearchResults(matches);
+    if (matches.length === 0) setSearchMessage('Kein Blatt gefunden.');
+}
+
+function pickSearchResult(match) {
+    if (!xmlData) return;
+    if (currentPdfDoc) {
+        alert('Tisch leeren!');
+        return;
+    }
+    pendingSearchMatch = match;
+
+    const statusLabel = getStatusLabel(match.status);
+    setSearchMessage('Ich entnehme das Blatt \u201e' + match.titel + '\u201c aus deinem ' + statusLabel.replace(/\s*\(Q\d\)/, '') + '.');
+    renderSearchResults([]);
+    const input = document.getElementById('search-input');
+    if (input) input.value = '';
+
+    const fertigBtn = document.querySelector('#search-panel .search-btn-row .btn');
+    if (fertigBtn) fertigBtn.textContent = 'Fertig';
+}
+
+function executeSearchDrop(match) {
+    if (!xmlData || !match) return;
+
+    // Quadrant bestimmen
+    const s = (match.status || '').toLowerCase();
+    let quadId = 'Q1';
+    if (s.includes('wiederholen'))  quadId = 'Q2';
+    else if (s.includes('geübt'))   quadId = 'Q3';
+    else if (s.includes('gelernt')) quadId = 'Q4';
+
+    // Position der Karte im Quadranten ermitteln
+    const cards = getCardNodes();
+    let posInQuad = 0;
+    let counter = 0;
+    cards.forEach((node, idx) => {
+        const st = node.querySelector('Arbeitsstatus')?.textContent || '';
+        let q = 'Q1';
+        if (st.includes('wiederholen')) q = 'Q2';
+        else if (st.includes('geübt')) q = 'Q3';
+        else if (st.includes('gelernt')) q = 'Q4';
+        if (q === quadId) {
+            if (idx === match.idx) posInQuad = counter;
+            counter++;
+        }
+    });
+
+    quadrantOffsets[quadId] = posInQuad;
+    renderBoard();
+
+    const cardEl = document.getElementById('card-' + match.idx);
+    if (!cardEl) return;
+
+    const userConfig = getUserConfigForDropBehavior();
+    const shouldApplyStoredCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+    if (typeof discardCenterPendingScrollState === 'function') {
+        discardCenterPendingScrollState();
+    }
+    cardEl.classList.add('in-center');
+    lastCardIdFromCenter = cardEl.dataset.cardid;
+    activeCenterCardId   = cardEl.dataset.cardid;
+    if (shouldApplyStoredCenterView) {
+        applyCenterSettingsFromXml(cardEl.dataset.cardid);
+    }
+    showPdfPages(cardEl.dataset.pdf);
+    setSaveDateState(false, getModeHintText());
 }
 
 function drag(event) {
@@ -1521,6 +1768,14 @@ function saveDateNow() {
     console.log('Played date saved for card ' + cardId);
 }
 
+function restoreSaveCenterSettingsModeState() {
+    try {
+        const stored = localStorage.getItem('saveCenterSettingsModeActive');
+        if (stored === '1') saveCenterSettingsModeActive = true;
+    } catch (e) {}
+    updateSaveCenterSettingsButtonState();
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         setupDropListeners();
@@ -1531,7 +1786,7 @@ if (document.readyState === 'loading') {
         }
         applyModeButtonState();
         restoreSafetyBackupIfAvailable();
-        updateSaveCenterSettingsButtonState();
+        restoreSaveCenterSettingsModeState();
         window.addEventListener('resize', handleViewportResize);
     });
 } else {
@@ -1543,7 +1798,7 @@ if (document.readyState === 'loading') {
     }
     applyModeButtonState();
     restoreSafetyBackupIfAvailable();
-    updateSaveCenterSettingsButtonState();
+    restoreSaveCenterSettingsModeState();
     window.addEventListener('resize', handleViewportResize);
 }
 

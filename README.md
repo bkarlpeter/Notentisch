@@ -70,6 +70,7 @@ Details siehe [CHANGELOG.md](CHANGELOG.md).
 - XML laden/speichern im Browser
 - PDF-Pfad-Fallbacks fuer gemischte Pfadangaben (inkl. Windows-Pfade mit `#`-Trenner)
 - Kartenbild-Fallback: wenn kein `Cards_Export/card_*.png` existiert, wird ein Thumbnail aus Seite 1 der PDF erzeugt
+- **Blatt suchen** (`Suchen`-Button): Suchoverlay mit Texteingabe, zeigt Treffer mit Stapelzuordnung; Bestätigung per `Fertig` lädt das Blatt direkt in den CENTER
 
 ## Start auf einem anderen Windows-System
  so gehts: .\setup_notentisch.ps1
@@ -118,6 +119,47 @@ Browser-URL:
 
 - `http://localhost:8000/board.html`
 
+## XML aus PDF-Verzeichnis erstellen oder ergänzen
+
+Neue PDFs können automatisch als Einträge in die XML übernommen werden – entweder direkt im Browser beim Laden oder offline per PowerShell-Skript.
+
+### Variante 1 – Direkt im Browser (beim Laden ohne XML)
+
+Wenn beim Klick auf `LADEN` kein XML ausgewählt wird (Abbruch im Dateipicker), erscheint ein Dialog:
+
+> *„Kein XML gewählt. Soll eine neue XML aus einem PDF-Ordner erstellt werden?"*
+
+- **Ja** → Ordner-Picker öffnet sich → alle PDFs im Ordner werden als neue Einträge angelegt (Arbeitsstatus `zurückgestellt`, kein Datum) → Board wird angezeigt → XML als ungespeichert markiert (normaler Speichern-Flow)
+- **Nein** → nichts passiert
+
+Wenn ein XML geladen wird, erscheint der Dialog **nicht**.
+
+### Variante 2 – PowerShell-Skript `create_xml_from_pdfs.ps1`
+
+Für neue Installationen ohne bestehende XML oder für Batch-Nutzung:
+
+```powershell
+# Frische XML aus Ordner erstellen:
+.\create_xml_from_pdfs.ps1 -PdfDir "C:\...\Noten\Blätter" -OutputXml "Notentisch-Neu.xml"
+
+# Bestehende XML um fehlende PDFs ergänzen (Merge):
+.\create_xml_from_pdfs.ps1 -PdfDir "C:\...\Noten\Blätter" -OutputXml "Notentisch.xml" -Merge
+
+# Abweichender Standard-Status (Default: "zurückgestellt"):
+.\create_xml_from_pdfs.ps1 -PdfDir "C:\...\Noten\Blätter" -OutputXml "Notentisch.xml" -Merge -Arbeitsstatus "wiederholen"
+```
+
+Parameter:
+
+| Parameter | Pflicht | Beschreibung |
+|---|---|---|
+| `-PdfDir` | ja | Verzeichnis mit den PDF-Dateien |
+| `-OutputXml` | ja | Pfad der zu erzeugenden bzw. zu ergänzenden XML |
+| `-Merge` | nein | Bestehende XML ergänzen statt neu erstellen |
+| `-Arbeitsstatus` | nein | Startstatus neuer Einträge (Default: `zurückgestellt`) |
+
+---
+
 ## Card-Bilder generieren
 
 Mit `extract_cards.ps1` koennen Card-Vorschaubilder aus PDFs erzeugt werden:
@@ -144,10 +186,15 @@ Das Skript nutzt automatisch:
 - `WIDE / NORMAL`: vergroessert CENTER nach links; rechter Rand bleibt fix
 - CENTER-Ausrichtung: `Links/Mitte/Rechts` per Button, persistent ueber `centerAlign`
 - CENTER-Scroll: Schrittweite ueber `scrollStep`, Scroll-Verhalten ueber `centerSmoothScroll`
-- `Auto Zoom`: Toggle fuer blattbezogene Center-Werte (blau = aus, gruen = aktiv)
+- `Auto Zoom`: Toggle fuer blattbezogene Center-Werte (blau = aus, gruen = aktiv); **Zustand wird persistent gespeichert** und beim nächsten Start wiederhergestellt
   - aktiv: Beim Drop ins CENTER werden gespeicherte `CenterAnsicht`-Werte angewendet
   - aktiv: Beim Verlassen des CENTER (Drop/Klick nach Q1-Q4) werden aktuelle Center-Werte automatisch in XML gespeichert
   - aus: Keine automatische Anwendung und keine automatische Speicherung von `CenterAnsicht`
+- `Suchen`: öffnet ein Suchoverlay zur Volltextsuche über alle Blatttitel
+  - Treffer zeigen Titel und Stapelzuordnung
+  - Treffer anklicken → Bestätigungsmeldung erscheint
+  - `Fertig` → Blatt wird in den CENTER geladen (wie Drag & Drop)
+  - `Abbrechen` / Escape → Overlay schließt sich ohne Aktion
 - Config-Vorschau: nutzt zuerst lokalen PNG-Cache, dann XML/PDF-Fund (Ausschnitt) und sonst Bild-Fallback
 - `Blaetter`: sichtbare Karten pro Quadrant einstellen (max. 10)
 - `Stapel-Überlappung je Batch` (Advanced): bestimmt die Überlappung beim Blaettern im Quadrantenstapel

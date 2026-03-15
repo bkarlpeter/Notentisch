@@ -380,6 +380,95 @@
             display: none;
         }
 
+        /* --- SUCH-OVERLAY --- */
+        #search-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+        }
+        #search-overlay.visible {
+            display: flex;
+        }
+        #search-panel {
+            background: #1e2a35;
+            border: 1px solid #3d5a73;
+            border-radius: 10px;
+            padding: 28px 32px 24px;
+            min-width: 340px;
+            max-width: 480px;
+            width: 90%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        #search-panel h3 {
+            margin: 0;
+            font-size: 15px;
+            color: #c6d8ea;
+            font-weight: bold;
+            letter-spacing: 0.03em;
+        }
+        #search-input {
+            width: 100%;
+            box-sizing: border-box;
+            background: #152028;
+            border: 1px solid #3d5a73;
+            color: #dde8f0;
+            border-radius: 5px;
+            padding: 8px 10px;
+            font-size: 14px;
+            outline: none;
+        }
+        #search-input:focus {
+            border-color: #5a9fd4;
+        }
+        #search-result-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+        #search-result-list li {
+            background: #1a3045;
+            border: 1px solid #2e4a62;
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        #search-result-list li:hover {
+            background: #1f4060;
+        }
+        .result-title {
+            font-weight: bold;
+            color: #d0e8ff;
+            font-size: 13px;
+        }
+        .result-status {
+            font-size: 11px;
+            color: #7aa8c8;
+            margin-top: 2px;
+        }
+        #search-message {
+            font-size: 13px;
+            color: #7ecfa0;
+            min-height: 18px;
+        }
+        .search-btn-row {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
         .center-placeholder {
             text-align: center;
             color: #9aa;
@@ -464,6 +553,20 @@
 
 <body>
 
+    <!-- SUCH-OVERLAY -->
+    <div id="search-overlay">
+        <div id="search-panel">
+            <h3>&#128269;&nbsp;Blatt suchen</h3>
+            <input type="text" id="search-input" placeholder="Titel eingeben..." autocomplete="off"
+                oninput="searchCards()" onkeydown="searchKeyDown(event)">
+            <ul id="search-result-list"></ul>
+            <div id="search-message"></div>
+            <div class="search-btn-row">
+                <button class="btn" onclick="closeSearchOverlay()">Fertig</button>
+            </div>
+        </div>
+    </div>
+
 <div id="layout-container">
 
     <!-- LAYOUT 1: 2x2 + CENTER (normal) -->
@@ -504,6 +607,8 @@
     <div class="control-bar">
         <button class="btn" onclick="handleLoadButton()">LADEN</button>
         <button class="btn" id="modeToggleBtn" onclick="togglePlayMode()">Spielen</button>
+        <span class="separator">|</span>
+        <button class="btn btn-small" onclick="openSearchOverlay()" title="Blatt suchen">Suchen</button>
         <button class="btn btn-small btn-zoom" id="zoomOutBtn" onclick="zoomOut()">ZOOM -</button>
         <button class="btn btn-small btn-zoom" id="zoomInBtn" onclick="zoomIn()">ZOOM +</button>
         <button class="btn btn-small btn-zoom" onclick="fitPdfWidth()">Breite</button>
@@ -534,10 +639,10 @@
 </div>
 
     <!-- SCRIPTS -->
-    <script src="center-config.js?v=20260314a"></script>
-    <script src="functions.js?v=20260314a"></script>
-    <script src="center-view.js?v=20260313i"></script>
-    <script src="filehandling.js?v=20260314a"></script>
+    <script src="center-config.js?v=20260315a"></script>
+    <script src="functions.js?v=20260315a"></script>
+    <script src="center-view.js?v=20260315a"></script>
+    <script src="filehandling.js?v=20260315c"></script>
 
 </body>
 </html>
