@@ -310,8 +310,9 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
         renderPdfPages();
     }
 
-    if (shouldRerender && typeof renderBoard === 'function' && typeof xmlData !== 'undefined' && xmlData) {
-        renderBoard();
+    const renderApi = window.NotentischRender;
+    if (shouldRerender && renderApi && typeof renderApi.renderBoard === 'function' && typeof xmlData !== 'undefined' && xmlData) {
+        renderApi.renderBoard();
     }
 }
 

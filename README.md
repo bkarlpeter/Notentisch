@@ -414,12 +414,13 @@ die Blätter werden auf vier Felder rund um das Center verteilt ("Quadranten") e
 
 - `board.html` - UI, Layout, Styles
 - `functions.js` - PDF-Anzeige, Zoom, Seiten-/Scroll-Navigation, Pfadaufloesung
-- `filehandling.js` - XML I/O, Karten-Rendering, Drag & Drop, Statusspeicherung
+- `render.js` - Karten-Rendering, Stack-/Offset-Logik, Vorschau-Bildaufbau, Render-API (`window.NotentischRender`)
+- `filehandling.js` - XML I/O, Drag & Drop, Suche, Statusspeicherung, Board-/Center-Workflow
 - `audio-assist.js` - Audio Auto (Mikrofonaufnahme, Fingerprint-Bildung, Matching, XML-Felder `AudioReferenz`)
 - `extract_cards.ps1` - Card-Bilder aus PDFs generieren (Poppler)
 - `Notentisch.bat` - Batch-Launcher fuer Windows (startet `local_server.py` + Browser; setzt waehrend der Session Energiespar-Timeouts auf `Nie` und restauriert danach)
 - `notentisch.vbs` - VB-Wrapper fuer unsichtbaren Start
-- `local_server.py` - lokaler HTTP-Server mit Shutdown-Endpoint (`/__shutdown__`) und Audio-Upload-Endpoint (`/__audio_upload__`)
+- `local_server.py` - lokaler HTTP-Server mit Shutdown-Endpoint (`/__shutdown__`) sowie Audio-Upload/-Delete (`/__audio_upload__`, `/__audio_delete__`)
 - `Cards_Export/` - Ordner fuer statische Card-Bilder (`card_*.png`)
 
 ## Test-Ordner

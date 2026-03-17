@@ -17,7 +17,10 @@
 Kompletten Ordner "Notentisch" kopieren. Wichtig sind u.a.:
 - board.html
 - functions.js
+- render.js
 - filehandling.js
+- audio-assist.js
+- local_server.py
 - Notentisch.bat
 - extract_cards.ps1
 - create_xml_from_pdfs.ps1
@@ -118,6 +121,10 @@ Du kannst das Skript jederzeit erneut ausführen, falls du die Ordnerstruktur od
 **Problem:** Audio konnte nicht gespeichert werden
 - Prüfen, ob der lokale Server über local_server.py läuft
 - Prüfen, ob der Ordner mysounds beschreibbar ist
+
+**Problem:** Nach Update verhält sich Audio/Rendering noch wie vorher
+- Lokalen Server neu starten
+- Browserseite einmal hart neu laden, damit `render.js`, `filehandling.js` und `audio-assist.js` frisch geladen werden
 
 ---
 

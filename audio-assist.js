@@ -19,6 +19,10 @@ const AUDIO_SPEECH_HIGH_RATIO_MIN = 0.12;
 const AUDIO_RECORD_ACTIVE_SIGNAL_MS = 1100;
 const AUDIO_FRAME_SAMPLE_MS = 180;
 
+function getRenderApi() {
+    return window.NotentischRender || null;
+}
+
 function getAudioReferenceTargetFrames() {
     const fallbackMs = (window.NOTENTISCH_USER_CONFIG_DEFAULTS && window.NOTENTISCH_USER_CONFIG_DEFAULTS.audioReferenceTargetMs) || 5000;
     let targetMs = fallbackMs;
@@ -101,8 +105,9 @@ function updateAudioAssistUi() {
 }
 
 function sanitizeSoundFileBase(value) {
-    if (typeof sanitizeTitle === 'function') {
-        return sanitizeTitle(value || '').replace(/^card_/i, '').replace(/\.png$/i, '');
+    const renderApi = getRenderApi();
+    if (renderApi && typeof renderApi.sanitizeTitle === 'function') {
+        return renderApi.sanitizeTitle(value || '').replace(/^card_/i, '').replace(/\.png$/i, '');
     }
     return String(value || 'blatt').trim().toLowerCase().replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '') || 'blatt';
 }
@@ -145,16 +150,17 @@ function isReplaceAudioByTitleEnabled() {
 }
 
 function getCardTitleById(cardId) {
-    const cardNode = typeof getCardNodeById === 'function' ? getCardNodeById(cardId) : null;
+    const cardNode = getRenderApi()?.getCardNodeById(cardId) || null;
     return (cardNode?.querySelector('Titel')?.textContent || '').trim();
 }
 
 function collectAudioPathsForTitle(title) {
-    if (!xmlData || typeof getCardNodes !== 'function') return [];
+    const cardNodes = getRenderApi()?.getCardNodes() || [];
+    if (!xmlData || !cardNodes.length) return [];
     const titleKey = String(title || '').trim();
     if (!titleKey) return [];
 
-    return getCardNodes().map((cardNode, idx) => {
+    return cardNodes.map((cardNode, idx) => {
         const cardTitle = (cardNode.querySelector('Titel')?.textContent || '').trim();
         if (cardTitle !== titleKey) return null;
         const audioNode = cardNode.querySelector('AudioReferenz');
@@ -165,11 +171,12 @@ function collectAudioPathsForTitle(title) {
 }
 
 function clearAudioReferenceForTitle(title) {
-    if (!xmlData || typeof getCardNodes !== 'function') return;
+    const cardNodes = getRenderApi()?.getCardNodes() || [];
+    if (!xmlData || !cardNodes.length) return;
     const titleKey = String(title || '').trim();
     if (!titleKey) return;
 
-    getCardNodes().forEach((cardNode, idx) => {
+    cardNodes.forEach((cardNode, idx) => {
         const cardTitle = (cardNode.querySelector('Titel')?.textContent || '').trim();
         if (cardTitle !== titleKey) return;
         const audioNode = cardNode.querySelector('AudioReferenz');
@@ -200,7 +207,7 @@ async function deleteAudioFileByPath(pathValue) {
 }
 
 function getCardAudioNode(cardId) {
-    const cardNode = typeof getCardNodeById === 'function' ? getCardNodeById(cardId) : null;
+    const cardNode = getRenderApi()?.getCardNodeById(cardId) || null;
     if (!cardNode || !xmlData) return null;
     let node = cardNode.querySelector('AudioReferenz');
     if (!node) {
@@ -370,8 +377,9 @@ function cosineSimilarity(a, b) {
 }
 
 function collectAudioReferenceCandidates() {
-    if (!xmlData || typeof getCardNodes !== 'function') return [];
-    return getCardNodes().map((cardNode, idx) => {
+    const cardNodes = getRenderApi()?.getCardNodes() || [];
+    if (!xmlData || !cardNodes.length) return [];
+    return cardNodes.map((cardNode, idx) => {
         const audio = readAudioMetadataFromCardNode(cardNode);
         if (!audio) return null;
         const parsedFingerprint = parseFingerprint(audio.fingerprint);
@@ -388,7 +396,7 @@ function collectAudioReferenceCandidates() {
 }
 
 function buildMatchObjectForCardId(cardId) {
-    const cardNode = typeof getCardNodeById === 'function' ? getCardNodeById(cardId) : null;
+    const cardNode = getRenderApi()?.getCardNodeById(cardId) || null;
     if (!cardNode) return null;
     const idx = Number(cardId);
     if (!Number.isFinite(idx)) return null;
@@ -499,7 +507,7 @@ async function finalizeRecordedAudio(state) {
 }
 
 async function startAudioRecordingForCenterCard(cardId) {
-    const cardNode = typeof getCardNodeById === 'function' ? getCardNodeById(cardId) : null;
+    const cardNode = getRenderApi()?.getCardNodeById(cardId) || null;
     if (!cardNode || typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia) return;
 
     const mimeType = getPreferredAudioMimeType();
