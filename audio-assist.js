@@ -1,4 +1,5 @@
 let audioAssistMode = 0; // 0=aus, 1=hören/suchen, 2=aufnehmen+suchen
+let audioAssistDirection = 1; // 1=aufwärts (0→1→2), -1=abwärts (2→1→0)
 let audioAssistMonitorTimer = null;
 let audioAssistBusy = false;
 
@@ -89,16 +90,16 @@ function updateAudioAssistUi() {
     if (discardBtn) {
         discardBtn.style.display = audioAssistMode === 2 ? 'inline-flex' : 'none';
         if (audioRecordState && audioRecordState.cardId !== null) {
-            discardBtn.textContent = 'Verw.';
-            discardBtn.title = 'Laufende Aufnahme verwerfen';
+            discardBtn.textContent = 'Loeschen';
+            discardBtn.title = 'Laufende Aufnahme loeschen';
             discardBtn.disabled = false;
         } else if (canRestartRecording) {
             discardBtn.textContent = 'Nochmal';
             discardBtn.title = 'Referenz für dieses Blatt sofort neu aufnehmen';
             discardBtn.disabled = false;
         } else {
-            discardBtn.textContent = 'Verw.';
-            discardBtn.title = 'Laufende Aufnahme verwerfen';
+            discardBtn.textContent = 'Loeschen';
+            discardBtn.title = 'Laufende Aufnahme loeschen';
             discardBtn.disabled = true;
         }
     }
@@ -761,10 +762,16 @@ async function audioAssistTick() {
             if (audioRecordState) {
                 await stopAudioRecording(true);
             }
-            if (!audioMatchState) {
-                await startAudioMatching();
+            if (audioAssistMode !== 2) {
+                // Nur im Hör-Modus (1) Matching starten; im Aufnahme-Modus (2) warten
+                // wir auf eine neue Karte im CENTER.
+                if (!audioMatchState) {
+                    await startAudioMatching();
+                }
+                await evaluateAudioMatching();
+            } else if (audioMatchState) {
+                stopAudioMatching();
             }
-            await evaluateAudioMatching();
         }
     } catch (err) {
         console.error('Audio-Automatik Fehler:', err);
@@ -777,6 +784,7 @@ async function audioAssistTick() {
 
 function disableAudioAssistMode() {
     audioAssistMode = 0;
+    audioAssistDirection = 1;
     audioDiscardSuppressedCardId = null;
     if (audioAssistMonitorTimer) {
         clearInterval(audioAssistMonitorTimer);
@@ -788,7 +796,18 @@ function disableAudioAssistMode() {
 }
 
 function toggleAudioAssistMode() {
-    const nextMode = (audioAssistMode + 1) % 3;
+    let nextMode;
+    if (audioAssistMode === 0) {
+        nextMode = 1;
+        audioAssistDirection = 1;
+    } else if (audioAssistMode === 2) {
+        // Ton Rec beendet → zurück zu Ton An (Tonhören), nicht zu Aus
+        nextMode = 1;
+        audioAssistDirection = -1;
+    } else {
+        // mode === 1: Richtung beibehalten (aufwärts→2, abwärts→0)
+        nextMode = 1 + audioAssistDirection;
+    }
 
     if (nextMode === 0) {
         disableAudioAssistMode();

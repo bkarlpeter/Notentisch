@@ -21,6 +21,7 @@
 - [Center-/Zoom-Parameter (Basis fuer weitere Aenderungen)](#center-zoom-parameter-basis-fuer-weitere-aenderungen)
 - [CenterAnsicht je Blatt (XML)](#centeransicht-je-blatt-xml)
 - [Speichern](#speichern)
+- [Verzeichnisse (Ton/XML)](#verzeichnisse-tonxml)
 - [Use Cases](#use-cases)
 - [Dateiformat (XML)](#dateiformat-xml)
 - [Projektdateien](#projektdateien)
@@ -262,11 +263,12 @@ Das Skript nutzt automatisch:
 - `Tonsuche`: Mikrofon-gestützte Automatik für Suche und Aufnahme
   - Klick 1: `Ton An` → nur hören/suchen; Button ist grün
   - Klick 2: `Ton Rec` → Aufnahme-Modus; Button ist orange
-  - Klick 3: aus
+  - Klick 3 (aus `Ton Rec`): zurück zu `Ton An` (Tonhören, nicht aus!)
+  - Klick 4 (aus `Ton An`): aus
   - weißer Rahmen am Tonsuche-Button: während `Ton Rec` wird gerade musikalisches Signal aufgenommen
   - im Aufnahme-Modus mit Blatt im CENTER: kurze Referenzaufnahme wird automatisch beendet, sobald genug Material für `AudioReferenz` gesammelt wurde
   - optional in `Advanced`: alte Sequenz pro Titel löschen (`Löschen`) oder Historie behalten (`Beibehalten`)
-  - `Verw.` verwirft eine laufende Aufnahme; nach automatischem Stopp wird derselbe Button zu `Nochmal` für sofortige Neuaufnahme derselben Center-Karte
+  - `Loeschen` löscht/verwirft eine laufende Aufnahme; nach automatischem Stopp wird derselbe Button zu `Nochmal` für sofortige Neuaufnahme derselben Center-Karte
   - ohne Blatt im CENTER: Live-Matching gegen gespeicherte Audio-Fingerprints; bei stabilem Treffer wird das Blatt automatisch ins CENTER geladen
 - Karten mit vorhandener Audio-Referenz zeigen optional einen gelben Marker oben rechts (Config: `Spielton-Marker`)
 - Config-Vorschau: nutzt zuerst lokalen PNG-Cache, dann XML/PDF-Fund (Ausschnitt) und sonst Bild-Fallback
@@ -300,6 +302,21 @@ Die Funktion ist für lokales Arbeiten gedacht: Audio wird nur über den lokalen
 4. 3-5 Sekunden das Referenzmotiv spielen/summen, bis die Aufnahme automatisch stoppt.
 5. `Tonsuche` auf `Ton An` schalten und in ruhiger Umgebung erneut das Motiv spielen/summen.
 6. Erwartung: Nach kurzer stabiler Erkennung wird das passende Blatt automatisch in den CENTER gezogen.
+
+### Ablauf Tonsequenz (Ton Rec)
+
+1. Karte in den CENTER ziehen.
+2. `Tonsuche` auf `Ton Rec` schalten:
+  - Button wird orange.
+  - Zusatzbutton `Loeschen` erscheint.
+3. Sequenz spielen:
+  - während verwertbares Musiksignal erkannt wird, zeigt `Ton Rec` einen weißen Rahmen.
+  - sobald genug Material gesammelt wurde, stoppt die Aufnahme automatisch und der weiße Rahmen verschwindet.
+4. Danach gibt es vier typische Wege:
+  - a) User spielt weiter: es wird nicht weiter aufgenommen, bis bewusst neu gestartet wird.
+  - b) User stoppt/spielt nicht weiter und drückt `Nochmal`: sofortige Neuaufnahme derselben CENTER-Karte, Ablauf startet wieder bei Schritt 3.
+  - c) User drückt den orangefarbenen `Ton Rec`-Button erneut: wechselt zu `Ton An` (Tonhören-Modus, grün). Ein weiterer Druck schaltet die Audio-Automatik vollständig aus.
+  - d) User entfernt das Blatt aus dem CENTER: Aufnahme wird finalisiert, App wartet auf die nächste Karte (kein Suchbetrieb). Sobald eine neue Karte in den CENTER gezogen wird, startet die Aufnahme sofort → Ablauf ab Schritt 3.
 
 ### Was gespeichert wird (XML)
 
@@ -365,6 +382,13 @@ Im jeweiligen `<NotenTisch>`-Eintrag wird ein optionaler Block ergänzt:
 
 - Aenderungen an `Arbeitsstatus` und (im Modus `Spielen`) `zuletztgespielt` werden beim Ablegen einer Karte auf `Q1` bis `Q4` automatisch in die XML-Datei geschrieben.
 - Beim ersten Schreibzugriff waehlt der User die XML-Datei; danach wird der gespeicherte Datei-Handle wiederverwendet.
+
+### Verzeichnisse (Ton/XML)
+
+- Tonaufnahmen: werden lokal im Projektordner unter `mysounds/` gespeichert.
+- XML-Datei: wird beim Laden zuerst per Dateiauswahl (`LADEN`) abgefragt.
+- XML-Speicherziel: wird beim ersten Schreibzugriff zuvor abgefragt; danach wird der Datei-/Ordner-Handle wiederverwendet.
+- PDF-Import ohne XML: der PDF-Quellordner wird zuvor per Ordnerauswahl abgefragt.
 
 ## Use Cases
 
