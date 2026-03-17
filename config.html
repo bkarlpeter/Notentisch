@@ -97,6 +97,14 @@
             </div>
 
             <div class="field">
+                <label for="showAudioBadge">Spielton-Marker</label>
+                <select id="showAudioBadge">
+                    <option value="show">Anzeigen</option>
+                    <option value="hide">Ausblenden</option>
+                </select>
+            </div>
+
+            <div class="field">
                 <label for="centerAlignBtn">Ausrichtung im Center (bei Drop)</label>
                 <button id="centerAlignBtn" type="button" class="secondary">Links</button>
             </div>
@@ -135,7 +143,7 @@
             window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
     </script>
-    <script src="center-config.js?v=20260308"></script>
+    <script src="center-config.js?v=20260317b"></script>
     <script>
         const USER_CONFIG_KEY = 'notentischUserConfig';
         const DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS } : {};
@@ -223,6 +231,7 @@
             document.getElementById('zoomStep').value = normalizeZoomStep(config.zoomStep);
             document.getElementById('scrollStep').value = normalizeScrollStep(config.scrollStep);
             document.getElementById('showFullscreenButton').value = normalizeBoolean(config.showFullscreenButton, DEFAULTS.showFullscreenButton) ? 'show' : 'hide';
+            document.getElementById('showAudioBadge').value = normalizeBoolean(config.showAudioBadge, DEFAULTS.showAudioBadge) ? 'show' : 'hide';
             document.getElementById('useZoomSettingsOnDrop').value = normalizeBoolean(config.useZoomSettingsOnDrop, DEFAULTS.useZoomSettingsOnDrop) ? 'show' : 'hide';
             const alignBtn = document.getElementById('centerAlignBtn');
             const alignValue = normalizeCenterAlign(config.centerAlign);
@@ -243,6 +252,7 @@
                 zoomStep: normalizeZoomStep(document.getElementById('zoomStep').value),
                 scrollStep: normalizeScrollStep(document.getElementById('scrollStep').value),
                 showFullscreenButton: normalizeBoolean(document.getElementById('showFullscreenButton').value, DEFAULTS.showFullscreenButton),
+                showAudioBadge: normalizeBoolean(document.getElementById('showAudioBadge').value, DEFAULTS.showAudioBadge),
                 useZoomSettingsOnDrop: normalizeBoolean(document.getElementById('useZoomSettingsOnDrop').value, DEFAULTS.useZoomSettingsOnDrop),
                 centerAlign: normalizeCenterAlign((document.getElementById('centerAlignBtn')?.dataset.value) || existing.centerAlign)
             };
@@ -615,7 +625,7 @@
             saveFromFormWithStatus('Automatisch gespeichert.');
         });
 
-        ['pdfSharpness', 'paperTintPercent', 'paperTintColor', 'tintMethod', 'tintStrength', 'zoomStep', 'scrollStep', 'showFullscreenButton', 'useZoomSettingsOnDrop'].forEach((id) => {
+        ['pdfSharpness', 'paperTintPercent', 'paperTintColor', 'tintMethod', 'tintStrength', 'zoomStep', 'scrollStep', 'showFullscreenButton', 'showAudioBadge', 'useZoomSettingsOnDrop'].forEach((id) => {
             const el = document.getElementById(id);
             if (!el) return;
             el.addEventListener('input', () => saveFromFormWithStatus('Automatisch gespeichert.'));

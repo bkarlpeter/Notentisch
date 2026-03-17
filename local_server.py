@@ -27,6 +27,10 @@ class NotentischHandler(SimpleHTTPRequestHandler):
             self._handle_audio_upload(parsed)
             return
 
+        if parsed.path == '/__audio_delete__':
+            self._handle_audio_delete(parsed)
+            return
+
         if parsed.path == '/__shutdown__':
             # Shutdown nur mit gültigem Session-Token erlauben.
             # Das reduziert unbeabsichtigte Stopps durch andere lokale Browser-Tabs/Tools.
@@ -94,6 +98,41 @@ class NotentischHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         relative_path = 'mysounds/' + safe_name
         self.wfile.write(json.dumps({'ok': True, 'path': relative_path}).encode('utf-8'))
+
+    def _handle_audio_delete(self, parsed) -> None:
+        query = parse_qs(parsed.query)
+        raw_path = (query.get('path') or [''])[0]
+        candidate = str(raw_path or '').strip().replace('\\', '/')
+
+        if not candidate.startswith('mysounds/'):
+            self.send_error(400, 'Invalid audio path')
+            return
+
+        filename = self._sanitize_sound_filename(candidate.split('/', 1)[1] if '/' in candidate else '')
+        if not filename:
+            self.send_error(400, 'Invalid filename')
+            return
+
+        extension = Path(filename).suffix.lower()
+        if extension not in self.ALLOWED_AUDIO_EXTENSIONS:
+            self.send_error(400, 'Unsupported file extension')
+            return
+
+        target = Path(os.getcwd()) / 'mysounds' / filename
+        deleted = False
+        if target.exists():
+            try:
+                target.unlink()
+                deleted = True
+            except OSError:
+                self.send_error(500, 'Could not delete file')
+                return
+
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Cache-Control', 'no-store')
+        self.end_headers()
+        self.wfile.write(json.dumps({'ok': True, 'deleted': deleted, 'path': 'mysounds/' + filename}).encode('utf-8'))
 
     def _sanitize_sound_filename(self, value: str) -> str:
         base = os.path.basename((value or '').strip())

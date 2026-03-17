@@ -1,6 +1,9 @@
 DIGITALER NOTENTISCH - TODO LIST
 =================================
 
+HISTORIE / MEILENSTEINE
+=======================
+
 Version 1.0.0 - FERTIG ✓
 - [x] 2-Seiten-PDF-Viewer
 - [x] Rollende Navigation
@@ -13,42 +16,63 @@ Version 1.0.0 - FERTIG ✓
 - [x] Dynamische PDF-Skalierung
 - [x] Timestamp für Cards (LastViewed)
 
-Version 1.1 - IN ARBEIT 🔄
-==========================
-- [ ] **Full View Mode**: Fullscreen für Center-PDF (mit ESC zum Schließen)
-- [ ] **Layout an Windows anpassen**: Responsive Grid bei Fenstervergrößerung/-verkleinerung
-- [ ] Zoom-Funktion (+/- Buttons für PDF)
+Version 1.1.x - UMGESETZT / ERWEITERT ✓
+======================================
+- [x] Fullscreen für Center-PDF (F11 / Esc)
+- [x] Zoom-Funktion (+/- Buttons für PDF)
+- [x] Suchfunktion für Karten (`Textsuche`)
+- [x] Responsive Toolbar-Grundlagen
+- [x] Audio-gestützte Tonsuche / Referenzaufnahme
+- [x] Lokaler Audio-Upload nach `mysounds/`
+- [x] README und INSTALL erweitert
+
+AKTUELL OFFEN
+=============
+
 - [ ] Tastatur-Navigation für PDF (Arrow Keys)
 - [ ] Lesezeichen für Seiten
-- [ ] Theme-Switcher (Dark/Light)
+- [ ] CSS in separate Datei auslagern
+- [ ] Unit Tests schreiben
+- [ ] Error-Handling verbessern
+- [ ] Funktion zum automatischen Erstellen neuer Cards
+    - UI-Button für neue Card
+    - NotID automatisch generieren
+    - Titel / Speicherort / Arbeitsstatus / Ziel-Quadrant erfassen
+    - XML dynamisch erweitern
+    - Card sofort im Board anzeigen
+- [ ] Quadranten optional im Uhrzeigersinn anordnen
+    - Grid-Reihenfolge prüfen
+    - Mapping und Labels konsistent anpassen
 
-Version 1.2 - PLANUNG
-====================
+SPÄTER / IDEEN
+==============
+
 - [ ] PDF-Annotationen/Markierungen
 - [ ] Übungsmodus mit Timer
-- [ ] Statistik-Dashboard (Timestamps auswerten)
-- [ ] Export als Print-PDF
+- [ ] Statistik-Dashboard
+- [ ] Export als Print-/Report-PDF
 - [ ] Metronom-Integration
-
-BUGS ZU FIXEN
-=============
-- [ ] Keine bekannten Bugs
-
-VERBESSERUNGEN
-==============
-- [ ] Performance: Lazy Loading für Karten
-- [ ] UX: Drag-Vorschau verbessern
-- [ ] UX: Letzten Zustand/Sitzung wiederherstellen
-- [ ] Mobile: Responsive Design (Touch-Unterstützung)
+- [ ] Theme-Switcher (Dark/Light)
+- [ ] Mobile / Touch-Unterstützung ausbauen
 - [ ] Audio: MP3-Playback für Übungen
+- [ ] Drag-&-Drop-Vorschau verbessern
+- [ ] Letzten Zustand / Sitzung wiederherstellen
 
 TECHNISCHE SCHULDEN
 ===================
-- [x] Code-Splitting (board.html zu groß) ✓ → board.js
-- [ ] CSS in separate Datei auslagern
+
+- [ ] Performance: Lazy Loading für Karten
 - [x] JavaScript modularisieren ✓
+- [ ] CSS in separate Datei auslagern
 - [ ] Unit Tests schreiben
 - [ ] Error-Handling verbessern
+
+HINWEIS
+=======
+
+- [ ] Code-Splitting weiter vorantreiben
+    - `board.html` enthält weiterhin viel Inline-CSS und Struktur
+    - Ziel: Styles und weitere UI-Logik weiter auslagern
 
 DOKUMENTATION
 =============
@@ -57,43 +81,18 @@ DOKUMENTATION
 - [ ] Keyboard-Shortcuts Übersicht (PDF)
 - [x] README.md aktualisiert ✓
 - [x] CHANGELOG.md erstellt ✓
-- [x] XML-Format mit Timestamps dokumentiert ✓
+- [x] XML-Format dokumentiert ✓
 
 =============================================================================
 TODO-Liste - Projekt Notentisch
 =============================================================================
 
-[ ] Funktion zum automatischen Erstellen neuer Cards
-    - "Neue Card" Button im UI hinzufügen
-    - Formular erstellen für:
-      * NotID (automatisch generieren)
-      * Speicherort (PDF-Pfad)
-      * Titel/Name
-      * ArbeitsStatus (zurückgestellt/wiederholen/geübt/gelernt)
-      * Quadrant (1-4)
-    - XML dynamisch erweitern
-    - Optional: Bild-Upload Funktion für Cards_Export/
-    - Card sofort im Board anzeigen
-
-[ ] Quadranten im Uhrzeigersinn anordnen
-    - HTML Grid-Reihenfolge ändern (Q3 und Q4 tauschen)
-    - quadrantMap anpassen: { 1: 'neueIdee', 2: 'wiederholen', 3: 'gelernt', 4: 'geübt' }
-    - CSS Labels entsprechend aktualisieren
-
-[ ] Weitere mögliche Verbesserungen
-    - [ ] Suchfunktion für Cards
-    - [ ] Filterfunktion nach Status
-    - [ ] Sortierung der Cards (Datum, Name, etc.)
-    - [ ] Drag & Drop zwischen Quadranten verbessern
-    - [ ] Keyboard-Shortcuts dokumentieren
-    - [ ] Export als PDF-Report
-    - [ ] Statistik-Dashboard
-    - [ ] Dark/Light Mode Toggle
-    - [ ] Mobile Responsive Design
+Diese Datei dient bewusst sowohl als Verlaufsübersicht als auch als Arbeitsliste.
+Erledigte Meilensteine bleiben deshalb sichtbar; offene Punkte stehen weiter oben.
 
 =============================================================================
 Notizen:
-- Python HTTP Server läuft auf Port 8080
+- Lokaler Server läuft auf Port 8000
 - Cards_Export/ Ordner muss Bilder enthalten (PNG-Format)
-- XML-Struktur: <Notentisch> oder <NotenTisch> Einträge
+- XML-Bestände können je nach Herkunft <Notentisch> oder <NotenTisch> verwenden
 =============================================================================

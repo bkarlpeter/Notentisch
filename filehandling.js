@@ -566,7 +566,29 @@ function setStatusText(text) {
     }, 2200);
 }
 
+function cardHasAudioReference(cardNode) {
+    if (!cardNode) return false;
+    const refNode = cardNode.querySelector('AudioReferenz');
+    if (!refNode) return false;
+    const filePath = refNode.querySelector('Datei')?.textContent || '';
+    return String(filePath).trim().length > 0;
+}
+
+function isAudioBadgeEnabled() {
+    if (typeof settings !== 'undefined' && typeof settings?.showAudioBadge === 'boolean') {
+        return settings.showAudioBadge;
+    }
+    if (typeof loadUserConfig !== 'function') return true;
+    try {
+        const cfg = loadUserConfig();
+        return cfg?.showAudioBadge !== false;
+    } catch (err) {
+        return true;
+    }
+}
+
 let quadrantOffsets = { Q1: 0, Q2: 0, Q3: 0, Q4: 0 };
+let lastRenderedShowAudioBadge = null;
 
 function resetQuadrantOffsets() {
     quadrantOffsets = { Q1: 0, Q2: 0, Q3: 0, Q4: 0 };
@@ -588,6 +610,13 @@ function createCardElement(cardInfo) {
 
     loadCardImage(img, cardInfo.titel, cardInfo.speicherort);
 
+    if (cardInfo.showAudioBadge && cardInfo.hasAudioReference) {
+        const badge = document.createElement('span');
+        badge.className = 'card-audio-badge';
+        badge.title = 'Spielton vorhanden';
+        div.appendChild(badge);
+    }
+
     const titleDiv = document.createElement('div');
     titleDiv.className = 'card-title';
     titleDiv.textContent = cardInfo.titel;
@@ -602,7 +631,10 @@ function createCardElement(cardInfo) {
 }
 
 function getCardCacheSignature(cardInfo) {
-    return String(cardInfo.titel || '') + '|' + String(cardInfo.speicherort || '');
+    return String(cardInfo.titel || '')
+        + '|' + String(cardInfo.speicherort || '')
+        + '|' + (cardInfo.hasAudioReference ? 'a1' : 'a0')
+        + '|' + (cardInfo.showAudioBadge ? 'b1' : 'b0');
 }
 
 function getOrCreateCardElement(cardInfo) {
@@ -828,6 +860,15 @@ function renderBoard() {
     });
 
     const cards = getCardNodes();
+    const showAudioBadge = isAudioBadgeEnabled();
+
+    // Falls der Marker-Toggle umgeschaltet wurde, alte Kartenelemente verwerfen.
+    // So ist sichergestellt, dass die Badge-Ansicht immer frisch aufgebaut wird.
+    if (lastRenderedShowAudioBadge !== null && lastRenderedShowAudioBadge !== showAudioBadge) {
+        cardElementCache.clear();
+    }
+    lastRenderedShowAudioBadge = showAudioBadge;
+
     const limit = getStackCount();
     const overlapCount = getConfiguredBatchOverlap(limit);
 
@@ -835,13 +876,14 @@ function renderBoard() {
         const titel = cardEl.querySelector('Titel')?.textContent || 'Unbekannt';
         const speicherort = cardEl.querySelector('Speicherort')?.textContent || '';
         const status = cardEl.querySelector('Arbeitsstatus')?.textContent || 'zurueckgestellt';
+        const hasAudioReference = cardHasAudioReference(cardEl);
 
         let quad = 'Q1';
         if (status.includes('wiederholen')) quad = 'Q2';
         if (status.includes('geübt')) quad = 'Q3';
         if (status.includes('gelernt')) quad = 'Q4';
 
-        grouped[quad].push({ idx, titel, speicherort });
+        grouped[quad].push({ idx, titel, speicherort, hasAudioReference, showAudioBadge });
     });
 
     quadrants.forEach((quad) => {
@@ -1404,24 +1446,10 @@ function restoreBoardSnapshotFromConfig(snapshot) {
     lastCardIdFromCenter = snapshot.lastCardIdFromCenter ?? null;
     activeCenterCardId = snapshot.activeCenterCardId ?? null;
 
-    const hasQuadrantMarkup = !!(snapshot.quadrantMarkup && typeof snapshot.quadrantMarkup === 'object');
-    if (hasQuadrantMarkup) {
-        ['Q1', 'Q2', 'Q3', 'Q4'].forEach((id) => {
-            const target = document.getElementById(id);
-            if (!target) return;
-            target.innerHTML = String(snapshot.quadrantMarkup[id] || '');
-            const cards = target.querySelectorAll('.card-container');
-            cards.forEach((card) => {
-                card.addEventListener('dragstart', drag);
-                card.addEventListener('dblclick', moveCardToQ2);
-            });
-        });
-        setupDropListeners();
-        updateStackLayout();
-    } else {
-        renderBoard();
-        updateStackLayout();
-    }
+    // Nach Config-Rueckkehr immer aus XML neu rendern, damit Marker-/Config-Änderungen
+    // nicht durch veraltetes Snapshot-Markup ueberdeckt werden.
+    renderBoard();
+    updateStackLayout();
 
     if (activeCenterCardId !== null && activeCenterCardId !== undefined) {
         const centerCard = document.querySelector('.card-container[data-cardid="' + activeCenterCardId + '"]');

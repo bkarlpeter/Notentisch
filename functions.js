@@ -30,7 +30,10 @@ const USER_CONFIG_DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS
         centerSmoothScroll: true,
         useZoomSettingsOnDrop: true,
         dropGlowDurationMs: 1400,
-        stackBatchOverlapCount: 2
+        stackBatchOverlapCount: 2,
+        audioReferenceTargetMs: 5000,
+        replaceAudioByTitle: true,
+        showAudioBadge: true
     };
 
 function clampNumber(value, min, max, fallback) {
@@ -157,6 +160,9 @@ function loadUserConfig() {
             useZoomSettingsOnDrop: normalizeBoolean(parsed.useZoomSettingsOnDrop, USER_CONFIG_DEFAULTS.useZoomSettingsOnDrop),
             dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, USER_CONFIG_DEFAULTS.dropGlowDurationMs),
             stackBatchOverlapCount: clampNumber(parsed.stackBatchOverlapCount, 0, 9, USER_CONFIG_DEFAULTS.stackBatchOverlapCount),
+            audioReferenceTargetMs: clampNumber(parsed.audioReferenceTargetMs, 1500, 12000, USER_CONFIG_DEFAULTS.audioReferenceTargetMs),
+            replaceAudioByTitle: normalizeBoolean(parsed.replaceAudioByTitle, USER_CONFIG_DEFAULTS.replaceAudioByTitle),
+            showAudioBadge: normalizeBoolean(parsed.showAudioBadge, USER_CONFIG_DEFAULTS.showAudioBadge),
             btnBaseColor: normalizeHexColor(parsed.btnBaseColor, USER_CONFIG_DEFAULTS.btnBaseColor),
             btnToggleColor1: normalizeHexColor(parsed.btnToggleColor1, USER_CONFIG_DEFAULTS.btnToggleColor1),
             btnToggleColor2: normalizeHexColor(parsed.btnToggleColor2, USER_CONFIG_DEFAULTS.btnToggleColor2)
@@ -281,6 +287,7 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     settings.centerSmoothScroll = userConfig.centerSmoothScroll;
     settings.useZoomSettingsOnDrop = userConfig.useZoomSettingsOnDrop;
     settings.dropGlowDurationMs = userConfig.dropGlowDurationMs;
+    settings.showAudioBadge = userConfig.showAudioBadge;
     settings.layoutPreset = userConfig.layoutPreset;
     settings.showFullscreenButton = userConfig.showFullscreenButton;
     settings.autoFullscreenOnStart = userConfig.autoFullscreenOnStart;
@@ -301,6 +308,10 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
 
     if (shouldRerender && typeof currentPdfDoc !== 'undefined' && currentPdfDoc && typeof renderPdfPages === 'function') {
         renderPdfPages();
+    }
+
+    if (shouldRerender && typeof renderBoard === 'function' && typeof xmlData !== 'undefined' && xmlData) {
+        renderBoard();
     }
 }
 
@@ -516,6 +527,7 @@ const settings = {
     centerSmoothScroll: initialUserConfig.centerSmoothScroll,
     useZoomSettingsOnDrop: initialUserConfig.useZoomSettingsOnDrop,
     dropGlowDurationMs: initialUserConfig.dropGlowDurationMs,
+    showAudioBadge: initialUserConfig.showAudioBadge,
     layoutPreset: initialUserConfig.layoutPreset,
     showFullscreenButton: initialUserConfig.showFullscreenButton,
     autoFullscreenOnStart: initialUserConfig.autoFullscreenOnStart,

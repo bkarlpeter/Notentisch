@@ -6,6 +6,7 @@ let audioRecordState = null;
 let audioMatchState = null;
 let audioLastDetectedCardId = null;
 let audioConsecutiveDetections = 0;
+let audioDiscardSuppressedCardId = null;
 
 const AUDIO_FINGERPRINT_BANDS = 24;
 const AUDIO_MATCH_THRESHOLD = 0.92;
@@ -15,10 +16,48 @@ const AUDIO_MUSIC_MAX_FLATNESS = 0.82;
 const AUDIO_MUSIC_MIN_PEAKINESS = 1.55;
 const AUDIO_SPEECH_MID_RATIO_LIMIT = 0.84;
 const AUDIO_SPEECH_HIGH_RATIO_MIN = 0.12;
+const AUDIO_RECORD_ACTIVE_SIGNAL_MS = 1100;
+const AUDIO_FRAME_SAMPLE_MS = 180;
+
+function getAudioReferenceTargetFrames() {
+    const fallbackMs = (window.NOTENTISCH_USER_CONFIG_DEFAULTS && window.NOTENTISCH_USER_CONFIG_DEFAULTS.audioReferenceTargetMs) || 5000;
+    let targetMs = fallbackMs;
+    try {
+        if (typeof loadUserConfig === 'function') {
+            const config = loadUserConfig();
+            if (config && Number.isFinite(Number(config.audioReferenceTargetMs))) {
+                targetMs = Number(config.audioReferenceTargetMs);
+            }
+        }
+    } catch {}
+    const normalizedMs = Math.min(12000, Math.max(1500, targetMs));
+    return Math.max(6, Math.ceil(normalizedMs / AUDIO_FRAME_SAMPLE_MS));
+}
+
+function getCurrentCenterCardId() {
+    const hasOpenPdf = (typeof currentPdfDoc !== 'undefined' && !!currentPdfDoc);
+    if (!hasOpenPdf) return null;
+    if (typeof activeCenterCardId !== 'undefined' && activeCenterCardId !== null && activeCenterCardId !== undefined) {
+        return String(activeCenterCardId);
+    }
+    if (typeof lastCardIdFromCenter !== 'undefined' && lastCardIdFromCenter !== null && lastCardIdFromCenter !== undefined) {
+        return String(lastCardIdFromCenter);
+    }
+    return null;
+}
 
 function updateAudioAssistUi() {
     const btn = document.getElementById('audioAssistBtn');
-    const status = document.getElementById('audioAssistStatus');
+    const discardBtn = document.getElementById('audioDiscardBtn');
+    const centerCardId = getCurrentCenterCardId();
+    const hasActiveRecordingSignal = !!(audioRecordState
+        && audioRecordState.cardId !== null
+        && audioRecordState.lastAcceptedAt
+        && (Date.now() - audioRecordState.lastAcceptedAt) <= AUDIO_RECORD_ACTIVE_SIGNAL_MS);
+    const canRestartRecording = !!(audioAssistMode === 2
+        && !audioRecordState
+        && centerCardId
+        && audioDiscardSuppressedCardId === centerCardId);
     if (btn) {
         if (audioAssistMode === 2) {
             btn.textContent = 'Ton Rec';
@@ -34,11 +73,8 @@ function updateAudioAssistUi() {
             btn.style.color = '';
         }
 
-        // Rahmenfarbe: weiss = Aufnahme/Matching aktiv, sonst kein Rahmen.
-        if (audioRecordState && audioRecordState.cardId !== null) {
-            btn.style.border = '2px solid #ffffff';
-            btn.style.boxShadow = '0 0 0 2px rgba(255,255,255,0.45), 0 0 14px rgba(255,255,255,0.8)';
-        } else if (audioMatchState && audioMatchState.running) {
+        // Weißer Rahmen nur, wenn während der Aufnahme gerade musikalisches Signal erkannt wird.
+        if (hasActiveRecordingSignal) {
             btn.style.border = '2px solid #ffffff';
             btn.style.boxShadow = '0 0 0 2px rgba(255,255,255,0.45), 0 0 14px rgba(255,255,255,0.8)';
         } else {
@@ -46,20 +82,21 @@ function updateAudioAssistUi() {
             btn.style.boxShadow = '';
         }
     }
-    if (status) {
-        if (!audioAssistMode) {
-            status.textContent = 'Audio: aus';
-            return;
-        }
+    if (discardBtn) {
+        discardBtn.style.display = audioAssistMode === 2 ? 'inline-flex' : 'none';
         if (audioRecordState && audioRecordState.cardId !== null) {
-            status.textContent = 'Audio: Aufnahme ' + (audioRecordState.title || 'Blatt');
-            return;
+            discardBtn.textContent = 'Verw.';
+            discardBtn.title = 'Laufende Aufnahme verwerfen';
+            discardBtn.disabled = false;
+        } else if (canRestartRecording) {
+            discardBtn.textContent = 'Nochmal';
+            discardBtn.title = 'Referenz für dieses Blatt sofort neu aufnehmen';
+            discardBtn.disabled = false;
+        } else {
+            discardBtn.textContent = 'Verw.';
+            discardBtn.title = 'Laufende Aufnahme verwerfen';
+            discardBtn.disabled = true;
         }
-        if (audioMatchState && audioMatchState.running) {
-            status.textContent = 'Audio: hört auf Vergleich';
-            return;
-        }
-        status.textContent = audioAssistMode === 1 ? 'Audio: hört (wartet)' : 'Audio: bereit';
     }
 }
 
@@ -90,6 +127,76 @@ function getAudioExtensionFromMime(mime) {
     if (String(mime).includes('mp4')) return 'm4a';
     if (String(mime).includes('ogg')) return 'ogg';
     return 'webm';
+}
+
+function isReplaceAudioByTitleEnabled() {
+    const fallback = (window.NOTENTISCH_USER_CONFIG_DEFAULTS && typeof window.NOTENTISCH_USER_CONFIG_DEFAULTS.replaceAudioByTitle === 'boolean')
+        ? window.NOTENTISCH_USER_CONFIG_DEFAULTS.replaceAudioByTitle
+        : true;
+    try {
+        if (typeof loadUserConfig === 'function') {
+            const config = loadUserConfig();
+            if (typeof config?.replaceAudioByTitle === 'boolean') {
+                return config.replaceAudioByTitle;
+            }
+        }
+    } catch {}
+    return fallback;
+}
+
+function getCardTitleById(cardId) {
+    const cardNode = typeof getCardNodeById === 'function' ? getCardNodeById(cardId) : null;
+    return (cardNode?.querySelector('Titel')?.textContent || '').trim();
+}
+
+function collectAudioPathsForTitle(title) {
+    if (!xmlData || typeof getCardNodes !== 'function') return [];
+    const titleKey = String(title || '').trim();
+    if (!titleKey) return [];
+
+    return getCardNodes().map((cardNode, idx) => {
+        const cardTitle = (cardNode.querySelector('Titel')?.textContent || '').trim();
+        if (cardTitle !== titleKey) return null;
+        const audioNode = cardNode.querySelector('AudioReferenz');
+        if (!audioNode) return null;
+        const filePath = (audioNode.querySelector('Datei')?.textContent || '').trim();
+        return filePath || null;
+    }).filter(Boolean);
+}
+
+function clearAudioReferenceForTitle(title) {
+    if (!xmlData || typeof getCardNodes !== 'function') return;
+    const titleKey = String(title || '').trim();
+    if (!titleKey) return;
+
+    getCardNodes().forEach((cardNode, idx) => {
+        const cardTitle = (cardNode.querySelector('Titel')?.textContent || '').trim();
+        if (cardTitle !== titleKey) return;
+        const audioNode = cardNode.querySelector('AudioReferenz');
+        if (!audioNode) return;
+        upsertXmlChild(audioNode, 'Datei', '');
+        upsertXmlChild(audioNode, 'MimeType', '');
+        upsertXmlChild(audioNode, 'Fingerprint', '');
+        upsertXmlChild(audioNode, 'ErfasstAm', '');
+    });
+}
+
+async function deleteAudioFileByPath(pathValue) {
+    const raw = String(pathValue || '').trim().replace(/\\/g, '/');
+    if (!raw || !raw.startsWith('mysounds/')) return;
+
+    let response;
+    try {
+        response = await fetch('/__audio_delete__?path=' + encodeURIComponent(raw), {
+            method: 'POST'
+        });
+    } catch {
+        return;
+    }
+
+    if (!response.ok) {
+        console.warn('Audio-Datei konnte nicht gelöscht werden:', raw, response.status);
+    }
 }
 
 function getCardAudioNode(cardId) {
@@ -294,17 +401,40 @@ function buildMatchObjectForCardId(cardId) {
 }
 
 async function uploadRecordedAudio(blob, filename) {
-    const response = await fetch('/__audio_upload__?filename=' + encodeURIComponent(filename), {
-        method: 'POST',
-        headers: {
-            'Content-Type': blob.type || 'application/octet-stream'
-        },
-        body: blob
-    });
-    if (!response.ok) {
-        throw new Error('Audio-Upload fehlgeschlagen: ' + response.status);
+    let response;
+    try {
+        response = await fetch('/__audio_upload__?filename=' + encodeURIComponent(filename), {
+            method: 'POST',
+            headers: {
+                'Content-Type': blob.type || 'application/octet-stream'
+            },
+            body: blob
+        });
+    } catch (err) {
+        throw new Error('Lokaler Server nicht erreichbar. Bitte Notentisch neu starten bzw. local_server.py neu starten.');
     }
-    return response.json();
+
+    if (!response.ok) {
+        if (response.status === 404 || response.status === 405 || response.status === 501) {
+            throw new Error('Audio-Upload-Endpunkt fehlt. Bitte Notentisch bzw. den lokalen Server neu starten.');
+        }
+        let detail = '';
+        try {
+            detail = (await response.text()).trim();
+        } catch {}
+        throw new Error('Audio-Upload fehlgeschlagen (' + response.status + ')' + (detail ? ': ' + detail : '') + '. Bitte lokalen Server neu starten.');
+    }
+
+    let payload = null;
+    try {
+        payload = await response.json();
+    } catch {
+        throw new Error('Ungültige Serverantwort beim Audio-Upload.');
+    }
+    if (!payload || !payload.path) {
+        throw new Error('Serverantwort ohne Speicherpfad.');
+    }
+    return payload;
 }
 
 function stopMediaStream(stream) {
@@ -333,7 +463,25 @@ async function finalizeRecordedAudio(state) {
     const fingerprint = normalizeBandVector(state.bandSums, state.frameCount);
     if (!fingerprint) return;
 
-    const uploadResult = await uploadRecordedAudio(blob, fileName);
+    let uploadResult = null;
+    try {
+        uploadResult = await uploadRecordedAudio(blob, fileName);
+    } catch (err) {
+        alert('Audio-Datei konnte nicht gespeichert werden.\n\n' + err.message);
+        return;
+    }
+
+    if (isReplaceAudioByTitleEnabled()) {
+        const title = getCardTitleById(state.cardId) || state.title || '';
+        const oldPaths = collectAudioPathsForTitle(title);
+        clearAudioReferenceForTitle(title);
+        for (const oldPath of new Set(oldPaths)) {
+            if (String(oldPath).trim() !== String(uploadResult.path).trim()) {
+                await deleteAudioFileByPath(oldPath);
+            }
+        }
+    }
+
     writeAudioMetadataToCard(state.cardId, {
         path: uploadResult.path,
         mimeType: state.mimeType,
@@ -342,7 +490,11 @@ async function finalizeRecordedAudio(state) {
     });
 
     if (typeof saveXml === 'function') {
-        await saveXml(true);
+        try {
+            await saveXml(true);
+        } catch (err) {
+            alert('Audio-Datei wurde hochgeladen, aber die XML konnte nicht gespeichert werden. Bitte erneut speichern oder Notentisch neu starten.');
+        }
     }
 }
 
@@ -371,6 +523,9 @@ async function startAudioRecordingForCenterCard(cardId) {
         chunks: [],
         bandSums: createEmptyBandVector(),
         frameCount: 0,
+        targetFrameCount: getAudioReferenceTargetFrames(),
+        lastAcceptedAt: 0,
+        autoStopRequested: false,
         samplerTimer: null,
         finalizingPromise: null,
         stopPromise: null,
@@ -396,7 +551,6 @@ async function startAudioRecordingForCenterCard(cardId) {
         audioContext.close().catch(() => {});
         state.finalizingPromise = finalizeRecordedAudio(state).catch((err) => {
             console.error('Audio-Referenz konnte nicht gespeichert werden:', err);
-            alert('Audio-Referenz konnte nicht gespeichert werden.');
         }).finally(() => {
             if (typeof state.resolveStopPromise === 'function') {
                 state.resolveStopPromise();
@@ -408,7 +562,17 @@ async function startAudioRecordingForCenterCard(cardId) {
         const accepted = sampleAnalyserIntoBandVector(analyser, state.bandSums, isMusicLikeFrame);
         if (accepted) {
             state.frameCount += 1;
+            state.lastAcceptedAt = Date.now();
+            if (!state.autoStopRequested && state.frameCount >= state.targetFrameCount) {
+                state.autoStopRequested = true;
+                audioDiscardSuppressedCardId = String(state.cardId);
+                stopAudioRecording(true).catch((err) => {
+                    console.error('Audio-Autostopp fehlgeschlagen:', err);
+                });
+                return;
+            }
         }
+        updateAudioAssistUi();
     }, 180);
 
     recorder.start(1000);
@@ -434,6 +598,18 @@ async function stopAudioRecording(saveRecording) {
 
     if (saveRecording && state.stopPromise) {
         await state.stopPromise;
+    }
+    updateAudioAssistUi();
+}
+
+async function discardCurrentAudioRecording() {
+    const centerCardId = getCurrentCenterCardId();
+    if (audioRecordState && audioRecordState.cardId !== null) {
+        audioDiscardSuppressedCardId = String(audioRecordState.cardId);
+        await stopAudioRecording(false);
+    } else if (audioAssistMode === 2 && centerCardId && audioDiscardSuppressedCardId === centerCardId) {
+        audioDiscardSuppressedCardId = null;
+        await startAudioRecordingForCenterCard(centerCardId);
     }
     updateAudioAssistUi();
 }
@@ -536,14 +712,12 @@ async function audioAssistTick() {
 
     try {
         const hasOpenPdf = (typeof currentPdfDoc !== 'undefined' && !!currentPdfDoc);
-        let centerCardId = null;
+        let centerCardId = getCurrentCenterCardId();
 
-        if (hasOpenPdf) {
-            if (typeof activeCenterCardId !== 'undefined' && activeCenterCardId !== null && activeCenterCardId !== undefined) {
-                centerCardId = String(activeCenterCardId);
-            } else if (typeof lastCardIdFromCenter !== 'undefined' && lastCardIdFromCenter !== null && lastCardIdFromCenter !== undefined) {
-                centerCardId = String(lastCardIdFromCenter);
-            }
+        if (!centerCardId) {
+            audioDiscardSuppressedCardId = null;
+        } else if (audioDiscardSuppressedCardId && audioDiscardSuppressedCardId !== centerCardId) {
+            audioDiscardSuppressedCardId = null;
         }
 
         if (centerCardId) {
@@ -552,7 +726,11 @@ async function audioAssistTick() {
             }
             if (audioAssistMode === 2) {
                 // Aufnahme-Modus: Referenzton aufnehmen
-                if (!audioRecordState || audioRecordState.cardId !== centerCardId) {
+                if (audioDiscardSuppressedCardId === centerCardId) {
+                    if (audioRecordState) {
+                        await stopAudioRecording(false);
+                    }
+                } else if (!audioRecordState || audioRecordState.cardId !== centerCardId) {
                     await stopAudioRecording(true);
                     await startAudioRecordingForCenterCard(centerCardId);
                 }
@@ -591,6 +769,7 @@ async function audioAssistTick() {
 
 function disableAudioAssistMode() {
     audioAssistMode = 0;
+    audioDiscardSuppressedCardId = null;
     if (audioAssistMonitorTimer) {
         clearInterval(audioAssistMonitorTimer);
         audioAssistMonitorTimer = null;
@@ -623,6 +802,7 @@ function toggleAudioAssistMode() {
 }
 
 window.toggleAudioAssistMode = toggleAudioAssistMode;
+window.discardCurrentAudioRecording = discardCurrentAudioRecording;
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', updateAudioAssistUi);

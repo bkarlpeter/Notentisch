@@ -21,7 +21,7 @@
 - [Center-/Zoom-Parameter (Basis fuer weitere Aenderungen)](#center-zoom-parameter-basis-fuer-weitere-aenderungen)
 - [CenterAnsicht je Blatt (XML)](#centeransicht-je-blatt-xml)
 - [Speichern](#speichern)
-- [Use Case](#use-case)
+- [Use Cases](#use-cases)
 - [Dateiformat (XML)](#dateiformat-xml)
 - [Projektdateien](#projektdateien)
 - [Test-Ordner](#test-ordner)
@@ -263,9 +263,12 @@ Das Skript nutzt automatisch:
   - Klick 1: `Ton An` → nur hören/suchen; Button ist grün
   - Klick 2: `Ton Rec` → Aufnahme-Modus; Button ist orange
   - Klick 3: aus
-  - weißer Rahmen am Tonsuche-Button: Aufnahme oder Matching läuft gerade aktiv
-  - im Aufnahme-Modus mit Blatt im CENTER: kurze Referenzaufnahme wird im Eintrag unter `AudioReferenz` gespeichert
+  - weißer Rahmen am Tonsuche-Button: während `Ton Rec` wird gerade musikalisches Signal aufgenommen
+  - im Aufnahme-Modus mit Blatt im CENTER: kurze Referenzaufnahme wird automatisch beendet, sobald genug Material für `AudioReferenz` gesammelt wurde
+  - optional in `Advanced`: alte Sequenz pro Titel löschen (`Löschen`) oder Historie behalten (`Beibehalten`)
+  - `Verw.` verwirft eine laufende Aufnahme; nach automatischem Stopp wird derselbe Button zu `Nochmal` für sofortige Neuaufnahme derselben Center-Karte
   - ohne Blatt im CENTER: Live-Matching gegen gespeicherte Audio-Fingerprints; bei stabilem Treffer wird das Blatt automatisch ins CENTER geladen
+- Karten mit vorhandener Audio-Referenz zeigen optional einen gelben Marker oben rechts (Config: `Spielton-Marker`)
 - Config-Vorschau: nutzt zuerst lokalen PNG-Cache, dann XML/PDF-Fund (Ausschnitt) und sonst Bild-Fallback
 - `Blaetter`: sichtbare Karten pro Quadrant einstellen (max. 10)
 - `Stapel-Überlappung je Batch` (Advanced): bestimmt die Überlappung beim Blaettern im Quadrantenstapel
@@ -294,7 +297,7 @@ Die Funktion ist für lokales Arbeiten gedacht: Audio wird nur über den lokalen
 1. `board.html` öffnen und XML laden.
 2. Einen Titel in den CENTER ziehen.
 3. `Tonsuche` auf `Ton Rec` schalten und Mikrofon erlauben.
-4. 3-5 Sekunden das Referenzmotiv spielen/summen, dann Blatt aus dem CENTER zurück in einen Quadranten legen.
+4. 3-5 Sekunden das Referenzmotiv spielen/summen, bis die Aufnahme automatisch stoppt.
 5. `Tonsuche` auf `Ton An` schalten und in ruhiger Umgebung erneut das Motiv spielen/summen.
 6. Erwartung: Nach kurzer stabiler Erkennung wird das passende Blatt automatisch in den CENTER gezogen.
 
@@ -316,6 +319,8 @@ Im jeweiligen `<NotenTisch>`-Eintrag wird ein optionaler Block ergänzt:
 - Fingerprint ist ein einfacher Frequenzband-Vergleich, kein robustes Audio-ML-Modell.
 - Ähnliche Motive, starkes Rauschen oder andere Lautstärke können Fehl- oder Nichttreffer verursachen.
 - Nur Modus `Ton Rec` überschreibt bzw. erzeugt Referenzaufnahmen; `Ton An` sucht nur.
+- Im Modus `Ton Rec` stoppt die Aufnahme automatisch nach genug erkanntem Musiksignal; die Dauer ist in `Advanced` einstellbar.
+- `Advanced > Alte Sequenz bei Neuaufnahme`: `Löschen` hält pro Titel nur eine aktuelle Sequenz (alte Datei + alte XML-Referenzen werden entfernt), `Beibehalten` speichert zusätzliche Sequenzen.
 - Das Matching startet nur, wenn kein PDF im CENTER offen ist.
 - Upload-Härtung im Server: nur Audio-Endungen (`.webm`, `.ogg`, `.wav`, `.m4a`, `.mp3`), Dateigröße max. 25 MB.
 
@@ -342,6 +347,9 @@ Im jeweiligen `<NotenTisch>`-Eintrag wird ein optionaler Block ergänzt:
 - `autoFullscreenOnStart` (bool): Fordert beim Start automatisch Vollbild an (Advanced, Default `true`).
 - `centerZoomFocus`: ist systemseitig fest auf `left-top` normalisiert (kein Umschalter in Advanced).
 - `stackBatchOverlapCount` (integer): Überlappung zwischen zwei Stapel-Batches in den Quadranten (`0..9`, Default `2`).
+- `audioReferenceTargetMs` (integer): Ziel-Dauer der Audio-Referenzaufnahme in Millisekunden (`1500..12000`, Default `5000`).
+- `replaceAudioByTitle` (bool): Verhalten bei Neuaufnahme pro Titel (`true` = alte Sequenz löschen, `false` = alte Sequenz beibehalten).
+- `showAudioBadge` (bool): Zeigt/versteckt den gelben Spielton-Marker auf Karten mit Audio-Referenz.
 
 ### CenterAnsicht je Blatt (XML)
 
@@ -358,19 +366,29 @@ Im jeweiligen `<NotenTisch>`-Eintrag wird ein optionaler Block ergänzt:
 - Aenderungen an `Arbeitsstatus` und (im Modus `Spielen`) `zuletztgespielt` werden beim Ablegen einer Karte auf `Q1` bis `Q4` automatisch in die XML-Datei geschrieben.
 - Beim ersten Schreibzugriff waehlt der User die XML-Datei; danach wird der gespeicherte Datei-Handle wiederverwendet.
 
-## Use Case
+## Use Cases
 
-1. Start: User laedt die XML mit Noten-Metadaten (`LADEN`). Dabei wird der Speicherort der Exportdatei gefragt, die zuvor mit MS access erstelt wurde.
-2. User schaut sich Blaetter an, indem Karten ins CENTER gezogen werden
-3. Karte wird aus dem CENTER auf einen Quadranten abgelegt
+### Usecase 1: User will Noten auf den Tisch legen
+
+1. Start: User laedt die XML mit Noten-Metadaten (`LADEN`). Dabei wird der Speicherort der Exportdatei gefragt, die zuvor mit MS Access erstellt wurde.
+2. User schaut sich Blaetter an, indem Karten ins CENTER gezogen werden.
+3. Karte wird aus dem CENTER auf einen Quadranten abgelegt.
 4. Dabei wird:
   - der neue **Arbeitsstatus** im XML aktualisiert
   - im Modus **Spielen** automatisch `zuletztgespielt` gesetzt
   - im Modus **Sichten** kein `zuletztgespielt` gesetzt
   - die XML-Datei automatisch gespeichert
-5. Abschluss: Weitere Karten koennen direkt weiter einsortiert werden; jede Ablage auf `Q1` bis `Q4` wird sofort gespeichert
+5. Abschluss: Weitere Karten koennen direkt weiter einsortiert werden; jede Ablage auf `Q1` bis `Q4` wird sofort gespeichert.
 
-zu 2: beim Ansehen weiterer Blätter wird das aktuelle dorthin zurückgeschoben wo es her kam
+Hinweis zu 2: Beim Ansehen weiterer Blaetter wird das aktuelle Blatt dorthin zurueckgeschoben, wo es herkam.
+
+### Usecase 2: User will Noten mit Spielton suchen
+
+1. User schaltet `Tonsuche` auf `Ton Rec` und legt das Zielblatt in den CENTER.
+2. User spielt das Motiv 3-6 Sekunden ein; die Referenzaufnahme stoppt automatisch nach genug erkanntem Musiksignal.
+3. Optional kann der User mit `Nochmal` sofort eine neue Referenz für dieselbe Center-Karte einspielen.
+4. Danach schaltet der User auf `Ton An` und spielt das Motiv erneut.
+5. Die App vergleicht den Live-Ton mit gespeicherten Fingerprints und zieht bei stabilem Treffer das passende Blatt automatisch in den CENTER.
 
 ## Dateiformat (XML)
 Eine XML Datei muss vorliegen, die z.B mit Access exportiert wurde und einen Satz an Notenblättern enthält.

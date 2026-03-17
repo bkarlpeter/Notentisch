@@ -362,6 +362,31 @@
             white-space: nowrap;
         }
 
+        #audioDiscardBtn {
+            display: none;
+            width: 62px;
+            min-width: 62px;
+            padding: 0 8px;
+            background: #7a2d2d;
+            border: 1px solid #9a3a3a;
+            color: #fff;
+            font-size: 11px;
+        }
+
+        #audioDiscardBtn:disabled {
+            opacity: 0.45;
+            cursor: default;
+            filter: none;
+        }
+
+        .toolbar-right {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            flex: 0 0 auto;
+        }
+
         #saveDateHint {
             margin-left: auto;
             display: inline-block;
@@ -410,6 +435,10 @@
                 font-size: 11px;
             }
 
+            .toolbar-right {
+                gap: 8px;
+            }
+
             #saveDateHint,
             #audioAssistStatus {
                 display: none;
@@ -424,6 +453,10 @@
             .btn {
                 width: 84px;
                 font-size: 11px;
+            }
+
+            .toolbar-right {
+                gap: 6px;
             }
 
             #alignBtn {
@@ -505,6 +538,10 @@
             .btn {
                 width: 76px;
                 font-size: 10px;
+            }
+
+            .toolbar-right {
+                gap: 4px;
             }
 
             #alignBtn {
@@ -712,6 +749,20 @@
             padding: 0 5px;
         }
 
+        .card-audio-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: clamp(6px, 3.5%, 10px);
+            height: clamp(6px, 3.5%, 10px);
+            border-radius: 2px;
+            background: #ffd54a;
+            border: 1px solid rgba(0, 0, 0, 0.45);
+            box-shadow: 0 0 0 1px rgba(255, 213, 74, 0.35);
+            z-index: 2;
+            pointer-events: none;
+        }
+
         /* --- GRID POSITIONEN --- */
         #Q1 { grid-column: 1; grid-row: 1; }
         #Q2 { grid-column: 2; grid-row: 1; }
@@ -806,23 +857,25 @@
             <span class="stack-max-text">(max 10)</span>
         </label>
         <span class="separator">|</span>
-        <button class="btn" id="textSearchBtn" onclick="openSearchOverlay()" title="Blatt suchen">Textsuche</button>
-        <button class="btn" onclick="toggleAudioAssistMode()" id="audioAssistBtn" title="1=Suchen, 2=Aufnehmen, 3=Aus">Tonsuche</button>
-        
         <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)" class="hidden-file-input">
-        <button class="btn btn-config" onclick="openConfigPage()" title="Config">C</button>
-        <button class="btn btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreenMode()" title="Vollbild (F11 / Esc)">F11</button>
-        <button class="btn btn-end" id="endBtn" onclick="requestShutdownAndExit()" title="Server beenden und schließen">Ende</button>
+        <div class="toolbar-right">
+            <button class="btn" id="textSearchBtn" onclick="openSearchOverlay()" title="Blatt suchen">Textsuche</button>
+            <button class="btn" onclick="toggleAudioAssistMode()" id="audioAssistBtn" title="1=Suchen, 2=Aufnehmen, 3=Aus">Tonsuche</button>
+            <button class="btn" id="audioDiscardBtn" onclick="discardCurrentAudioRecording()" title="Laufende Aufnahme verwerfen">Verw.</button>
+            <button class="btn btn-config" onclick="openConfigPage()" title="Config">C</button>
+            <button class="btn btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreenMode()" title="Vollbild (F11 / Esc)">F11</button>
+            <button class="btn btn-end" id="endBtn" onclick="requestShutdownAndExit()" title="Server beenden und schließen">Ende</button>
+        </div>
     </div>
 
 </div>
 
     <!-- SCRIPTS -->
-    <script src="center-config.js?v=20260315a"></script>
-    <script src="functions.js?v=20260315a"></script>
+    <script src="center-config.js?v=20260317b"></script>
+    <script src="functions.js?v=20260317c"></script>
     <script src="center-view.js?v=20260315a"></script>
-    <script src="filehandling.js?v=20260317d"></script>
-    <script src="audio-assist.js?v=20260317a"></script>
+    <script src="filehandling.js?v=20260317g"></script>
+    <script src="audio-assist.js?v=20260317e"></script>
 
 </body>
 </html>

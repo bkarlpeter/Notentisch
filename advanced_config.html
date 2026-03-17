@@ -51,6 +51,8 @@
             <div class="field"><label for="autoFullscreenOnStart">Auto-Fullscreen beim Start</label><select id="autoFullscreenOnStart"><option value="show">Aktiv</option><option value="hide">Inaktiv</option></select></div>
             <div class="field"><label for="dropGlowDurationMs">Nachglühen Rahmen bei Ablage (ms)</label><input id="dropGlowDurationMs" type="number" min="0" max="10000" step="50"></div>
             <div class="field"><label for="stackBatchOverlapCount">Stapel-Überlappung je Batch (Karten)</label><input id="stackBatchOverlapCount" type="number" min="0" max="9" step="1"></div>
+            <div class="field"><label for="audioReferenceTargetMs">Audio-Referenzdauer (ms)</label><input id="audioReferenceTargetMs" type="number" min="1500" max="12000" step="100"></div>
+            <div class="field"><label for="replaceAudioByTitle">Alte Sequenz bei Neuaufnahme</label><select id="replaceAudioByTitle"><option value="show">Löschen</option><option value="hide">Beibehalten</option></select></div>
 
             <div class="field field-btn-color">
                 <label>Button Grundfarbe (Ausgangszustand)</label>
@@ -95,7 +97,7 @@
         <div id="status"></div>
     </div>
 
-    <script src="center-config.js?v=20260314a"></script>
+    <script src="center-config.js?v=20260317b"></script>
     <script>
         const USER_CONFIG_KEY = 'notentischUserConfig';
         const DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS } : {};
@@ -154,6 +156,8 @@
             document.getElementById('autoFullscreenOnStart').value = normalizeBoolean(config.autoFullscreenOnStart, DEFAULTS.autoFullscreenOnStart) ? 'show' : 'hide';
             document.getElementById('dropGlowDurationMs').value = clampNumber(config.dropGlowDurationMs, 0, 10000, DEFAULTS.dropGlowDurationMs);
             document.getElementById('stackBatchOverlapCount').value = clampNumber(config.stackBatchOverlapCount, 0, 9, DEFAULTS.stackBatchOverlapCount ?? 2);
+            document.getElementById('audioReferenceTargetMs').value = clampNumber(config.audioReferenceTargetMs, 1500, 12000, DEFAULTS.audioReferenceTargetMs ?? 5000);
+            document.getElementById('replaceAudioByTitle').value = normalizeBoolean(config.replaceAudioByTitle, DEFAULTS.replaceAudioByTitle ?? true) ? 'show' : 'hide';
             const baseColor = normalizeHexColor(config.btnBaseColor, DEFAULTS.btnBaseColor || '#3498db');
             const toggleColor1 = normalizeHexColor(config.btnToggleColor1, DEFAULTS.btnToggleColor1 || '#27ae60');
             const toggleColor2 = normalizeHexColor(config.btnToggleColor2, DEFAULTS.btnToggleColor2 || '#52be80');
@@ -189,6 +193,8 @@
                 autoFullscreenOnStart: normalizeBoolean(document.getElementById('autoFullscreenOnStart').value, DEFAULTS.autoFullscreenOnStart),
                 dropGlowDurationMs: clampNumber(document.getElementById('dropGlowDurationMs').value, 0, 10000, DEFAULTS.dropGlowDurationMs),
                 stackBatchOverlapCount: clampNumber(document.getElementById('stackBatchOverlapCount').value, 0, 9, DEFAULTS.stackBatchOverlapCount ?? 2),
+                audioReferenceTargetMs: clampNumber(document.getElementById('audioReferenceTargetMs').value, 1500, 12000, DEFAULTS.audioReferenceTargetMs ?? 5000),
+                replaceAudioByTitle: normalizeBoolean(document.getElementById('replaceAudioByTitle').value, DEFAULTS.replaceAudioByTitle ?? true),
                 btnBaseColor: normalizeHexColor(document.getElementById('btnBaseColorHex').value, DEFAULTS.btnBaseColor || '#3498db'),
                 btnToggleColor1: normalizeHexColor(document.getElementById('btnToggleColor1Hex').value, DEFAULTS.btnToggleColor1 || '#27ae60'),
                 btnToggleColor2: normalizeHexColor(document.getElementById('btnToggleColor2Hex').value, DEFAULTS.btnToggleColor2 || '#52be80')
@@ -241,7 +247,7 @@
         bindColorInputs('btnToggleColor1Picker', 'btnToggleColor1Hex', 'swatchToggle1', DEFAULTS.btnToggleColor1 || '#27ae60');
         bindColorInputs('btnToggleColor2Picker', 'btnToggleColor2Hex', 'swatchToggle2', DEFAULTS.btnToggleColor2 || '#52be80');
 
-        ['centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerSmoothScroll', 'pageInfoTone', 'autoFullscreenOnStart', 'dropGlowDurationMs', 'stackBatchOverlapCount'].forEach((id) => {
+        ['centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerSmoothScroll', 'pageInfoTone', 'autoFullscreenOnStart', 'dropGlowDurationMs', 'stackBatchOverlapCount', 'audioReferenceTargetMs', 'replaceAudioByTitle'].forEach((id) => {
             const el = document.getElementById(id);
             el.addEventListener('input', () => saveWithStatus('Automatisch gespeichert.'));
             el.addEventListener('change', () => saveWithStatus('Automatisch gespeichert.'));

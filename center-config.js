@@ -135,6 +135,15 @@
         // Überlappung zwischen zwei Stapel-Batches (Anzahl Karten).
         stackBatchOverlapCount: 2,
 
+        // Ziel-Dauer einer Audio-Referenzaufnahme in Millisekunden.
+        audioReferenceTargetMs: 5000,
+
+        // Alte Audio-Sequenzen pro Titel beim Neuaufnehmen entfernen.
+        replaceAudioByTitle: true,
+
+        // Marker in der Karten-Ecke anzeigen, wenn eine Audio-Referenz existiert.
+        showAudioBadge: true,
+
         // Grundfarbe der Steuerleisten-Buttons im Ausgangszustand (Hex).
         btnBaseColor: '#3498db',
 
@@ -179,6 +188,9 @@
             useZoomSettingsOnDrop: normalizeBoolean(parsed.useZoomSettingsOnDrop, defaults.useZoomSettingsOnDrop),
             dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, defaults.dropGlowDurationMs),
             stackBatchOverlapCount: clampNumber(parsed.stackBatchOverlapCount, 0, 9, defaults.stackBatchOverlapCount),
+            audioReferenceTargetMs: clampNumber(parsed.audioReferenceTargetMs, 1500, 12000, defaults.audioReferenceTargetMs),
+            replaceAudioByTitle: normalizeBoolean(parsed.replaceAudioByTitle, defaults.replaceAudioByTitle),
+            showAudioBadge: normalizeBoolean(parsed.showAudioBadge, defaults.showAudioBadge),
             btnBaseColor: normalizeHexColor(parsed.btnBaseColor, defaults.btnBaseColor),
             btnToggleColor1: normalizeHexColor(parsed.btnToggleColor1, defaults.btnToggleColor1),
             btnToggleColor2: normalizeHexColor(parsed.btnToggleColor2, defaults.btnToggleColor2)
