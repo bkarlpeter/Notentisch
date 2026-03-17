@@ -7,9 +7,13 @@ import secrets
 import sys
 import threading
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 
 class NotentischHandler(SimpleHTTPRequestHandler):
+    ALLOWED_AUDIO_EXTENSIONS = {'.webm', '.ogg', '.wav', '.m4a', '.mp3'}
+
     def end_headers(self):
         self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
         self.send_header('Pragma', 'no-cache')
@@ -17,7 +21,13 @@ class NotentischHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_POST(self):
-        if self.path == '/__shutdown__':
+        parsed = urlparse(self.path)
+
+        if parsed.path == '/__audio_upload__':
+            self._handle_audio_upload(parsed)
+            return
+
+        if parsed.path == '/__shutdown__':
             # Shutdown nur mit gültigem Session-Token erlauben.
             # Das reduziert unbeabsichtigte Stopps durch andere lokale Browser-Tabs/Tools.
             if not self._is_valid_shutdown_request():
@@ -28,7 +38,9 @@ class NotentischHandler(SimpleHTTPRequestHandler):
         super().do_POST()
 
     def do_GET(self):
-        if self.path == '/__session__':
+        parsed = urlparse(self.path)
+
+        if parsed.path == '/__session__':
             # Der Browser holt hier das aktuelle Shutdown-Token für diese Server-Session.
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
@@ -37,11 +49,58 @@ class NotentischHandler(SimpleHTTPRequestHandler):
             payload = {'shutdownToken': getattr(self.server, 'shutdown_token', '')}
             self.wfile.write(json.dumps(payload).encode('utf-8'))
             return
-        if self.path == '/__shutdown__':
+        if parsed.path == '/__shutdown__':
             # Shutdown via GET ist bewusst deaktiviert.
             self.send_error(405, 'Method Not Allowed')
             return
         super().do_GET()
+
+    def _handle_audio_upload(self, parsed) -> None:
+        # Uploads sind auf das Arbeitsverzeichnis des lokalen Notentisch-Servers beschränkt.
+        # Dadurch kann der Browser nicht beliebige Pfade auf dem System beschreiben.
+        query = parse_qs(parsed.query)
+        raw_name = (query.get('filename') or [''])[0]
+        safe_name = self._sanitize_sound_filename(raw_name)
+        if not safe_name:
+            self.send_error(400, 'Invalid filename')
+            return
+
+        extension = Path(safe_name).suffix.lower()
+        if extension not in self.ALLOWED_AUDIO_EXTENSIONS:
+            self.send_error(400, 'Unsupported file extension')
+            return
+
+        try:
+            content_length = int(self.headers.get('Content-Length', '0') or '0')
+        except ValueError:
+            self.send_error(400, 'Invalid Content-Length')
+            return
+        if content_length <= 0:
+            self.send_error(400, 'Missing body')
+            return
+        if content_length > 25 * 1024 * 1024:
+            self.send_error(413, 'File too large')
+            return
+
+        sound_dir = Path(os.getcwd()) / 'mysounds'
+        sound_dir.mkdir(parents=True, exist_ok=True)
+        target = sound_dir / safe_name
+        payload = self.rfile.read(content_length)
+        target.write_bytes(payload)
+
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Cache-Control', 'no-store')
+        self.end_headers()
+        relative_path = 'mysounds/' + safe_name
+        self.wfile.write(json.dumps({'ok': True, 'path': relative_path}).encode('utf-8'))
+
+    def _sanitize_sound_filename(self, value: str) -> str:
+        base = os.path.basename((value or '').strip())
+        allowed = ''.join(ch for ch in base if ch.isalnum() or ch in ('-', '_', '.'))
+        if not allowed or allowed.startswith('.') or len(allowed) > 120:
+            return ''
+        return allowed
 
     def _is_valid_shutdown_request(self) -> bool:
         token = self.headers.get('X-Notentisch-Token', '')

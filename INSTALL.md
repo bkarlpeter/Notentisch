@@ -41,7 +41,7 @@ Falls "Blätter" auf dem Zielrechner nicht funktioniert (z.B. alte Junction):
 
 **Variante B (manuell):**
 - PowerShell im Projektordner öffnen
-- `python -m http.server 8000`
+- `py -3 local_server.py 8000`
 - Browser: [http://localhost:8000/board.html](http://localhost:8000/board.html)
 
 ### 5. XML laden
@@ -102,6 +102,22 @@ Du kannst das Skript jederzeit erneut ausführen, falls du die Ordnerstruktur od
 **Problem:** Keine Kartenbilder
 - `.\extract_cards.ps1` ausführen
 - Poppler-Pfad prüfen (siehe Optional)
+
+**Problem:** Mikrofon wird nicht abgefragt (Audio Auto)
+- Browser-Berechtigung für Mikrofon prüfen
+- Seite neu laden und Audio Auto erneut aktivieren
+
+**Problem:** Audio Auto erkennt nichts
+- Zuerst Referenzaufnahme mit Blatt im Center machen (ca. 3-5 Sekunden)
+- Danach außerhalb vom Center erneut testen
+
+**Problem:** Falsches Blatt wird erkannt
+- Referenz in ruhiger Umgebung neu aufnehmen
+- Näher am Mikrofon spielen/summen
+
+**Problem:** Audio konnte nicht gespeichert werden
+- Prüfen, ob der lokale Server über local_server.py läuft
+- Prüfen, ob der Ordner mysounds beschreibbar ist
 
 ---
 

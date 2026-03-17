@@ -16,6 +16,8 @@
 - [XML aus PDF-Verzeichnis erstellen oder ergänzen](#xml-aus-pdf-verzeichnis-erstellen-oder-ergänzen)
 - [Card-Bilder generieren](#card-bilder-generieren)
 - [Bedienung](#bedienung)
+- [Audio Auto (Mikrofon)](#audio-auto-mikrofon)
+- [Audio Auto Troubleshooting](#audio-auto-troubleshooting)
 - [Center-/Zoom-Parameter (Basis fuer weitere Aenderungen)](#center-zoom-parameter-basis-fuer-weitere-aenderungen)
 - [CenterAnsicht je Blatt (XML)](#centeransicht-je-blatt-xml)
 - [Speichern](#speichern)
@@ -252,11 +254,18 @@ Das Skript nutzt automatisch:
   - aktiv: Beim Drop ins CENTER werden gespeicherte `CenterAnsicht`-Werte angewendet
   - aktiv: Beim Verlassen des CENTER (Drop/Klick nach Q1-Q4) werden aktuelle Center-Werte automatisch in XML gespeichert
   - aus: Keine automatische Anwendung und keine automatische Speicherung von `CenterAnsicht`
-- `Suchen`: öffnet ein Suchoverlay zur Volltextsuche über alle Blatttitel
+- `Textsuche`: öffnet ein Suchoverlay zur Volltextsuche über alle Blatttitel
   - Treffer zeigen Titel und Stapelzuordnung
   - Treffer anklicken → Bestätigungsmeldung erscheint
   - `Fertig` → Blatt wird in den CENTER geladen (wie Drag & Drop)
   - `Abbrechen` / Escape → Overlay schließt sich ohne Aktion
+- `Tonsuche`: Mikrofon-gestützte Automatik für Suche und Aufnahme
+  - Klick 1: `Ton An` → nur hören/suchen; Button ist grün
+  - Klick 2: `Ton Rec` → Aufnahme-Modus; Button ist orange
+  - Klick 3: aus
+  - weißer Rahmen am Tonsuche-Button: Aufnahme oder Matching läuft gerade aktiv
+  - im Aufnahme-Modus mit Blatt im CENTER: kurze Referenzaufnahme wird im Eintrag unter `AudioReferenz` gespeichert
+  - ohne Blatt im CENTER: Live-Matching gegen gespeicherte Audio-Fingerprints; bei stabilem Treffer wird das Blatt automatisch ins CENTER geladen
 - Config-Vorschau: nutzt zuerst lokalen PNG-Cache, dann XML/PDF-Fund (Ausschnitt) und sonst Bild-Fallback
 - `Blaetter`: sichtbare Karten pro Quadrant einstellen (max. 10)
 - `Stapel-Überlappung je Batch` (Advanced): bestimmt die Überlappung beim Blaettern im Quadrantenstapel
@@ -269,6 +278,57 @@ Das Skript nutzt automatisch:
 - Modus `Spielen`: beim Ablegen wird `zuletztgespielt` gesetzt
 - Modus `Sichten`: beim Ablegen wird kein `zuletztgespielt` gesetzt
 - Beim Ablegen auf `Q1` bis `Q4` wird die XML automatisch gespeichert
+
+## Audio Auto (Mikrofon)
+
+Die Funktion ist für lokales Arbeiten gedacht: Audio wird nur über den lokalen Server (`127.0.0.1`) in den Projektordner `mysounds/` geschrieben.
+
+### Voraussetzungen
+
+- Browser mit `MediaRecorder` + Mikrofonfreigabe (Edge/Chrome/Firefox aktuell)
+- laufender lokaler Server (`local_server.py`)
+- geladene XML
+
+### Manueller Kurztest (ca. 2 Minuten)
+
+1. `board.html` öffnen und XML laden.
+2. Einen Titel in den CENTER ziehen.
+3. `Tonsuche` auf `Ton Rec` schalten und Mikrofon erlauben.
+4. 3-5 Sekunden das Referenzmotiv spielen/summen, dann Blatt aus dem CENTER zurück in einen Quadranten legen.
+5. `Tonsuche` auf `Ton An` schalten und in ruhiger Umgebung erneut das Motiv spielen/summen.
+6. Erwartung: Nach kurzer stabiler Erkennung wird das passende Blatt automatisch in den CENTER gezogen.
+
+### Was gespeichert wird (XML)
+
+Im jeweiligen `<NotenTisch>`-Eintrag wird ein optionaler Block ergänzt:
+
+```xml
+<AudioReferenz>
+  <Datei>mysounds/sound_....webm</Datei>
+  <MimeType>audio/webm;codecs=opus</MimeType>
+  <Fingerprint>0.12,0.34,...</Fingerprint>
+  <ErfasstAm>2026-03-17T12:00:00.000Z</ErfasstAm>
+</AudioReferenz>
+```
+
+### Technische Grenzen / Hinweise
+
+- Fingerprint ist ein einfacher Frequenzband-Vergleich, kein robustes Audio-ML-Modell.
+- Ähnliche Motive, starkes Rauschen oder andere Lautstärke können Fehl- oder Nichttreffer verursachen.
+- Nur Modus `Ton Rec` überschreibt bzw. erzeugt Referenzaufnahmen; `Ton An` sucht nur.
+- Das Matching startet nur, wenn kein PDF im CENTER offen ist.
+- Upload-Härtung im Server: nur Audio-Endungen (`.webm`, `.ogg`, `.wav`, `.m4a`, `.mp3`), Dateigröße max. 25 MB.
+
+## Audio Auto Troubleshooting
+
+- Problem: Mikrofon wird nicht abgefragt.
+  - Lösung: Browser-Berechtigung für Mikrofon prüfen (Website-Einstellungen), Seite neu laden, `Tonsuche` erneut aktivieren.
+- Problem: Keine Erkennung in `Ton An`.
+  - Lösung: Zuerst mit `Ton Rec` eine Referenz im CENTER aufnehmen (3-5 Sekunden), dann außerhalb des CENTER in `Ton An` testen.
+- Problem: Falsches Blatt wird erkannt.
+  - Lösung: Referenz in ruhiger Umgebung neu aufnehmen, näher am Mikrofon spielen/summen, ähnliche Titel separat neu referenzieren.
+- Problem: Audio kann nicht gespeichert werden.
+  - Lösung: Prüfen, ob `local_server.py` läuft und der Ordner `mysounds/` beschreibbar ist.
 
 ### Center-/Zoom-Parameter (Basis fuer weitere Aenderungen)
 
@@ -337,10 +397,11 @@ die Blätter werden auf vier Felder rund um das Center verteilt ("Quadranten") e
 - `board.html` - UI, Layout, Styles
 - `functions.js` - PDF-Anzeige, Zoom, Seiten-/Scroll-Navigation, Pfadaufloesung
 - `filehandling.js` - XML I/O, Karten-Rendering, Drag & Drop, Statusspeicherung
+- `audio-assist.js` - Audio Auto (Mikrofonaufnahme, Fingerprint-Bildung, Matching, XML-Felder `AudioReferenz`)
 - `extract_cards.ps1` - Card-Bilder aus PDFs generieren (Poppler)
 - `Notentisch.bat` - Batch-Launcher fuer Windows (startet `local_server.py` + Browser; setzt waehrend der Session Energiespar-Timeouts auf `Nie` und restauriert danach)
 - `notentisch.vbs` - VB-Wrapper fuer unsichtbaren Start
-- `local_server.py` - lokaler HTTP-Server mit Shutdown-Endpoint (`/__shutdown__`)
+- `local_server.py` - lokaler HTTP-Server mit Shutdown-Endpoint (`/__shutdown__`) und Audio-Upload-Endpoint (`/__audio_upload__`)
 - `Cards_Export/` - Ordner fuer statische Card-Bilder (`card_*.png`)
 
 ## Test-Ordner
