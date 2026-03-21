@@ -863,17 +863,105 @@ function getBoardSnapshotForConfig() {
         xmlText,
         xmlFileName: xmlFileName || null,
         quadrantOffsets: getRenderApi()?.getQuadrantOffsets() || { Q1: 0, Q2: 0, Q3: 0, Q4: 0 },
-        quadrantMarkup: {
-            Q1: document.getElementById('Q1') ? document.getElementById('Q1').innerHTML : '',
-            Q2: document.getElementById('Q2') ? document.getElementById('Q2').innerHTML : '',
-            Q3: document.getElementById('Q3') ? document.getElementById('Q3').innerHTML : '',
-            Q4: document.getElementById('Q4') ? document.getElementById('Q4').innerHTML : ''
-        },
         centerVisual: (() => { try { return captureCenterVisualSnapshot(); } catch (e) { return null; } })(),
         stackCount: getRenderApi()?.getStackCount() || 8,
         lastCardIdFromCenter,
         activeCenterCardId
     };
+}
+
+function getCardLayoutSnapshotForConfig() {
+    const quadrants = { Q1: [], Q2: [], Q3: [], Q4: [] };
+
+    ['Q1', 'Q2', 'Q3', 'Q4'].forEach((quadrantId) => {
+        const quadrant = document.getElementById(quadrantId);
+        if (!quadrant) return;
+        quadrants[quadrantId] = Array.from(quadrant.querySelectorAll('.card-container[data-cardid]'))
+            .map((el) => String(el.dataset.cardid || '').trim())
+            .filter(Boolean);
+    });
+
+    let centerCardId = activeCenterCardId;
+    if (centerCardId === null || centerCardId === undefined || centerCardId === '') {
+        const inCenter = document.querySelector('.card-container.in-center[data-cardid]');
+        centerCardId = inCenter ? inCenter.dataset.cardid : null;
+    }
+
+    return {
+        savedAt: Date.now(),
+        quadrants,
+        centerCardId: (centerCardId !== null && centerCardId !== undefined && centerCardId !== '') ? String(centerCardId) : null,
+        stackCount: getRenderApi()?.getStackCount() || 8,
+        quadrantOffsets: getRenderApi()?.getQuadrantOffsets() || { Q1: 0, Q2: 0, Q3: 0, Q4: 0 }
+    };
+}
+
+function applyCardLayoutSnapshotFromConfig(snapshot, options = {}) {
+    if (!snapshot || typeof snapshot !== 'object') return false;
+
+    const attempts = Math.max(1, Number(options.attempts) || 18);
+    const retryDelayMs = Math.max(20, Number(options.retryDelayMs) || 80);
+    let remaining = attempts;
+
+    const applyOnce = () => {
+        const stackInput = document.getElementById('stackCount');
+        if (stackInput && Number.isFinite(Number(snapshot.stackCount))) {
+            stackInput.value = String(Math.max(1, Math.min(10, Number(snapshot.stackCount))));
+        }
+
+        if (snapshot.quadrantOffsets && typeof snapshot.quadrantOffsets === 'object') {
+            getRenderApi()?.setQuadrantOffsets(snapshot.quadrantOffsets);
+        }
+
+        const quadrants = snapshot.quadrants || {};
+        let movedAny = false;
+
+        ['Q1', 'Q2', 'Q3', 'Q4'].forEach((quadrantId) => {
+            const ids = Array.isArray(quadrants[quadrantId]) ? quadrants[quadrantId] : [];
+            if (!ids.length) return;
+
+            const target = document.getElementById(quadrantId);
+            if (!target) return;
+
+            for (let i = ids.length - 1; i >= 0; i--) {
+                const cardId = String(ids[i] || '').trim();
+                if (!cardId) continue;
+                const card = document.querySelector('.card-container[data-cardid="' + cardId + '"]');
+                if (!card) continue;
+                placeCardAtTopOfQuadrant(target, card);
+                movedAny = true;
+            }
+        });
+
+        const allCards = document.querySelectorAll('.card-container.in-center');
+        allCards.forEach((el) => el.classList.remove('in-center'));
+
+        if (snapshot.centerCardId !== null && snapshot.centerCardId !== undefined && snapshot.centerCardId !== '') {
+            const centerCard = document.querySelector('.card-container[data-cardid="' + String(snapshot.centerCardId) + '"]');
+            if (centerCard) {
+                centerCard.classList.add('in-center');
+                activeCenterCardId = String(snapshot.centerCardId);
+            }
+        }
+
+        if (movedAny) {
+            getRenderApi()?.updateStackLayout();
+            return true;
+        }
+
+        return false;
+    };
+
+    const tryApply = () => {
+        const done = applyOnce();
+        if (done) return;
+        remaining -= 1;
+        if (remaining <= 0) return;
+        setTimeout(tryApply, retryDelayMs);
+    };
+
+    tryApply();
+    return true;
 }
 
 function restoreBoardSnapshotFromConfig(snapshot) {
@@ -1263,6 +1351,9 @@ function restoreSaveCenterSettingsModeState() {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         setupDropListeners();
+        if (typeof restoreBoardSessionState === 'function') {
+            restoreBoardSessionState();
+        }
         getRenderApi()?.initializeStackControls();
         getRenderApi()?.updateStackLayout();
         if (!shouldSkipAutoLoadSavedFolder()) {
@@ -1275,6 +1366,9 @@ if (document.readyState === 'loading') {
     });
 } else {
     setupDropListeners();
+    if (typeof restoreBoardSessionState === 'function') {
+        restoreBoardSessionState();
+    }
     getRenderApi()?.initializeStackControls();
     getRenderApi()?.updateStackLayout();
     if (!shouldSkipAutoLoadSavedFolder()) {

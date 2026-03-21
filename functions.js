@@ -1,5 +1,8 @@
 const USER_CONFIG_KEY = 'notentischUserConfig';
 const BOARD_SESSION_STATE_KEY = 'notentischBoardSessionState';
+const BOARD_SESSION_FALLBACK_KEY = 'notentischBoardSessionStateFallback';
+const BOARD_CARD_LAYOUT_KEY = 'notentischBoardCardLayoutBuffer';
+const BOARD_HISTORY_RETURN_KEY = 'notentischReturnToBoardViaHistory';
 let shutdownSessionToken = null;
 const USER_CONFIG_DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS
     ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS }
@@ -329,8 +332,10 @@ function getToggleStepColor(step) {
 }
 
 function openConfigPage() {
+    let state = null;
+    let cardLayoutSnapshot = null;
     try {
-        const state = {
+        state = {
             savedAt: Date.now(),
             boardSnapshot: (typeof getBoardSnapshotForConfig === 'function')
                 ? getBoardSnapshotForConfig()
@@ -339,32 +344,127 @@ function openConfigPage() {
                 ? getCurrentCenterRuntimeState()
                 : null
         };
+
+        if (typeof getCardLayoutSnapshotForConfig === 'function') {
+            cardLayoutSnapshot = getCardLayoutSnapshotForConfig();
+            if (cardLayoutSnapshot) {
+                state.cardLayout = cardLayoutSnapshot;
+            }
+        }
+    } catch (err) {
+    }
+
+    if (cardLayoutSnapshot) {
+        try {
+            localStorage.setItem(BOARD_CARD_LAYOUT_KEY, JSON.stringify(cardLayoutSnapshot));
+        } catch (err) {
+        }
+    }
+
+    let savedToSession = false;
+    if (state) {
         try {
             sessionStorage.setItem(BOARD_SESSION_STATE_KEY, JSON.stringify(state));
+            savedToSession = true;
         } catch {
             // Quota überschritten – nochmal ohne centerVisual versuchen
             if (state.boardSnapshot) state.boardSnapshot.centerVisual = null;
             try {
                 sessionStorage.setItem(BOARD_SESSION_STATE_KEY, JSON.stringify(state));
-            } catch { /* give up */ }
+                savedToSession = true;
+            } catch {
+            }
         }
+    }
+
+    if (!savedToSession && state && state.boardSnapshot) {
+        const fallbackState = {
+            savedAt: Date.now(),
+            boardSnapshot: {
+                xmlText: state.boardSnapshot.xmlText || '',
+                xmlFileName: state.boardSnapshot.xmlFileName || null,
+                quadrantOffsets: state.boardSnapshot.quadrantOffsets || { Q1: 0, Q2: 0, Q3: 0, Q4: 0 },
+                stackCount: Number.isFinite(Number(state.boardSnapshot.stackCount)) ? Number(state.boardSnapshot.stackCount) : 8,
+                lastCardIdFromCenter: state.boardSnapshot.lastCardIdFromCenter ?? null,
+                activeCenterCardId: state.boardSnapshot.activeCenterCardId ?? null,
+                centerVisual: null
+            },
+            center: state.center || null
+        };
+
+        try {
+            localStorage.setItem(BOARD_SESSION_FALLBACK_KEY, JSON.stringify(fallbackState));
+        } catch (err) {
+        }
+    }
+
+    try {
+        sessionStorage.setItem(BOARD_HISTORY_RETURN_KEY, String(Date.now()));
     } catch (err) {
     }
-    window.location.href = 'config.html';
+
+    window.location.assign('config.html');
 }
 
 function restoreBoardSessionState() {
     let parsed = null;
+    let source = 'session';
+    let cardLayoutSnapshot = null;
     try {
         const raw = sessionStorage.getItem(BOARD_SESSION_STATE_KEY);
-        if (!raw) return;
-        parsed = JSON.parse(raw);
+        if (raw) {
+            parsed = JSON.parse(raw);
+        }
     } catch (err) {
+        parsed = null;
+    }
+
+    if (!parsed) {
+        try {
+            const rawFallback = localStorage.getItem(BOARD_SESSION_FALLBACK_KEY);
+            if (rawFallback) {
+                parsed = JSON.parse(rawFallback);
+                source = 'fallback';
+            }
+        } catch (err) {
+            parsed = null;
+        }
+    }
+
+    if (parsed && parsed.cardLayout && typeof parsed.cardLayout === 'object') {
+        cardLayoutSnapshot = parsed.cardLayout;
+    }
+
+    if (!cardLayoutSnapshot) {
+        try {
+            const rawLayout = localStorage.getItem(BOARD_CARD_LAYOUT_KEY);
+            if (rawLayout) {
+                cardLayoutSnapshot = JSON.parse(rawLayout);
+            }
+        } catch (err) {
+            cardLayoutSnapshot = null;
+        }
+    }
+
+    if (!parsed && !cardLayoutSnapshot) {
         return;
     }
 
-    if (!parsed || (!parsed.center && !parsed.boardSnapshot)) {
+    const hasBoardSnapshot = !!parsed.boardSnapshot;
+    const hasCenterState = !!parsed.center;
+    const canRestoreBoard = !hasBoardSnapshot || typeof restoreBoardSnapshotFromConfig === 'function';
+    const canRestoreCenter = !hasCenterState || typeof restoreCenterRuntimeState === 'function';
+    const canRestoreCardLayout = !cardLayoutSnapshot || typeof applyCardLayoutSnapshotFromConfig === 'function';
+
+    // Wird functions.js vor filehandling.js ausgeführt, fehlen Restore-Funktionen noch.
+    // Snapshot bleibt dann liegen und wird später erneut versucht.
+    if (!canRestoreBoard || !canRestoreCenter || !canRestoreCardLayout) {
+        return;
+    }
+
+    if (parsed && !parsed.center && !parsed.boardSnapshot && !cardLayoutSnapshot) {
         sessionStorage.removeItem(BOARD_SESSION_STATE_KEY);
+        localStorage.removeItem(BOARD_SESSION_FALLBACK_KEY);
         return;
     }
 
@@ -374,19 +474,26 @@ function restoreBoardSessionState() {
     } catch (err) {
     }
 
-    let boardRestoreResult = null;
-    if (parsed.boardSnapshot && typeof restoreBoardSnapshotFromConfig === 'function') {
-        boardRestoreResult = restoreBoardSnapshotFromConfig(parsed.boardSnapshot);
+    if (parsed && parsed.boardSnapshot && typeof restoreBoardSnapshotFromConfig === 'function') {
+        restoreBoardSnapshotFromConfig(parsed.boardSnapshot);
     }
 
     // restoreCenterRuntimeState wird immer aufgerufen, damit showPdfPages das PDF lädt
     // und currentPdfDoc gesetzt wird. Ohne dies bricht queueZoomRender() mit
     // "if (!currentPdfDoc) return" ab und Zoom funktioniert nicht.
-    if (parsed.center && typeof restoreCenterRuntimeState === 'function') {
+    if (parsed && parsed.center && typeof restoreCenterRuntimeState === 'function') {
         restoreCenterRuntimeState(parsed.center, { preserveConfiguredFocus: true });
     }
 
-    sessionStorage.removeItem(BOARD_SESSION_STATE_KEY);
+    if (cardLayoutSnapshot && typeof applyCardLayoutSnapshotFromConfig === 'function') {
+        applyCardLayoutSnapshotFromConfig(cardLayoutSnapshot, { attempts: 20, retryDelayMs: 80 });
+    }
+
+    if (source === 'session') {
+        sessionStorage.removeItem(BOARD_SESSION_STATE_KEY);
+    }
+    localStorage.removeItem(BOARD_SESSION_FALLBACK_KEY);
+    localStorage.removeItem(BOARD_CARD_LAYOUT_KEY);
 }
 
 function syncFullscreenButtonState() {

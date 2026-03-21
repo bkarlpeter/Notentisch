@@ -639,9 +639,17 @@
             saveConfig(cfg);
             document.getElementById('status').textContent = 'Auf Standard zurückgesetzt.';
         });
-        document.getElementById('advancedBtn').addEventListener('click', () => { window.location.href = 'advanced_config.html'; });
+        document.getElementById('advancedBtn').addEventListener('click', () => { window.location.assign('advanced_config.html'); });
+        function goBackToBoard() {
+            if (window.history.length > 1) {
+                window.history.back();
+                return;
+            }
+            window.location.replace('board.html');
+        }
+
         document.getElementById('backToBoardBtn').addEventListener('click', () => {
-            window.location.href = 'board.html';
+            goBackToBoard();
         });
 
         window.addEventListener('resize', () => drawMusicPreview(readFromForm()));

@@ -362,21 +362,21 @@
             white-space: nowrap;
         }
 
-        #audioDiscardBtn {
-            display: none;
+        #audioSaveBtn {
+            display: inline-flex;
+            visibility: hidden;
+            align-items: center;
             width: 78px;
             min-width: 78px;
             padding: 0 8px;
-            background: #7a2d2d;
-            border: 1px solid #9a3a3a;
+            background: #3498db;
+            border: none;
+            border-radius: 4px;
             color: #fff;
             font-size: 11px;
-        }
-
-        #audioDiscardBtn:disabled {
-            opacity: 0.45;
             cursor: default;
-            filter: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         .toolbar-right {
@@ -860,7 +860,7 @@
         <div class="toolbar-right">
             <button class="btn" id="textSearchBtn" onclick="openSearchOverlay()" title="Blatt suchen">Textsuche</button>
             <button class="btn" onclick="toggleAudioAssistMode()" id="audioAssistBtn" title="1=Suchen, 2=Aufnehmen, 3=Aus">Tonsuche</button>
-            <button class="btn" id="audioDiscardBtn" onclick="discardCurrentAudioRecording()" title="Laufende Aufnahme loeschen">Loeschen</button>
+            <span id="audioSaveBtn" title="Auto-Speichern Status">Speichern</span>
             <button class="btn btn-config" onclick="openConfigPage()" title="Config">C</button>
             <button class="btn btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreenMode()" title="Vollbild (F11 / Esc)">F11</button>
             <button class="btn btn-end" id="endBtn" onclick="requestShutdownAndExit()" title="Server beenden und schließen">Ende</button>
@@ -875,7 +875,7 @@
     <script src="center-view.js?v=20260315a"></script>
     <script src="render.js?v=20260317a"></script>
     <script src="filehandling.js?v=20260317h"></script>
-    <script src="audio-assist.js?v=20260317e"></script>
+    <script src="audio-assist.js?v=20260321m"></script>
 
 </body>
 </html>

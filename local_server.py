@@ -13,11 +13,22 @@ from urllib.parse import parse_qs, urlparse
 
 class NotentischHandler(SimpleHTTPRequestHandler):
     ALLOWED_AUDIO_EXTENSIONS = {'.webm', '.ogg', '.wav', '.m4a', '.mp3'}
+    DIAG_LOG_FILENAME = 'musicprint_diagnostics.jsonl'
+    DIAG_LOG_MAX_BYTES = 5 * 1024 * 1024
+    NO_STORE_PREFIXES = (
+        '/__',
+    )
 
     def end_headers(self):
-        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
-        self.send_header('Pragma', 'no-cache')
-        self.send_header('Expires', '0')
+        # no-store nur für API-/Steuer-Endpunkte, damit Browser-Verlauf/BFCache
+        # bei normalen Seiten (board/config/advanced) weiter funktionieren kann.
+        request_path = urlparse(self.path).path
+        if any(request_path.startswith(prefix) for prefix in self.NO_STORE_PREFIXES):
+            self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            self.send_header('Pragma', 'no-cache')
+            self.send_header('Expires', '0')
+        else:
+            self.send_header('Cache-Control', 'no-cache, max-age=0, must-revalidate')
         super().end_headers()
 
     def do_POST(self):
@@ -29,6 +40,10 @@ class NotentischHandler(SimpleHTTPRequestHandler):
 
         if parsed.path == '/__audio_delete__':
             self._handle_audio_delete(parsed)
+            return
+
+        if parsed.path == '/__audio_diag__':
+            self._handle_audio_diag()
             return
 
         if parsed.path == '/__shutdown__':
@@ -133,6 +148,70 @@ class NotentischHandler(SimpleHTTPRequestHandler):
         self.send_header('Cache-Control', 'no-store')
         self.end_headers()
         self.wfile.write(json.dumps({'ok': True, 'deleted': deleted, 'path': 'mysounds/' + filename}).encode('utf-8'))
+
+    def _handle_audio_diag(self) -> None:
+        try:
+            content_length = int(self.headers.get('Content-Length', '0') or '0')
+        except ValueError:
+            self.send_error(400, 'Invalid Content-Length')
+            return
+
+        if content_length <= 0:
+            self.send_error(400, 'Missing body')
+            return
+        if content_length > 512 * 1024:
+            self.send_error(413, 'Payload too large')
+            return
+
+        raw = self.rfile.read(content_length)
+        try:
+            payload = json.loads(raw.decode('utf-8'))
+        except Exception:
+            self.send_error(400, 'Invalid JSON payload')
+            return
+
+        events = payload.get('events') if isinstance(payload, dict) else None
+        if not isinstance(events, list) or not events:
+            self.send_error(400, 'Missing events array')
+            return
+
+        # Logdatei bleibt im Projekt unter mysounds und ist damit später offline auswertbar.
+        sound_dir = Path(os.getcwd()) / 'mysounds'
+        sound_dir.mkdir(parents=True, exist_ok=True)
+        target = sound_dir / self.DIAG_LOG_FILENAME
+
+        if target.exists() and target.stat().st_size > self.DIAG_LOG_MAX_BYTES:
+            try:
+                backup = sound_dir / (self.DIAG_LOG_FILENAME + '.old')
+                if backup.exists():
+                    backup.unlink()
+                target.rename(backup)
+            except OSError:
+                # Wenn Rotieren fehlschlägt, versuchen wir trotzdem weiterzuschreiben.
+                pass
+
+        lines = []
+        for event in events[:200]:
+            if not isinstance(event, dict):
+                continue
+            lines.append(json.dumps(event, ensure_ascii=False))
+
+        if not lines:
+            self.send_error(400, 'No valid events')
+            return
+
+        try:
+            with target.open('a', encoding='utf-8') as fh:
+                fh.write('\n'.join(lines) + '\n')
+        except OSError:
+            self.send_error(500, 'Could not write diagnostics log')
+            return
+
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Cache-Control', 'no-store')
+        self.end_headers()
+        self.wfile.write(json.dumps({'ok': True, 'stored': len(lines), 'path': 'mysounds/' + self.DIAG_LOG_FILENAME}).encode('utf-8'))
 
     def _sanitize_sound_filename(self, value: str) -> str:
         base = os.path.basename((value or '').strip())
