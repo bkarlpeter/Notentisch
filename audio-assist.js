@@ -37,6 +37,42 @@ const AUDIO_DIAG_BATCH_SIZE = 12;
 const AUDIO_DIAG_FLUSH_MS = 3000;
 const AUDIO_DIAG_MAX_QUEUE = 80;
 
+// ── Nicht-blockierender Toast (ersetzt native alert) ─────────────────────────
+// Zeigt eine Nachricht als schwebendes Overlay an, das fullscreen nicht beendet
+// und nach durationMs automatisch verschwindet (Standard: 4000 ms).
+function showAudioToast(message, durationMs) {
+    const dur = (durationMs != null && Number.isFinite(Number(durationMs))) ? Number(durationMs) : 4000;
+    let container = document.getElementById('audioToastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'audioToastContainer';
+        container.style.cssText =
+            'position:fixed;bottom:24px;right:24px;z-index:2147483647;' +
+            'display:flex;flex-direction:column;gap:8px;pointer-events:none;' +
+            'font-family:sans-serif;';
+        document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.style.cssText =
+        'background:rgba(28,28,28,0.94);color:#fff;padding:12px 18px;' +
+        'border-radius:8px;font-size:14px;line-height:1.45;max-width:360px;' +
+        'box-shadow:0 4px 20px rgba(0,0,0,0.55);pointer-events:auto;cursor:pointer;' +
+        'opacity:1;transition:opacity 0.35s;';
+    toast.textContent = message;
+    toast.title = 'Klicken zum Schließen';
+    const dismiss = () => {
+        if (toast._dismissed) return;
+        toast._dismissed = true;
+        clearTimeout(toast._timer);
+        toast.style.opacity = '0';
+        setTimeout(() => toast.parentNode?.removeChild(toast), 380);
+    };
+    toast.addEventListener('click', dismiss);
+    toast._timer = setTimeout(dismiss, dur);
+    container.appendChild(toast);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function getRenderApi() {
     return window.NotentischRender || null;
 }
@@ -471,6 +507,36 @@ function isMusicLikeFrame(profile) {
     return true;
 }
 
+// -- Mel-Band-Helper (gecacht) -----------------------------------------------
+// Liefert für jeden der bandCount Mel-Bänder den [lo, hi]-Bin-Index im FFT-Array.
+// Mel-Skalierung konzentriert die Bänder auf den melodisch relevanten Bereich
+// (80–3500 Hz) statt gleichmäßig über 0–24 kHz – dadurch werden Volksmusik-
+// stücke mit ähnlicher Gesamt-Klangfarbe viel besser unterscheidbar.
+const _melBandRangesCache = Object.create(null);
+
+function getMelBandBinRanges(binCount, bandCount, sampleRate) {
+    const key = `${binCount}_${bandCount}_${Math.round(sampleRate)}`;
+    if (_melBandRangesCache[key]) return _melBandRangesCache[key];
+    const fMin = 80;
+    const fMax = Math.min(sampleRate / 2 - 1, 3500);
+    const melMin = 2595 * Math.log10(1 + fMin / 700);
+    const melMax = 2595 * Math.log10(1 + fMax / 700);
+    const hzPerBin = (sampleRate / 2) / binCount;
+    const ranges = [];
+    for (let b = 0; b < bandCount; b++) {
+        const melLo = melMin + (melMax - melMin) * b / bandCount;
+        const melHi = melMin + (melMax - melMin) * (b + 1) / bandCount;
+        const fLo = 700 * (Math.pow(10, melLo / 2595) - 1);
+        const fHi = 700 * (Math.pow(10, melHi / 2595) - 1);
+        const lo = Math.max(0, Math.floor(fLo / hzPerBin));
+        const hi = Math.min(binCount - 1, Math.ceil(fHi / hzPerBin));
+        ranges.push([lo, Math.max(lo, hi)]);
+    }
+    _melBandRangesCache[key] = ranges;
+    return ranges;
+}
+// ---------------------------------------------------------------------------
+
 function sampleAnalyserIntoBandVector(analyser, targetVector, frameFilter) {
     if (!analyser || !targetVector) return;
     const data = new Uint8Array(analyser.frequencyBinCount);
@@ -482,13 +548,15 @@ function sampleAnalyserIntoBandVector(analyser, targetVector, frameFilter) {
         }
     }
 
-    const chunkSize = Math.max(1, Math.floor(data.length / AUDIO_FINGERPRINT_BANDS));
+    // Mel-skalierte Bänder statt linearer Aufteilung: feinere Auflösung im
+    // melodisch relevanten Bereich (80-3500 Hz), dadurch bessere Unterscheidung
+    // von Stücken mit ähnlicher Gesamt-Klangfarbe.
+    const sampleRate = (analyser.context && analyser.context.sampleRate) || 48000;
+    const melRanges = getMelBandBinRanges(data.length, AUDIO_FINGERPRINT_BANDS, sampleRate);
     for (let bandIndex = 0; bandIndex < AUDIO_FINGERPRINT_BANDS; bandIndex++) {
-        let sum = 0;
-        let count = 0;
-        const start = bandIndex * chunkSize;
-        const end = Math.min(data.length, start + chunkSize);
-        for (let i = start; i < end; i++) {
+        const [lo, hi] = melRanges[bandIndex];
+        let sum = 0, count = 0;
+        for (let i = lo; i <= hi; i++) {
             sum += data[i];
             count++;
         }
@@ -548,14 +616,24 @@ function getMatchBandWeight(bandIndex, bandCount) {
 function buildMatchingVector(fingerprint) {
     if (!Array.isArray(fingerprint) || !fingerprint.length) return null;
     const gamma = AUDIO_MATCH_FINGERPRINT_GAMMA;
-    const transformed = new Array(fingerprint.length);
-    for (let i = 0; i < fingerprint.length; i++) {
-        const raw = Number(fingerprint[i]);
-        const value = Number.isFinite(raw) ? Math.max(0, raw) : 0;
-        const contrasted = Math.pow(value, gamma);
-        transformed[i] = contrasted * getMatchBandWeight(i, fingerprint.length);
+    const n = fingerprint.length;
+
+    // Teil 1: gamma-kontrastierte, bandgewichtete Spektral-Hüllkurve.
+    const base = new Array(n);
+    for (let i = 0; i < n; i++) {
+        const raw = Number.isFinite(fingerprint[i]) ? Math.max(0, fingerprint[i]) : 0;
+        base[i] = Math.pow(raw, gamma) * getMatchBandWeight(i, n);
     }
-    return transformed;
+
+    // Teil 2: Delta-Features (erste Ableitung der Hüllkurve).
+    // Stücke mit ähnlicher Gesamt-Klangfarbe aber unterschiedlichen lokalen
+    // Spektrum-Spitzen/Tälern werden hier sicherer unterschieden.
+    const deltas = new Array(n - 1);
+    for (let i = 0; i < n - 1; i++) {
+        deltas[i] = (base[i + 1] - base[i]) * 1.5;
+    }
+
+    return [...base, ...deltas];
 }
 
 function collectAudioReferenceCandidates() {
@@ -649,7 +727,7 @@ function prepareAudioFingerprint(state) {
             cardId: String(state.cardId || ''),
             frameCount: Number(state.frameCount || 0)
         });
-        alert('Zu wenig musikalisches Signal erkannt. Bitte lauter/sauberer einspielen.');
+        showAudioToast('Zu wenig musikalisches Signal erkannt. Bitte lauter/sauberer einspielen.');
         return null;
     }
     const fingerprint = normalizeBandVector(state.bandSums, state.frameCount);
@@ -674,7 +752,7 @@ async function finalizeRecordedAudio(state, fingerprint) {
         queueAudioDiagEvent('fingerprint_missing_on_save', {
             cardId: String(state.cardId || '')
         });
-        alert('Fingerprint verloren. Bitte erneut aufnehmen.');
+        showAudioToast('Fingerprint verloren. Bitte erneut aufnehmen.');
         return false;
     }
 
@@ -691,7 +769,7 @@ async function finalizeRecordedAudio(state, fingerprint) {
             cardId: String(state.cardId || ''),
             message: String(err?.message || err || '')
         });
-        alert('Audio-Datei konnte nicht gespeichert werden.\n\n' + err.message);
+        showAudioToast('Audio-Datei konnte nicht gespeichert werden: ' + err.message);
         return false;
     }
 
@@ -724,7 +802,7 @@ async function finalizeRecordedAudio(state, fingerprint) {
                 cardId: String(state.cardId || ''),
                 path: String(uploadResult.path || '')
             });
-            alert('Audio-Datei wurde hochgeladen, aber die XML konnte nicht gespeichert werden. Bitte erneut speichern oder Notentisch neu starten.');
+            showAudioToast('Audio-Datei wurde hochgeladen, aber die XML konnte nicht gespeichert werden. Bitte erneut speichern oder Notentisch neu starten.');
         }
     }
 
@@ -756,7 +834,7 @@ async function saveAudioFingerprint() {
         return false;
     } catch (err) {
         console.error('Audio-Fingerprint konnte nicht gespeichert werden:', err);
-        alert('Audio konnte nicht gespeichert werden: ' + (err.message || err));
+        showAudioToast('Audio konnte nicht gespeichert werden: ' + (err.message || err));
         audioReadyToSaveState = pendingSave;
         updateAudioAssistUi();
         return false;
@@ -795,6 +873,7 @@ async function startAudioRecordingForCenterCard(cardId) {
         targetFrameCount: getAudioReferenceTargetFrames(),
         lastAcceptedAt: 0,
         autoStopRequested: false,
+        discardOnStop: false,
         samplerTimer: null,
         finalizingPromise: null,
         stopPromise: null,
@@ -819,18 +898,21 @@ async function startAudioRecordingForCenterCard(cardId) {
         stopMediaStream(stream);
         audioContext.close().catch(() => {});
         
-        // Fingerprint berechnen und für Speicherung bereitstellen
-        const fingerprint = prepareAudioFingerprint(state);
-        if (fingerprint) {
-            audioReadyToSaveState = { state, fingerprint };
-            // Wartezeit startet ab "MusicPrint erstellt".
-            audioWaitAfterMatchUntil = Date.now() + getAudioWaitAfterMatchMs();
-            updateAudioAssistUi();
+        // Fingerprint berechnen und für Speicherung bereitstellen.
+        // Bei externem Abbruch (discardOnStop) Aufnahme lautlos verwerfen.
+        if (!state.discardOnStop) {
+            const fingerprint = prepareAudioFingerprint(state);
+            if (fingerprint) {
+                audioReadyToSaveState = { state, fingerprint };
+                // Wartezeit startet ab "MusicPrint erstellt".
+                audioWaitAfterMatchUntil = Date.now() + getAudioWaitAfterMatchMs();
+                updateAudioAssistUi();
 
-            // Direkt automatisch speichern, ohne manuellen Klick auf den Speichern-Button.
-            saveAudioFingerprint().catch((err) => {
-                console.error('Audio-Auto-Speichern fehlgeschlagen:', err);
-            });
+                // Direkt automatisch speichern, ohne manuellen Klick auf den Speichern-Button.
+                saveAudioFingerprint().catch((err) => {
+                    console.error('Audio-Auto-Speichern fehlgeschlagen:', err);
+                });
+            }
         }
         
         if (typeof state.resolveStopPromise === 'function') {
@@ -870,6 +952,11 @@ async function stopAudioRecording(saveRecording) {
     if (!audioRecordState) return;
     const state = audioRecordState;
     audioRecordState = null;
+
+    // Bei saveRecording=false: Aufnahme verwerfen, kein Fingerprint, kein Alert.
+    if (!saveRecording) {
+        state.discardOnStop = true;
+    }
 
     if (state.recorder && state.recorder.state !== 'inactive') {
         state.recorder.stop();
@@ -1097,7 +1184,10 @@ async function audioAssistTick() {
 
     try {
         const hasOpenPdf = (typeof currentPdfDoc !== 'undefined' && !!currentPdfDoc);
-        let centerCardId = getCurrentCenterCardId();
+        // Nur activeCenterCardId (nicht lastCardIdFromCenter) nutzen: wenn keine Karte aktiv im Center,
+        // soll Matching starten. lastCardIdFromCenter würde matching dauerhaft blockieren.
+        const centerCardId = (typeof activeCenterCardId !== 'undefined' && activeCenterCardId !== null)
+            ? String(activeCenterCardId) : null;
 
         if (!centerCardId) {
             audioDiscardSuppressedCardId = null;
@@ -1142,14 +1232,14 @@ async function audioAssistTick() {
                                 updateAudioAssistUi();
                             }, getAudioReadyBlinkMs() + 50);
                         }
-                        await stopAudioRecording(true);
+                        await stopAudioRecording(false);
                         await startAudioRecordingForCenterCard(centerCardId);
                     }
                 }
             } else {
                 // Nur-Hören-Modus: nicht aufnehmen
                 if (audioRecordState) {
-                    await stopAudioRecording(true);
+                    await stopAudioRecording(false);
                 }
             }
         } else if (hasOpenPdf) {
@@ -1159,11 +1249,11 @@ async function audioAssistTick() {
                 stopAudioMatching();
             }
             if (audioRecordState) {
-                await stopAudioRecording(true);
+                await stopAudioRecording(false);
             }
         } else {
             if (audioRecordState) {
-                await stopAudioRecording(true);
+                await stopAudioRecording(false);
             }
             if (audioAssistMode !== 2) {
                 // Nur im Hör-Modus (1) Matching starten; im Aufnahme-Modus (2) warten
@@ -1180,7 +1270,7 @@ async function audioAssistTick() {
         }
     } catch (err) {
         console.error('Audio-Automatik Fehler:', err);
-        alert('Audio-Automatik konnte nicht gestartet werden. Bitte Mikrofonfreigabe prüfen.');
+        showAudioToast('Audio-Automatik konnte nicht gestartet werden. Bitte Mikrofonfreigabe prüfen.');
         disableAudioAssistMode();
     } finally {
         audioAssistBusy = false;
@@ -1201,7 +1291,7 @@ function disableAudioAssistMode() {
         audioAssistMonitorTimer = null;
     }
     stopAudioMatching();
-    stopAudioRecording(true).catch(() => {});
+    stopAudioRecording(false).catch(() => {});
     queueAudioDiagEvent('audio_mode_changed', {
         fromMode: previousMode,
         toMode: 0,
@@ -1234,7 +1324,7 @@ function toggleAudioAssistMode() {
     }
 
     if (audioAssistMode === 0 && (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined')) {
-        alert('Dieser Browser unterstützt die Audio-Funktion nicht vollständig.');
+        showAudioToast('Dieser Browser unterstützt die Audio-Funktion nicht vollständig.');
         return;
     }
 
