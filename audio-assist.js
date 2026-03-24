@@ -39,6 +39,52 @@ const AUDIO_DIAG_BATCH_SIZE = 12;
 const AUDIO_DIAG_FLUSH_MS = 3000;
 const AUDIO_DIAG_MAX_QUEUE = 80;
 
+function getAudioMatchStrictnessProfile() {
+    const fallback = (window.NOTENTISCH_USER_CONFIG_DEFAULTS && window.NOTENTISCH_USER_CONFIG_DEFAULTS.audioMatchStrictness) || 'normal';
+    let strictness = String(fallback).toLowerCase();
+    try {
+        if (typeof loadUserConfig === 'function') {
+            const config = loadUserConfig();
+            if (config && config.audioMatchStrictness) {
+                strictness = String(config.audioMatchStrictness).toLowerCase();
+            }
+        }
+    } catch {}
+
+    if (strictness === 'locker') {
+        return {
+            strictness,
+            strictMinScore: 0.96,
+            strictMinGap: 0.006,
+            relaxedMinScore: 0.94,
+            relaxedMinGap: 0.002,
+            relaxedMinHits: 5,
+            relaxedMinVoteLead: 1
+        };
+    }
+    if (strictness === 'streng') {
+        return {
+            strictness,
+            strictMinScore: 0.985,
+            strictMinGap: 0.010,
+            relaxedMinScore: 0.965,
+            relaxedMinGap: 0.004,
+            relaxedMinHits: 6,
+            relaxedMinVoteLead: 3
+        };
+    }
+
+    return {
+        strictness: 'normal',
+        strictMinScore: AUDIO_MATCH_TRIGGER_MIN_SCORE,
+        strictMinGap: AUDIO_MATCH_TRIGGER_MIN_GAP,
+        relaxedMinScore: AUDIO_MATCH_TRIGGER_RELAXED_MIN_SCORE,
+        relaxedMinGap: AUDIO_MATCH_TRIGGER_RELAXED_MIN_GAP,
+        relaxedMinHits: AUDIO_MATCH_TRIGGER_RELAXED_MIN_HITS,
+        relaxedMinVoteLead: AUDIO_MATCH_TRIGGER_RELAXED_MIN_VOTE_LEAD
+    };
+}
+
 // ── Nicht-blockierender Toast (ersetzt native alert) ─────────────────────────
 // Zeigt eine Nachricht als schwebendes Overlay an, das fullscreen nicht beendet
 // und nach durationMs automatisch verschwindet (Standard: 4000 ms).
@@ -1124,13 +1170,15 @@ async function evaluateAudioMatching() {
         return;
     }
 
-    // Sicherheitscheck: Strict (hoher Score + klarer Gap) oder Relaxed (moderater Score + viele Votes)
-    const isStrictTrigger = (best.score >= AUDIO_MATCH_TRIGGER_MIN_SCORE && scoreGap >= AUDIO_MATCH_TRIGGER_MIN_GAP);
+    // Sicherheitscheck: Strict (hoher Score + klarer Gap) oder Relaxed (moderater Score + viele Votes).
+    // Die Grenzwerte sind über Advanced "Erkennungs-Strenge" konfigurierbar.
+    const strictnessProfile = getAudioMatchStrictnessProfile();
+    const isStrictTrigger = (best.score >= strictnessProfile.strictMinScore && scoreGap >= strictnessProfile.strictMinGap);
     const isRelaxedStableTrigger = (
-        best.score >= AUDIO_MATCH_TRIGGER_RELAXED_MIN_SCORE &&
-        scoreGap >= AUDIO_MATCH_TRIGGER_RELAXED_MIN_GAP &&
-        votesForBest >= AUDIO_MATCH_TRIGGER_RELAXED_MIN_HITS &&
-        voteLead >= AUDIO_MATCH_TRIGGER_RELAXED_MIN_VOTE_LEAD
+        best.score >= strictnessProfile.relaxedMinScore &&
+        scoreGap >= strictnessProfile.relaxedMinGap &&
+        votesForBest >= strictnessProfile.relaxedMinHits &&
+        voteLead >= strictnessProfile.relaxedMinVoteLead
     );
     if (!isStrictTrigger && !isRelaxedStableTrigger) {
         // Voting-History leeren damit der nächste Anlauf sauber beginnt
@@ -1141,12 +1189,13 @@ async function evaluateAudioMatching() {
             scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null,
             votes: votesForBest,
             voteLead,
-            strictMinScore: AUDIO_MATCH_TRIGGER_MIN_SCORE,
-            strictMinGap: AUDIO_MATCH_TRIGGER_MIN_GAP,
-            relaxedMinScore: AUDIO_MATCH_TRIGGER_RELAXED_MIN_SCORE,
-            relaxedMinGap: AUDIO_MATCH_TRIGGER_RELAXED_MIN_GAP,
-            relaxedMinHits: AUDIO_MATCH_TRIGGER_RELAXED_MIN_HITS,
-            relaxedMinVoteLead: AUDIO_MATCH_TRIGGER_RELAXED_MIN_VOTE_LEAD
+            strictness: strictnessProfile.strictness,
+            strictMinScore: strictnessProfile.strictMinScore,
+            strictMinGap: strictnessProfile.strictMinGap,
+            relaxedMinScore: strictnessProfile.relaxedMinScore,
+            relaxedMinGap: strictnessProfile.relaxedMinGap,
+            relaxedMinHits: strictnessProfile.relaxedMinHits,
+            relaxedMinVoteLead: strictnessProfile.relaxedMinVoteLead
         });
         return;
     }

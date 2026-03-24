@@ -53,6 +53,7 @@
             <div class="field"><label for="stackBatchOverlapCount">Stapel-Überlappung je Batch (Karten)</label><input id="stackBatchOverlapCount" type="number" min="0" max="9" step="1"></div>
             <div class="field"><label for="audioReferenceTargetMs">Audio-Referenzdauer (ms)</label><input id="audioReferenceTargetMs" type="number" min="1500" max="12000" step="100"></div>
             <div class="field"><label for="audioWaitAfterMatchMs">Wartezeit nach Tontreffer (ms)</label><input id="audioWaitAfterMatchMs" type="number" min="4000" max="8000" step="100"></div>
+            <div class="field"><label for="audioMatchStrictness">Erkennungs-Strenge</label><select id="audioMatchStrictness"><option value="locker">Locker</option><option value="normal">Normal</option><option value="streng">Streng</option></select></div>
             <div class="field"><label for="replaceAudioByTitle">Alte Sequenz bei Neuaufnahme</label><select id="replaceAudioByTitle"><option value="show">Löschen</option><option value="hide">Beibehalten</option></select></div>
 
             <div class="field field-btn-color">
@@ -128,6 +129,12 @@
             return DEFAULTS.pageInfoTone || 'normal';
         }
 
+        function normalizeAudioMatchStrictness(value) {
+            const input = String(value || '').trim().toLowerCase();
+            if (input === 'locker' || input === 'normal' || input === 'streng') return input;
+            return DEFAULTS.audioMatchStrictness || 'normal';
+        }
+
         function loadConfig() {
             try {
                 const raw = localStorage.getItem(USER_CONFIG_KEY);
@@ -159,6 +166,7 @@
             document.getElementById('stackBatchOverlapCount').value = clampNumber(config.stackBatchOverlapCount, 0, 9, DEFAULTS.stackBatchOverlapCount ?? 2);
             document.getElementById('audioReferenceTargetMs').value = clampNumber(config.audioReferenceTargetMs, 1500, 12000, DEFAULTS.audioReferenceTargetMs ?? 5000);
             document.getElementById('audioWaitAfterMatchMs').value = clampNumber(config.audioWaitAfterMatchMs, 4000, 8000, DEFAULTS.audioWaitAfterMatchMs ?? 4000);
+            document.getElementById('audioMatchStrictness').value = normalizeAudioMatchStrictness(config.audioMatchStrictness);
             document.getElementById('replaceAudioByTitle').value = normalizeBoolean(config.replaceAudioByTitle, DEFAULTS.replaceAudioByTitle ?? true) ? 'show' : 'hide';
             const baseColor = normalizeHexColor(config.btnBaseColor, DEFAULTS.btnBaseColor || '#3498db');
             const toggleColor1 = normalizeHexColor(config.btnToggleColor1, DEFAULTS.btnToggleColor1 || '#27ae60');
@@ -197,6 +205,7 @@
                 stackBatchOverlapCount: clampNumber(document.getElementById('stackBatchOverlapCount').value, 0, 9, DEFAULTS.stackBatchOverlapCount ?? 2),
                 audioReferenceTargetMs: clampNumber(document.getElementById('audioReferenceTargetMs').value, 1500, 12000, DEFAULTS.audioReferenceTargetMs ?? 5000),
                 audioWaitAfterMatchMs: clampNumber(document.getElementById('audioWaitAfterMatchMs').value, 4000, 8000, DEFAULTS.audioWaitAfterMatchMs ?? 4000),
+                audioMatchStrictness: normalizeAudioMatchStrictness(document.getElementById('audioMatchStrictness').value),
                 replaceAudioByTitle: normalizeBoolean(document.getElementById('replaceAudioByTitle').value, DEFAULTS.replaceAudioByTitle ?? true),
                 btnBaseColor: normalizeHexColor(document.getElementById('btnBaseColorHex').value, DEFAULTS.btnBaseColor || '#3498db'),
                 btnToggleColor1: normalizeHexColor(document.getElementById('btnToggleColor1Hex').value, DEFAULTS.btnToggleColor1 || '#27ae60'),
@@ -250,7 +259,7 @@
         bindColorInputs('btnToggleColor1Picker', 'btnToggleColor1Hex', 'swatchToggle1', DEFAULTS.btnToggleColor1 || '#27ae60');
         bindColorInputs('btnToggleColor2Picker', 'btnToggleColor2Hex', 'swatchToggle2', DEFAULTS.btnToggleColor2 || '#52be80');
 
-        ['centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerSmoothScroll', 'pageInfoTone', 'autoFullscreenOnStart', 'dropGlowDurationMs', 'stackBatchOverlapCount', 'audioReferenceTargetMs', 'audioWaitAfterMatchMs', 'replaceAudioByTitle'].forEach((id) => {
+        ['centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerSmoothScroll', 'pageInfoTone', 'autoFullscreenOnStart', 'dropGlowDurationMs', 'stackBatchOverlapCount', 'audioReferenceTargetMs', 'audioWaitAfterMatchMs', 'audioMatchStrictness', 'replaceAudioByTitle'].forEach((id) => {
             const el = document.getElementById(id);
             el.addEventListener('input', () => saveWithStatus('Automatisch gespeichert.'));
             el.addEventListener('change', () => saveWithStatus('Automatisch gespeichert.'));

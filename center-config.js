@@ -46,6 +46,12 @@
         return fallback;
     }
 
+    function normalizeAudioMatchStrictness(value, fallback) {
+        const input = String(value || '').trim().toLowerCase();
+        if (input === 'locker' || input === 'normal' || input === 'streng') return input;
+        return fallback;
+    }
+
     function normalizeBoolean(value, fallback) {
         if (typeof value === 'boolean') return value;
         if (value === 'true' || value === '1' || value === 1 || value === 'show') return true;
@@ -141,6 +147,9 @@
         // Wartezeit (ms) nach einem erfolgreichen Tontreffer, bevor erneut gematcht wird.
         audioWaitAfterMatchMs: 4000,
 
+        // Erkennungs-Strenge der Tonzuordnung: locker/normal/streng.
+        audioMatchStrictness: 'normal',
+
         // Dauer (ms) des weißen Aufleuchten an BTN2 wenn die Wartezeit abgelaufen ist.
         audioReadyBlinkMs: 1000,
 
@@ -196,6 +205,7 @@
             stackBatchOverlapCount: clampNumber(parsed.stackBatchOverlapCount, 0, 9, defaults.stackBatchOverlapCount),
             audioReferenceTargetMs: clampNumber(parsed.audioReferenceTargetMs, 1500, 12000, defaults.audioReferenceTargetMs),
             audioWaitAfterMatchMs: clampNumber(parsed.audioWaitAfterMatchMs, 4000, 8000, defaults.audioWaitAfterMatchMs),
+            audioMatchStrictness: normalizeAudioMatchStrictness(parsed.audioMatchStrictness, defaults.audioMatchStrictness),
             audioReadyBlinkMs: clampNumber(parsed.audioReadyBlinkMs, 200, 3000, defaults.audioReadyBlinkMs),
             replaceAudioByTitle: normalizeBoolean(parsed.replaceAudioByTitle, defaults.replaceAudioByTitle),
             showAudioBadge: normalizeBoolean(parsed.showAudioBadge, defaults.showAudioBadge),
