@@ -288,11 +288,25 @@ Das Skript nutzt automatisch:
 
 Die Funktion ist für lokales Arbeiten gedacht: Audio wird nur über den lokalen Server (`127.0.0.1`) in den Projektordner `mysounds/` geschrieben.
 
+Stand der Implementierung: 24.03.2026
+
+- Drei Zustände über den Button `Tonsuche`:
+  - `Aus`
+  - `Ton An` (nur Matching)
+  - `Ton Rec` (Aufnahme + automatisches Speichern)
+- Nicht-blockierende Host-Meldungen (Toast statt Browser-Alert):
+  - schließen Vollbild nicht
+  - verschwinden automatisch nach ca. 4 Sekunden
+- Referenzaufnahme wird im Modus `Ton Rec` automatisch beendet, sobald genug verwertbare Musik-Frames gesammelt wurden.
+- Matching nutzt Mel-skalierte Frequenzbänder und Delta-Features (Ableitungen), um ähnliche Klangfarben besser zu trennen.
+- In `Advanced` ist die Erkennungs-Strenge steuerbar (`Locker | Normal | Streng`).
+
 ### Voraussetzungen
 
 - Browser mit `MediaRecorder` + Mikrofonfreigabe (Edge/Chrome/Firefox aktuell)
 - laufender lokaler Server (`local_server.py`)
 - geladene XML
+- mindestens eine gespeicherte `AudioReferenz` für die zu suchenden Titel
 
 ### Manueller Kurztest (ca. 2 Minuten)
 
@@ -303,6 +317,11 @@ Die Funktion ist für lokales Arbeiten gedacht: Audio wird nur über den lokalen
 5. `Tonsuche` auf `Ton An` schalten und in ruhiger Umgebung erneut das Motiv spielen/summen.
 6. Erwartung: Nach kurzer stabiler Erkennung wird das passende Blatt automatisch in den CENTER gezogen.
 
+Hinweis zur Strenge:
+- `Advanced > Erkennungs-Strenge = Normal` ist der empfohlene Startwert.
+- Bei zu wenigen Treffern: `Locker`.
+- Bei Fehlzuordnungen: `Streng`.
+
 ### Ablauf Tonsequenz (Ton Rec)
 
 1. Karte in den CENTER ziehen.
@@ -312,11 +331,16 @@ Die Funktion ist für lokales Arbeiten gedacht: Audio wird nur über den lokalen
 3. Sequenz spielen:
   - während verwertbares Musiksignal erkannt wird, zeigt `Ton Rec` einen weißen Rahmen.
   - sobald genug Material gesammelt wurde, stoppt die Aufnahme automatisch und der weiße Rahmen verschwindet.
+  - Speichern erfolgt direkt automatisch (kein separater Bestätigungsdialog).
 4. Danach gibt es vier typische Wege:
   - a) User spielt weiter: es wird nicht weiter aufgenommen, bis bewusst neu gestartet wird.
   - b) User stoppt/spielt nicht weiter und drückt `Nochmal`: sofortige Neuaufnahme derselben CENTER-Karte, Ablauf startet wieder bei Schritt 3.
   - c) User drückt den orangefarbenen `Ton Rec`-Button erneut: wechselt zu `Ton An` (Tonhören-Modus, grün). Ein weiterer Druck schaltet die Audio-Automatik vollständig aus.
   - d) User entfernt das Blatt aus dem CENTER: Aufnahme wird finalisiert, App wartet auf die nächste Karte (kein Suchbetrieb). Sobald eine neue Karte in den CENTER gezogen wird, startet die Aufnahme sofort → Ablauf ab Schritt 3.
+
+Wichtig:
+- Wenn `Alte Sequenz bei Neuaufnahme = Löschen`, bleibt pro Titel nur die neueste Referenz erhalten.
+- Wenn `Beibehalten`, werden mehrere Referenzen pro Titel gespeichert und beim Matching berücksichtigt.
 
 ### Was gespeichert wird (XML)
 
@@ -331,6 +355,10 @@ Im jeweiligen `<NotenTisch>`-Eintrag wird ein optionaler Block ergänzt:
 </AudioReferenz>
 ```
 
+Zusätzlich:
+- Mehrere `<AudioReferenz>`-Blöcke pro Titel sind möglich (abhängig von `Advanced > Alte Sequenz bei Neuaufnahme`).
+- Karten mit Referenz können optional einen gelben Audio-Marker zeigen (`showAudioBadge`).
+
 ### Technische Grenzen / Hinweise
 
 - Fingerprint ist ein einfacher Frequenzband-Vergleich, kein robustes Audio-ML-Modell.
@@ -338,8 +366,24 @@ Im jeweiligen `<NotenTisch>`-Eintrag wird ein optionaler Block ergänzt:
 - Nur Modus `Ton Rec` überschreibt bzw. erzeugt Referenzaufnahmen; `Ton An` sucht nur.
 - Im Modus `Ton Rec` stoppt die Aufnahme automatisch nach genug erkanntem Musiksignal; die Dauer ist in `Advanced` einstellbar.
 - `Advanced > Alte Sequenz bei Neuaufnahme`: `Löschen` hält pro Titel nur eine aktuelle Sequenz (alte Datei + alte XML-Referenzen werden entfernt), `Beibehalten` speichert zusätzliche Sequenzen.
+- `Advanced > Erkennungs-Strenge` beeinflusst die Trigger-Schwellen nach dem Voting:
+  - `Locker`: reagiert früher (mehr Treffer, höheres Fehltreffer-Risiko)
+  - `Normal`: ausgewogen (Standard)
+  - `Streng`: reagiert später (weniger Fehltreffer, kann leise Treffer verpassen)
 - Das Matching startet nur, wenn kein PDF im CENTER offen ist.
 - Upload-Härtung im Server: nur Audio-Endungen (`.webm`, `.ogg`, `.wav`, `.m4a`, `.mp3`), Dateigröße max. 25 MB.
+
+### Diagnose / Logs
+
+- Laufzeit-Diagnosen werden in `mysounds/musicprint_diagnostics.jsonl` geschrieben.
+- Zusammenfassung kann in `mysounds/musicprint_diag_report.txt` landen.
+- Typische Diagnose-Events:
+  - `fingerprint_prepared`
+  - `fingerprint_saved`
+  - `matching_scored`
+  - `matching_pending_votes`
+  - `matching_blocked_low_confidence`
+  - `matching_triggered_drop`
 
 ## Audio Auto Troubleshooting
 
@@ -347,8 +391,12 @@ Im jeweiligen `<NotenTisch>`-Eintrag wird ein optionaler Block ergänzt:
   - Lösung: Browser-Berechtigung für Mikrofon prüfen (Website-Einstellungen), Seite neu laden, `Tonsuche` erneut aktivieren.
 - Problem: Keine Erkennung in `Ton An`.
   - Lösung: Zuerst mit `Ton Rec` eine Referenz im CENTER aufnehmen (3-5 Sekunden), dann außerhalb des CENTER in `Ton An` testen.
+  - Lösung: `Advanced > Erkennungs-Strenge` testweise auf `Locker` stellen.
 - Problem: Falsches Blatt wird erkannt.
   - Lösung: Referenz in ruhiger Umgebung neu aufnehmen, näher am Mikrofon spielen/summen, ähnliche Titel separat neu referenzieren.
+  - Lösung: `Advanced > Erkennungs-Strenge` auf `Streng` stellen.
+- Problem: Treffer erscheint im Log, aber kein Blatt wird geladen.
+  - Lösung: Prüfen, ob im Diagnose-Log `matching_blocked_low_confidence` steht; dann Strenge reduzieren (`Normal`/`Locker`) oder Referenz neu aufnehmen.
 - Problem: Audio kann nicht gespeichert werden.
   - Lösung: Prüfen, ob `local_server.py` läuft und der Ordner `mysounds/` beschreibbar ist.
 
