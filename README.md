@@ -264,7 +264,7 @@ Das Skript nutzt automatisch:
   - Kurzdruck aus `Tonsuche` (aus) schaltet auf `Ton An` → nur hören/suchen; Button ist grün
   - weiterer Kurzdruck schaltet auf `Ton Rec` → Aufnahme-Modus; Button ist orange
   - ab dann toggelt Kurzdruck nur noch zwischen `Ton An` und `Ton Rec` (`1 ↔ 2`)
-  - Langdruck in `Ton An` schaltet auf aus (`0`)
+  - Langdruck in `Ton An` (>= 650 ms) schaltet auf aus (`0`)
   - weißer Rahmen am Tonsuche-Button: während `Ton Rec` wird gerade musikalisches Signal aufgenommen
   - im Aufnahme-Modus mit Blatt im CENTER: kurze Referenzaufnahme wird automatisch beendet, sobald genug Material für `AudioReferenz` gesammelt wurde
   - optional in `Advanced`: alte Sequenz pro Titel löschen (`Löschen`) oder Historie behalten (`Beibehalten`)
