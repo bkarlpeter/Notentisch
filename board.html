@@ -705,6 +705,11 @@
 
         .card-container.visible { display: block; }
 
+        /* Transitions während programmatischem Board-Rebuild unterdrücken */
+        .board-rendering .card-container {
+            transition: none !important;
+        }
+
         .card-container:hover {
             transform: translateY(0px) scale(1.15) !important;
             z-index: 100 !important;

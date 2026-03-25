@@ -330,6 +330,8 @@
 	function renderBoard() {
 		if (!xmlData) return;
 
+		document.body.classList.add('board-rendering');
+
 		const grouped = { Q1: [], Q2: [], Q3: [], Q4: [] };
 
 		QUADRANT_IDS.forEach((quadrantId) => {
@@ -382,6 +384,8 @@
 		scheduleCardPrefetch(grouped, limit, overlapCount);
 		setupDropListeners();
 		updateStackLayout();
+
+		requestAnimationFrame(() => document.body.classList.remove('board-rendering'));
 	}
 
 	function sanitizeTitle(titel) {
