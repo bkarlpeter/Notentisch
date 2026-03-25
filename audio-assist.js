@@ -2,6 +2,7 @@ let audioAssistMode = 0; // 0=aus, 1=hören/suchen, 2=aufnehmen+suchen
 let audioAssistDirection = 1; // 1=aufwärts (0→1→2), -1=abwärts (2→1→0)
 let audioAssistMonitorTimer = null;
 let audioAssistBusy = false;
+let audioAssistPressStartedAt = 0;
 
 let audioRecordState = null;
 let audioMatchState = null;
@@ -38,6 +39,7 @@ const AUDIO_FRAME_SAMPLE_MS = 180;
 const AUDIO_DIAG_BATCH_SIZE = 12;
 const AUDIO_DIAG_FLUSH_MS = 3000;
 const AUDIO_DIAG_MAX_QUEUE = 80;
+const AUDIO_ASSIST_LONG_PRESS_MS = 650;
 
 function getAudioMatchStrictnessProfile() {
     const fallback = (window.NOTENTISCH_USER_CONFIG_DEFAULTS && window.NOTENTISCH_USER_CONFIG_DEFAULTS.audioMatchStrictness) || 'normal';
@@ -1351,22 +1353,45 @@ function disableAudioAssistMode() {
     updateAudioAssistUi();
 }
 
+function installAudioAssistButtonPressHandler() {
+    const btn = document.getElementById('audioAssistBtn');
+    if (!btn || btn.dataset.pressBound === 'true') return;
+
+    btn.addEventListener('pointerdown', () => {
+        audioAssistPressStartedAt = Date.now();
+    });
+    btn.addEventListener('pointercancel', () => {
+        audioAssistPressStartedAt = 0;
+    });
+    btn.dataset.pressBound = 'true';
+}
+
 function toggleAudioAssistMode() {
     // Wenn Fingerprint bereit zur Speicherung, wird es verworfen beim Mode-Wechsel
     audioReadyToSaveState = null;
     audioSaveWasConfirmed = false;
+
+    const isLongPress = audioAssistPressStartedAt > 0
+        && (Date.now() - audioAssistPressStartedAt) >= AUDIO_ASSIST_LONG_PRESS_MS;
+    audioAssistPressStartedAt = 0;
 
     let nextMode;
     if (audioAssistMode === 0) {
         nextMode = 1;
         audioAssistDirection = 1;
     } else if (audioAssistMode === 2) {
-        // Ton Rec beendet → zurück zu Ton An (Tonhören), nicht zu Aus
+        // In Aufnahme: Kurzdruck zurück zu Ton An.
         nextMode = 1;
         audioAssistDirection = -1;
     } else {
-        // mode === 1: Richtung beibehalten (aufwärts→2, abwärts→0)
-        nextMode = 1 + audioAssistDirection;
+        // mode === 1: Kurzdruck auf Aufnahme, Langdruck auf Aus.
+        if (isLongPress) {
+            nextMode = 0;
+            audioAssistDirection = -1;
+        } else {
+            nextMode = 2;
+            audioAssistDirection = 1;
+        }
     }
 
     if (nextMode === 0) {
@@ -1405,7 +1430,11 @@ window.toggleAudioAssistMode = toggleAudioAssistMode;
 window.saveAudioFingerprint = saveAudioFingerprint;
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateAudioAssistUi);
+    document.addEventListener('DOMContentLoaded', () => {
+        installAudioAssistButtonPressHandler();
+        updateAudioAssistUi();
+    });
 } else {
+    installAudioAssistButtonPressHandler();
     updateAudioAssistUi();
 }
