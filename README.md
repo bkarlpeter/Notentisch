@@ -261,10 +261,10 @@ Das Skript nutzt automatisch:
   - `Fertig` → Blatt wird in den CENTER geladen (wie Drag & Drop)
   - `Abbrechen` / Escape → Overlay schließt sich ohne Aktion
 - `Tonsuche`: Mikrofon-gestützte Automatik für Suche und Aufnahme
-  - Klick 1: `Ton An` → nur hören/suchen; Button ist grün
-  - Klick 2: `Ton Rec` → Aufnahme-Modus; Button ist orange
-  - Klick 3 (aus `Ton Rec`): zurück zu `Ton An` (Tonhören, nicht aus!)
-  - Klick 4 (aus `Ton An`): aus
+  - Kurzdruck aus `Tonsuche` (aus) schaltet auf `Ton An` → nur hören/suchen; Button ist grün
+  - weiterer Kurzdruck schaltet auf `Ton Rec` → Aufnahme-Modus; Button ist orange
+  - ab dann toggelt Kurzdruck nur noch zwischen `Ton An` und `Ton Rec` (`1 ↔ 2`)
+  - Langdruck in `Ton An` schaltet auf aus (`0`)
   - weißer Rahmen am Tonsuche-Button: während `Ton Rec` wird gerade musikalisches Signal aufgenommen
   - im Aufnahme-Modus mit Blatt im CENTER: kurze Referenzaufnahme wird automatisch beendet, sobald genug Material für `AudioReferenz` gesammelt wurde
   - optional in `Advanced`: alte Sequenz pro Titel löschen (`Löschen`) oder Historie behalten (`Beibehalten`)
