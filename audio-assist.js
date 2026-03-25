@@ -54,11 +54,11 @@ function getAudioMatchStrictnessProfile() {
     if (strictness === 'locker') {
         return {
             strictness,
-            strictMinScore: 0.96,
-            strictMinGap: 0.006,
-            relaxedMinScore: 0.94,
-            relaxedMinGap: 0.002,
-            relaxedMinHits: 5,
+            strictMinScore: 0.95,
+            strictMinGap: 0.005,
+            relaxedMinScore: 0.93,
+            relaxedMinGap: 0.001,
+            relaxedMinHits: 4,
             relaxedMinVoteLead: 1
         };
     }
@@ -76,12 +76,12 @@ function getAudioMatchStrictnessProfile() {
 
     return {
         strictness: 'normal',
-        strictMinScore: AUDIO_MATCH_TRIGGER_MIN_SCORE,
-        strictMinGap: AUDIO_MATCH_TRIGGER_MIN_GAP,
-        relaxedMinScore: AUDIO_MATCH_TRIGGER_RELAXED_MIN_SCORE,
-        relaxedMinGap: AUDIO_MATCH_TRIGGER_RELAXED_MIN_GAP,
-        relaxedMinHits: AUDIO_MATCH_TRIGGER_RELAXED_MIN_HITS,
-        relaxedMinVoteLead: AUDIO_MATCH_TRIGGER_RELAXED_MIN_VOTE_LEAD
+        strictMinScore: 0.96,
+        strictMinGap: 0.006,
+        relaxedMinScore: 0.94,
+        relaxedMinGap: 0.002,
+        relaxedMinHits: 5,
+        relaxedMinVoteLead: 1
     };
 }
 
