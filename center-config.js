@@ -144,6 +144,9 @@
         // Ziel-Dauer einer Audio-Referenzaufnahme in Millisekunden.
         audioReferenceTargetMs: 5000,
 
+        // Verzögerung (ms) bis eine neue Aufnahme im Ton-Rec-Modus startet.
+        audioRecordStartDelayMs: 0,
+
         // Wartezeit (ms) nach einem erfolgreichen Tontreffer, bevor erneut gematcht wird.
         audioWaitAfterMatchMs: 4000,
 
@@ -204,6 +207,7 @@
             dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, defaults.dropGlowDurationMs),
             stackBatchOverlapCount: clampNumber(parsed.stackBatchOverlapCount, 0, 9, defaults.stackBatchOverlapCount),
             audioReferenceTargetMs: clampNumber(parsed.audioReferenceTargetMs, 1500, 12000, defaults.audioReferenceTargetMs),
+            audioRecordStartDelayMs: clampNumber(parsed.audioRecordStartDelayMs, 0, 3000, defaults.audioRecordStartDelayMs),
             audioWaitAfterMatchMs: clampNumber(parsed.audioWaitAfterMatchMs, 4000, 8000, defaults.audioWaitAfterMatchMs),
             audioMatchStrictness: normalizeAudioMatchStrictness(parsed.audioMatchStrictness, defaults.audioMatchStrictness),
             audioReadyBlinkMs: clampNumber(parsed.audioReadyBlinkMs, 200, 3000, defaults.audioReadyBlinkMs),

@@ -303,6 +303,7 @@ Stand der Implementierung: 26.03.2026 (Kurz-/Langdruck-Modus)
 - Referenzaufnahme wird im Modus `Ton Rec` automatisch beendet, sobald genug verwertbare Musik-Frames gesammelt wurden.
 - Matching nutzt Mel-skalierte Frequenzbänder und Delta-Features (Ableitungen), um ähnliche Klangfarben besser zu trennen.
 - In `Advanced` ist die Erkennungs-Strenge steuerbar (`Locker | Normal | Streng`).
+- In `Advanced` kann eine Verzögerung vor dem Aufnahme-Start eingestellt werden (`0` bis `3000` ms).
 
 ### Voraussetzungen
 
@@ -317,7 +318,7 @@ Stand der Implementierung: 26.03.2026 (Kurz-/Langdruck-Modus)
 2. Kurzdruck auf `Tonsuche` → `Ton An` (grün).
 3. Weiterer Kurzdruck → `Ton Rec` (orange).
 4. Einen Titel in den CENTER ziehen.
-5. Mikrofon erlauben und 3-5 Sekunden das Referenzmotiv spielen/summen, bis die Aufnahme automatisch stoppt.
+5. Mikrofon erlauben und nach der konfigurierten Startverzögerung (`0` bis `3000` ms) 3-5 Sekunden das Referenzmotiv spielen/summen, bis die Aufnahme automatisch stoppt.
 6. Kurzdruck auf `Ton Rec` um zu `Ton An` zu wechseln.
 7. In ruhiger Umgebung erneut das Motiv spielen/summen.
 8. Erwartung: Nach kurzer stabiler Erkennung wird das passende Blatt automatisch in den CENTER gezogen.
@@ -334,6 +335,7 @@ Hinweis zur Strenge:
 2. Kurzdruck: `Aus` → `Ton An` (Button wird grün).
 3. Weiterer Kurzdruck: `Ton An` → `Ton Rec` (Button wird orange).
 4. Karte in den CENTER ziehen.
+  - Die Aufnahme startet sofort oder nach der in `Advanced > Verzögerung vor Aufnahme-Start` eingestellten Wartezeit.
 
 **Während der Aufnahme (Ton Rec aktiv):**
 5. Sequenz spielen/summen:
@@ -345,7 +347,7 @@ Hinweis zur Strenge:
   - b) **Zu Tonhören (Ton An) wechseln**: Kurzdruck auf den `Ton Rec`-Button → wechselt zu `Ton An` (grün). Das Matching startet, es wird nicht mehr aufgenommen.
   - c) **Schnell zwischen Rec und An toggeln**: Ab jetzt togglet jeder Kurzdruck zwischen `Ton Rec` (orange) und `Ton An` (grün).
   - d) **Komplett ausschalten**: Aus `Ton An` (nicht aus `Ton Rec`!) einen Langdruck (>= 650 ms) halten → schaltet auf `Aus` (Button: "Tonsuche").
-  - e) **Neue Karte ziehen**: Entferne die aktuelle Karte aus dem CENTER oder ziehe eine neue → Aufnahme wird finalisiert. Sobald eine neue Karte in den CENTER gezogen wird und `Ton Rec` aktiv ist, startet die Aufnahme sofort → Ablauf ab Schritt 5.
+  - e) **Neue Karte ziehen**: Entferne die aktuelle Karte aus dem CENTER oder ziehe eine neue → Aufnahme wird finalisiert. Sobald eine neue Karte in den CENTER gezogen wird und `Ton Rec` aktiv ist, startet die Aufnahme nach der eingestellten Verzögerung → Ablauf ab Schritt 5.
 
 Wichtig:
 - Wenn `Alte Sequenz bei Neuaufnahme = Löschen`, bleibt pro Titel nur die neueste Referenz erhalten.
@@ -374,6 +376,7 @@ Zusätzlich:
 - Ähnliche Motive, starkes Rauschen oder andere Lautstärke können Fehl- oder Nichttreffer verursachen.
 - Nur Modus `Ton Rec` überschreibt bzw. erzeugt Referenzaufnahmen; `Ton An` sucht nur.
 - Im Modus `Ton Rec` stoppt die Aufnahme automatisch nach genug erkanntem Musiksignal; die Dauer ist in `Advanced` einstellbar.
+- `Advanced > Verzögerung vor Aufnahme-Start`: steuert den Aufnahmestart zwischen `0` und `3000` ms nach Eintritt in `Ton Rec` mit Karte im CENTER.
 - `Advanced > Alte Sequenz bei Neuaufnahme`: `Löschen` hält pro Titel nur eine aktuelle Sequenz (alte Datei + alte XML-Referenzen werden entfernt), `Beibehalten` speichert zusätzliche Sequenzen.
 - `Advanced > Erkennungs-Strenge` beeinflusst die Trigger-Schwellen nach dem Voting:
   - `Locker`: reagiert früher (mehr Treffer, höheres Fehltreffer-Risiko)

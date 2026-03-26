@@ -6,6 +6,7 @@ let audioAssistPressStartedAt = 0;
 
 let audioRecordState = null;
 let audioMatchState = null;
+let audioRecordStartDelayState = null;
 let audioHitHistory = []; // Voting-Fenster: letzte N bestCardId-Ergebnisse (over threshold)
 let audioDiscardSuppressedCardId = null;
 let audioWaitAfterMatchUntil = 0;
@@ -217,6 +218,61 @@ function getAudioReferenceTargetFrames() {
     } catch {}
     const normalizedMs = Math.min(12000, Math.max(1500, targetMs));
     return Math.max(6, Math.ceil(normalizedMs / AUDIO_FRAME_SAMPLE_MS));
+}
+
+function getAudioRecordStartDelayMs() {
+    const fallback = (window.NOTENTISCH_USER_CONFIG_DEFAULTS && window.NOTENTISCH_USER_CONFIG_DEFAULTS.audioRecordStartDelayMs) || 0;
+    try {
+        if (typeof loadUserConfig === 'function') {
+            const config = loadUserConfig();
+            if (config && Number.isFinite(Number(config.audioRecordStartDelayMs))) {
+                return Math.min(3000, Math.max(0, Number(config.audioRecordStartDelayMs)));
+            }
+        }
+    } catch {}
+    return fallback;
+}
+
+function clearPendingAudioRecordStart() {
+    if (!audioRecordStartDelayState) return;
+    if (audioRecordStartDelayState.timerId) {
+        clearTimeout(audioRecordStartDelayState.timerId);
+    }
+    audioRecordStartDelayState = null;
+}
+
+function scheduleAudioRecordingStart(cardId) {
+    const normalizedCardId = String(cardId || '');
+    if (!normalizedCardId) return;
+
+    const delayMs = getAudioRecordStartDelayMs();
+    if (delayMs <= 0) {
+        clearPendingAudioRecordStart();
+        startAudioRecordingForCenterCard(normalizedCardId).catch((err) => {
+            console.error('Audio-Aufnahme konnte nicht gestartet werden:', err);
+        });
+        return;
+    }
+
+    if (audioRecordStartDelayState && audioRecordStartDelayState.cardId === normalizedCardId) {
+        return;
+    }
+
+    clearPendingAudioRecordStart();
+    audioRecordStartDelayState = {
+        cardId: normalizedCardId,
+        timerId: setTimeout(() => {
+            const pending = audioRecordStartDelayState;
+            audioRecordStartDelayState = null;
+            if (!pending || audioAssistMode !== 2) return;
+            const activeCenterId = (typeof activeCenterCardId !== 'undefined' && activeCenterCardId !== null)
+                ? String(activeCenterCardId) : null;
+            if (activeCenterId !== normalizedCardId || audioRecordState) return;
+            startAudioRecordingForCenterCard(normalizedCardId).catch((err) => {
+                console.error('Audio-Aufnahme konnte nicht verzögert gestartet werden:', err);
+            });
+        }, delayMs)
+    };
 }
 
 function getCurrentCenterCardId() {
@@ -895,6 +951,8 @@ async function startAudioRecordingForCenterCard(cardId) {
     const cardNode = getRenderApi()?.getCardNodeById(cardId) || null;
     if (!cardNode || typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia) return;
 
+    clearPendingAudioRecordStart();
+
     // Bei neuer Aufnahme den gespeicherten Bestätigungsstatus zurücksetzen.
     audioReadyToSaveState = null;
     audioSaveWasConfirmed = false;
@@ -1269,7 +1327,7 @@ async function audioAssistTick() {
                                 }, getAudioReadyBlinkMs() + 50);
                             }
                             audioDiscardSuppressedCardId = null;
-                            await startAudioRecordingForCenterCard(centerCardId);
+                            scheduleAudioRecordingStart(centerCardId);
                         }
                     }
                 } else if (!audioRecordState || audioRecordState.cardId !== centerCardId) {
@@ -1286,11 +1344,12 @@ async function audioAssistTick() {
                             }, getAudioReadyBlinkMs() + 50);
                         }
                         await stopAudioRecording(false);
-                        await startAudioRecordingForCenterCard(centerCardId);
+                        scheduleAudioRecordingStart(centerCardId);
                     }
                 }
             } else {
                 // Nur-Hören-Modus: nicht aufnehmen
+                clearPendingAudioRecordStart();
                 if (audioRecordState) {
                     await stopAudioRecording(false);
                 }
@@ -1301,10 +1360,12 @@ async function audioAssistTick() {
             if (audioMatchState) {
                 stopAudioMatching();
             }
+            clearPendingAudioRecordStart();
             if (audioRecordState) {
                 await stopAudioRecording(false);
             }
         } else {
+            clearPendingAudioRecordStart();
             if (audioRecordState) {
                 await stopAudioRecording(false);
             }
@@ -1339,6 +1400,7 @@ function disableAudioAssistMode() {
     audioWaitAfterMatchBlinkUntil = 0;
     audioReadyToSaveState = null;
     audioSaveWasConfirmed = false;
+    clearPendingAudioRecordStart();
     if (audioAssistMonitorTimer) {
         clearInterval(audioAssistMonitorTimer);
         audioAssistMonitorTimer = null;
