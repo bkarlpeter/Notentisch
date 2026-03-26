@@ -1,101 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mxfile host="Electron" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" version="28.2.5">
-  <diagram name="Tonsuche State Diagram" id="state-diagram-kurz-langdruck">
-    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1000" pageHeight="1000" math="0" shadow="0">
+<mxfile host="app.diagrams.net" modified="2026-03-26" agent="5.0" version="28.2.5">
+  <diagram name="Tonsuche Ablauf" id="tonsuche-ablauf">
+    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="1200" background="ffffff" math="0" shadow="0">
       <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        
-        <!-- Title -->
-        <mxCell id="title" value="Tonsuche: Kurz-/Langdruck Flow (650ms Grenze)" style="text;fontSize=18;fontStyle=bold;fillColor=none;strokeColor=none;align=center" vertex="1" parent="1">
-          <mxGeometry x="200" y="20" width="600" height="40" as="geometry" />
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="Tonsuche-Modi: Kurz- und Langdruck (650ms)" style="text;html=1;fontSize=16;fontStyle=bold;align=center;" vertex="1" parent="1">
+          <mxGeometry x="150" y="30" width="700" height="30" as="geometry"/>
         </mxCell>
-        
-        <!-- State: Aus (0) -->
-        <mxCell id="state-aus" value="AUS&#xa;(0)&#xa;Button: Tonsuche" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#F5F5F5;strokeColor=#000;strokeWidth=2" vertex="1" parent="1">
-          <mxGeometry x="100" y="150" width="140" height="100" as="geometry" />
+        <mxCell id="state-0" value="AUS (0)&#10;Button grau&#10;Tonsuche" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000;strokeWidth=2;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="150" y="150" width="150" height="120" as="geometry"/>
         </mxCell>
-        
-        <!-- State: Ton An (1) -->
-        <mxCell id="state-tonan" value="TON AN&#xa;(1)&#xa;Button: grün&#xa;Leben: Suchen" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#99FF99;strokeColor=#000;strokeWidth=2" vertex="1" parent="1">
-          <mxGeometry x="450" y="150" width="140" height="100" as="geometry" />
+        <mxCell id="state-1" value="TON AN (1)&#10;Button grün&#10;Nur Suchen" style="ellipse;whiteSpace=wrap;html=1;fillColor=#99ff99;strokeColor=#000;strokeWidth=2;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="500" y="150" width="150" height="120" as="geometry"/>
         </mxCell>
-        
-        <!-- State: Ton Rec (2) -->
-        <mxCell id="state-tonrec" value="TON REC&#xa;(2)&#xa;Button: orange&#xa;Leben: Aufnahme" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#FFCC99;strokeColor=#000;strokeWidth=2" vertex="1" parent="1">
-          <mxGeometry x="450" y="380" width="140" height="100" as="geometry" />
+        <mxCell id="state-2" value="TON REC (2)&#10;Button orange&#10;Aufnahme" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffcc99;strokeColor=#000;strokeWidth=2;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="500" y="400" width="150" height="120" as="geometry"/>
         </mxCell>
-        
-        <!-- Arrow: Aus -> Ton An (Kurz) -->
-        <mxCell id="edge-aus-tonan" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;fontSize=11;fillColor=none;strokeColor=#333;strokeWidth=2" edge="1" source="state-aus" target="state-tonan" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points" />
-          </mxGeometry>
-          <mxCell id="label-aus-tonan" value="Kurzdruck&#xa;0 → 1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;fontSize=10;fillColor=#E8F5E9;rounded=1;strokeColor=none" vertex="1" connectable="0" parent="edge-aus-tonan">
-            <mxGeometry x="0" y="-20" relative="1" as="geometry" />
+        <mxCell id="edge-01-short" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.2;exitDx=0;exitDy=0;entryX=0;entryY=0.2;entryDx=0;entryDy=0;strokeColor=#333;strokeWidth=2;" edge="1" source="state-0" target="state-1" parent="1">
+          <mxCell id="label-01" value="Kurzdruck&#10;0 → 1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;rounded=0;fontSize=11;fontColor=#000;backgroundColor=#e8f5e9;fillColor=#e8f5e9;" vertex="1" connectable="0" parent="edge-01-short">
+            <mxGeometry x="0" y="-25" relative="1" as="geometry"/>
           </mxCell>
         </mxCell>
-        
-        <!-- Arrow: Ton An -> Ton Rec (Kurz) -->
-        <mxCell id="edge-tonan-tonrec" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0;fontSize=11;fillColor=none;strokeColor=#333;strokeWidth=2" edge="1" source="state-tonan" target="state-tonrec" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="620" y="250" />
-              <mxPoint x="620" y="380" />
-            </Array>
-          </mxGeometry>
-          <mxCell id="label-tonan-tonrec" value="Kurzdruck&#xa;1 → 2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;fontSize=10;fillColor=#FFE0B2;rounded=1;strokeColor=none" vertex="1" connectable="0" parent="edge-tonan-tonrec">
-            <mxGeometry x="30" y="0" relative="1" as="geometry" />
+        <mxCell id="edge-12-short" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.95;exitY=1;exitDx=0;exitDy=0;entryX=0.95;entryY=0;entryDx=0;entryDy=0;strokeColor=#333;strokeWidth=2;" edge="1" source="state-1" target="state-2" parent="1">
+          <mxCell id="label-12" value="Kurzdruck&#10;1 → 2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;rounded=0;fontSize=11;fontColor=#000;backgroundColor=#ffe8b6;fillColor=#ffe8b6;" vertex="1" connectable="0" parent="edge-12-short">
+            <mxGeometry x="30" y="0" relative="1" as="geometry"/>
           </mxCell>
         </mxCell>
-        
-        <!-- Arrow: Ton Rec -> Ton An (Kurz) -->
-        <mxCell id="edge-tonrec-tonan" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;fontSize=11;fillColor=none;strokeColor=#333;strokeWidth=2" edge="1" source="state-tonrec" target="state-tonan" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="320" y="380" />
-              <mxPoint x="320" y="250" />
-            </Array>
-          </mxGeometry>
-          <mxCell id="label-tonrec-tonan" value="Kurzdruck&#xa;2 → 1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;fontSize=10;fillColor=#FFE0B2;rounded=1;strokeColor=none" vertex="1" connectable="0" parent="edge-tonrec-tonan">
-            <mxGeometry x="-50" y="0" relative="1" as="geometry" />
+        <mxCell id="edge-21-short" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.05;exitY=0;exitDx=0;exitDy=0;entryX=0.05;entryY=1;entryDx=0;entryDy=0;strokeColor=#333;strokeWidth=2;" edge="1" source="state-2" target="state-1" parent="1">
+          <mxCell id="label-21" value="Kurzdruck&#10;2 → 1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;rounded=0;fontSize=11;fontColor=#000;backgroundColor=#ffe8b6;fillColor=#ffe8b6;" vertex="1" connectable="0" parent="edge-21-short">
+            <mxGeometry x="-40" y="0" relative="1" as="geometry"/>
           </mxCell>
         </mxCell>
-        
-        <!-- Arrow: Ton An -> Aus (Lang) -->
-        <mxCell id="edge-tonan-aus-lang" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=11;fillColor=none;strokeColor=#FF5252;strokeWidth=3;dashed=1" edge="1" source="state-tonan" target="state-aus" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="320" y="200" />
-              <mxPoint x="320" y="70" />
-              <mxPoint x="240" y="70" />
-              <mxPoint x="240" y="200" />
-            </Array>
-          </mxGeometry>
-          <mxCell id="label-tonan-aus" value="Langdruck&#xa;(≥650ms)&#xa;1 → 0" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;fontSize=10;fontColor=#FF5252;fontStyle=bold;background=#FFEBEE;rounded=1;strokeColor=none;filled=1" vertex="1" connectable="0" parent="edge-tonan-aus-lang">
-            <mxGeometry x="0" y="-30" relative="1" as="geometry" />
+        <mxCell id="edge-10-long" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ff5252;strokeWidth=3;fontSize=11;dashed=1;" edge="1" source="state-1" target="state-0" parent="1">
+          <mxCell id="label-10" value="Langdruck (≥650ms)&#10;1 → 0" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;rounded=0;fontSize=11;fontColor=#d32f2f;fontStyle=bold;backgroundColor=#ffebee;fillColor=#ffebee;" vertex="1" connectable="0" parent="edge-10-long">
+            <mxGeometry x="0" y="-40" relative="1" as="geometry"/>
           </mxCell>
         </mxCell>
-        
-        <!-- Legend -->
-        <mxCell id="legend-title" value="Regeln:" style="text;fontSize=12;fontStyle=bold;fillColor=none;strokeColor=none;align=left" vertex="1" parent="1">
-          <mxGeometry x="100" y="560" width="100" height="30" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="rule1" value="• Ab Modus 2 (Ton Rec) togglest Kurzdruck zwischen 1 ↔ 2" style="text;fontSize=11;fillColor=none;strokeColor=none;align=left" vertex="1" parent="1">
-          <mxGeometry x="100" y="590" width="500" height="30" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="rule2" value="• Langdruck in Modus 1 (Ton An) schaltet auf Aus (0)" style="text;fontSize=11;fillColor=none;strokeColor=none;align=left" vertex="1" parent="1">
-          <mxGeometry x="100" y="620" width="500" height="30" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="rule3" value="• Weiße Rahmen-LED am Button: während Aufnahme in Modus 2 erkanntes Musiksignal" style="text;fontSize=11;fillColor=none;strokeColor=none;align=left" vertex="1" parent="1">
-          <mxGeometry x="100" y="650" width="700" height="30" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="rule4" value="• Nach erfolgreicher Aufnahme: Button-Label wechselt zu &quot;Fertig&quot; + Speicher-Button" style="text;fontSize=11;fillColor=none;strokeColor=none;align=left" vertex="1" parent="1">
-          <mxGeometry x="100" y="680" width="700" height="30" as="geometry" />
+        <mxCell id="info-box" value="WICHTIG: Ab Modus 2 toggelt Kurzdruck nur zwischen 1 ↔ 2&#10;Langdruck nur aus Modus 1 möglich (schaltet auf 0)" style="shape=note;html=1;noLabel=0;textAlign=left;whiteSpace=wrap;fontSize=10;fillColor=#fffacd;strokeColor=#ccc;" vertex="1" parent="1">
+          <mxGeometry x="150" y="650" width="600" height="80" as="geometry"/>
         </mxCell>
       </root>
     </mxGraphModel>
