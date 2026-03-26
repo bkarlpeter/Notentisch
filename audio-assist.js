@@ -239,6 +239,7 @@ function clearPendingAudioRecordStart() {
         clearTimeout(audioRecordStartDelayState.timerId);
     }
     audioRecordStartDelayState = null;
+    updateAudioAssistUi();
 }
 
 function scheduleAudioRecordingStart(cardId) {
@@ -273,6 +274,7 @@ function scheduleAudioRecordingStart(cardId) {
             });
         }, delayMs)
     };
+    updateAudioAssistUi();
 }
 
 function getCurrentCenterCardId() {
@@ -288,6 +290,7 @@ function getCurrentCenterCardId() {
 
 function updateAudioAssistUi() {
     const btn = document.getElementById('audioAssistBtn');
+    const hasPendingRecordStart = !!(audioAssistMode === 2 && audioRecordStartDelayState && !audioRecordState);
     const hasRecentMusicSignal = !!(audioAssistMode === 2
         && audioRecordState
         && audioRecordState.cardId !== null
@@ -295,9 +298,9 @@ function updateAudioAssistUi() {
         && (Date.now() - audioRecordState.lastAcceptedAt) <= AUDIO_RECORD_ACTIVE_SIGNAL_MS);
     if (btn) {
         if (audioAssistMode === 2) {
-            // In Ton-Rec: vor fertigem Print "Aufnahme", danach "Fertig"
-            btn.textContent = audioReadyToSaveState ? 'Fertig' : 'Aufnahme';
-            btn.style.background = '#c56a1b';
+            // In Ton-Rec: bei Startverzögerung "Startet...", danach "Aufnahme" oder "Fertig".
+            btn.textContent = audioReadyToSaveState ? 'Fertig' : (hasPendingRecordStart ? 'Startet...' : 'Aufnahme');
+            btn.style.background = hasPendingRecordStart ? '#3498db' : '#c56a1b';
             btn.style.color = '#fff';
         } else if (audioAssistMode === 1) {
             btn.textContent = 'Ton An';
