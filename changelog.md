@@ -1,5 +1,21 @@
 # Changelog - Notentisch
 
+## [v2026.03.26] - 26. März 2026
+
+### Verbessert
+- **Config/Advanced-Rückkehr ohne sichtbaren Stapel-Neuaufbau**: Beim Zurückkehren wird vorhandenes Karten-DOM bevorzugt weiterverwendet; ein kompletter Rebuild erfolgt nur noch als Fallback, wenn keine sichtbaren Karten vorhanden sind.
+- **Stabilere Fullscreen-Rückkehr mit F11**: `autoFullscreenOnStart` wird bei der Rückkehr aus Config/Advanced nicht erneut erzwungen, damit kein zusätzlicher Layout-Impuls entsteht.
+- **Zoom-Speicher erweitert**: Center-Ansicht speichert jetzt zusätzlich Alignment sowie Viewport- und Bildschirmmaße zusammen mit Zoom und relativer Position.
+
+### Behoben
+- **Gelbe Marker wieder schaltbar**: Audio-/Marker-Badges werden für bereits sichtbare Karten gezielt nachsynchronisiert, sodass Änderungen aus Config und Restore sofort wirksam sind.
+
+### Technisch
+- `filehandling.js`: Restore aus Config nutzt bevorzugt DOM-Restore, synchronisiert sichtbare Marker und schreibt/liest zusätzliche Center-View-Metadaten in XML.
+- `functions.js`: Config-Anwendung synchronisiert sichtbare Marker sofort; Session-Restore übergibt die DOM-Restore-Präferenz und unterdrückt Auto-Fullscreen bei History-Rückkehr.
+- `center-view.js`: Aktuelle Viewport- und Screen-Maße werden mit den Center-Einstellungen erfasst.
+- `render.js`: Neuer Sync für sichtbare Audio-Badges ohne komplettes Re-Rendering.
+
 ## [v2026.03.08.2] - 08. März 2026
 
 ### Neu
