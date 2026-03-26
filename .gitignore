@@ -46,3 +46,14 @@ History/
 .setup_notentisch_done
 
 preview_note_sample.png
+
+# Local documentation artifacts
+Dokumentation/MeineNoten.pptx
+Dokumentation/.$*.drawio.bkp
+
+# Local audio capture artifacts
+mysounds/*.webm
+
+# Local diagnostics
+mysounds/musicprint_diagnostics.jsonl
+mysounds/musicprint_diag_report.txt
