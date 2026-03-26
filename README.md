@@ -330,24 +330,58 @@ Hinweis zur Strenge:
 
 ### Ablauf Tonsequenz (Ton Rec)
 
-**Einstieg:**
-1. Sicherstellen, dass `Tonsuche` auf `Aus` (Button: "Tonsuche") steht.
-2. Kurzdruck: `Aus` → `Ton An` (Button wird grün).
-3. Weiterer Kurzdruck: `Ton An` → `Ton Rec` (Button wird orange).
-4. Karte in den CENTER ziehen.
-  - Die Aufnahme startet sofort oder nach der in `Advanced > Verzögerung vor Aufnahme-Start` eingestellten Wartezeit.
+**BTN1 = Tonsuche / Hauptschalter**
+1. Startzustand:
+  - Titel: `Tonsuche`
+  - Farbe: Basisfarbe des Boards (bei Standard blau)
+  - Funktion: Audio aus (`0`)
+2. Kurzdruck auf BTN1:
+  - Titel: `Ton An`
+  - Farbe: grün
+  - Funktion: nur hören / suchen (`1`)
+3. Noch ein Kurzdruck auf BTN1:
+  - Wechsel in `Ton Rec` (`2`)
+  - ab hier sind zwei Zwischenzustände möglich:
+4. Wenn in `Advanced` eine Verzögerung > `0 ms` gesetzt ist:
+  - Titel: `Startet...`
+  - Farbe: blau
+  - Funktion: Aufnahme ist geplant, läuft aber noch nicht
+5. Sobald die echte Aufnahme beginnt:
+  - Titel: `Aufnahme`
+  - Farbe: orange
+  - Funktion: Referenzaufnahme läuft
+  - bei erkanntem verwertbarem Musiksignal bekommt BTN1 zusätzlich einen weißen Rahmen
+6. Wenn genug Material gesammelt wurde:
+  - Titel: `Bereit`
+  - Farbe: orange
+  - Funktion: Aufnahme ist abgeschlossen, Fingerprint wurde erzeugt und Auto-Speichern wurde angestoßen
+7. Kurzdruck in `Ton Rec`:
+  - zurück zu `Ton An`
+  - Titel: `Ton An`
+  - Farbe: grün
+8. Ab diesem Punkt toggelt jeder weitere Kurzdruck zwischen:
+  - `Ton An` (grün)
+  - `Startet...` (blau, falls Startverzögerung aktiv)
+  - `Aufnahme` / `Bereit` (orange)
+9. Langdruck in `Ton An` (>= `650 ms`):
+  - zurück auf `Tonsuche`
+  - Farbe wieder Basisfarbe des Boards
 
-**Während der Aufnahme (Ton Rec aktiv):**
-5. Sequenz spielen/summen:
-  - während verwertbares Musiksignal erkannt wird, zeigt der Button `Ton Rec` einen weißen Rahmen.
-  - sobald genug Material gesammelt wurde, stoppt die Aufnahme automatisch und der weiße Rahmen verschwindet.
-  - Speichern erfolgt direkt automatisch (kein separater Bestätigungsdialog).
-6. Danach gibt es fünf typische Wege:
-  - a) **Neuaufnahme derselben Karte**: Drücke `Nochmal` → sofortige Neuaufnahme, Ablauf ab Schritt 5.
-  - b) **Zu Tonhören (Ton An) wechseln**: Kurzdruck auf den `Ton Rec`-Button → wechselt zu `Ton An` (grün). Das Matching startet, es wird nicht mehr aufgenommen.
-  - c) **Schnell zwischen Rec und An toggeln**: Ab jetzt togglet jeder Kurzdruck zwischen `Ton Rec` (orange) und `Ton An` (grün).
-  - d) **Komplett ausschalten**: Aus `Ton An` (nicht aus `Ton Rec`!) einen Langdruck (>= 650 ms) halten → schaltet auf `Aus` (Button: "Tonsuche").
-  - e) **Neue Karte ziehen**: Entferne die aktuelle Karte aus dem CENTER oder ziehe eine neue → Aufnahme wird finalisiert. Sobald eine neue Karte in den CENTER gezogen wird und `Ton Rec` aktiv ist, startet die Aufnahme nach der eingestellten Verzögerung → Ablauf ab Schritt 5.
+**BTN2 = Speicher-/Bereitschaftsstatus**
+1. BTN2 ist nur sichtbar, wenn `Ton Rec` aktiv ist.
+2. Vor einer fertigen Speicherung:
+  - Titel: `Speichern` oder `Speichern (Karten-ID)`
+  - Farbe: blau
+3. Direkt nach erfolgreichem Auto-Speichern, solange die Wartezeit läuft:
+  - Titel: `Gespeichert`
+  - Farbe: grün
+4. Nach Ablauf der Wartezeit: zurück zu `Speichern` / `Speichern (Karten-ID)`, blau
+
+**Typische Folgeaktionen:**
+1. **Neuaufnahme derselben Karte**: erneut in `Ton Rec` bleiben oder dorthin zurückschalten; die Aufnahme startet sofort oder nach der eingestellten Verzögerung.
+2. **Zu Tonhören wechseln**: Kurzdruck auf BTN1 wechselt zurück zu `Ton An`.
+3. **Komplett ausschalten**: Langdruck aus `Ton An` schaltet zurück auf `Tonsuche`.
+4. **Neue Karte im CENTER**: eine neue CENTER-Karte startet die nächste Aufnahme wieder mit derselben Logik inklusive optionaler Verzögerung.
 
 Wichtig:
 - Wenn `Alte Sequenz bei Neuaufnahme = Löschen`, bleibt pro Titel nur die neueste Referenz erhalten.

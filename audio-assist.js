@@ -291,7 +291,6 @@ function getCurrentCenterCardId() {
 function updateAudioAssistUi() {
     const btn = document.getElementById('audioAssistBtn');
     const hasPendingRecordStart = !!(audioAssistMode === 2 && audioRecordStartDelayState && !audioRecordState);
-    const hasActiveRecording = !!(audioAssistMode === 2 && audioRecordState);
     const hasRecentMusicSignal = !!(audioAssistMode === 2
         && audioRecordState
         && audioRecordState.cardId !== null
@@ -299,9 +298,9 @@ function updateAudioAssistUi() {
         && (Date.now() - audioRecordState.lastAcceptedAt) <= AUDIO_RECORD_ACTIVE_SIGNAL_MS);
     if (btn) {
         if (audioAssistMode === 2) {
-            // Der Tonsuche-Button zeigt nur den Modus, nicht den Speicherablauf.
-            btn.textContent = audioReadyToSaveState ? 'Fertig' : 'Aufnahme';
-            btn.style.background = '#c56a1b';
+            // In Ton-Rec: bei Startverzögerung "Startet...", danach "Aufnahme" oder "Bereit".
+            btn.textContent = audioReadyToSaveState ? 'Bereit' : (hasPendingRecordStart ? 'Startet...' : 'Aufnahme');
+            btn.style.background = hasPendingRecordStart ? '#3498db' : '#c56a1b';
             btn.style.color = '#fff';
         } else if (audioAssistMode === 1) {
             btn.textContent = 'Ton An';
@@ -328,26 +327,18 @@ function updateAudioAssistUi() {
         const saveTargetCardId = audioReadyToSaveState?.state?.cardId ? String(audioReadyToSaveState.state.cardId) : null;
         // BTN2 im Modus 2 immer sichtbar
         saveBtn.style.visibility = audioAssistMode === 2 ? 'visible' : 'hidden';
-        if (hasPendingRecordStart) {
-            saveBtn.textContent = 'Startet';
-            saveBtn.title = 'Aufnahme startet nach der eingestellten Verzögerung';
-            saveBtn.style.background = '#3498db';
-            saveBtn.style.color = '#fff';
-        } else if (hasActiveRecording || saveTargetCardId) {
-            saveBtn.textContent = 'Speichern';
-            saveBtn.title = saveTargetCardId
-                ? `Aufnahme fuer Karte ${saveTargetCardId} wird verarbeitet`
-                : 'Aufnahme läuft';
+        // Grün: nach Auto-Speichern, solange Wartezeit läuft. Blau: wenn Wartezeit vorbei.
+        const inWaitTime = audioWaitAfterMatchUntil > 0 && Date.now() < audioWaitAfterMatchUntil;
+        if (audioSaveWasConfirmed && inWaitTime) {
+            saveBtn.textContent = 'Gespeichert';
+            saveBtn.title = 'MusicPrint gespeichert – Wartezeit läuft';
             saveBtn.style.background = '#27ae60';
             saveBtn.style.color = '#fff';
-        } else if (audioSaveWasConfirmed) {
-            saveBtn.textContent = 'Gespeichert';
-            saveBtn.title = 'MusicPrint gespeichert';
-            saveBtn.style.background = '#3498db';
-            saveBtn.style.color = '#fff';
         } else {
-            saveBtn.textContent = 'Speichern';
-            saveBtn.title = 'Warte auf Aufnahme...';
+            saveBtn.textContent = saveTargetCardId ? `Speichern (${saveTargetCardId})` : 'Speichern';
+            saveBtn.title = saveTargetCardId
+                ? `Aufnahme fuer Karte ${saveTargetCardId} speichern`
+                : 'Warte auf Aufnahme...';
             saveBtn.style.background = '#3498db';
             saveBtn.style.color = '#fff';
         }
