@@ -314,6 +314,9 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     }
 
     const renderApi = window.NotentischRender;
+    if (renderApi && typeof renderApi.syncVisibleCardAudioBadges === 'function') {
+        renderApi.syncVisibleCardAudioBadges();
+    }
     if (shouldRerender && renderApi && typeof renderApi.renderBoard === 'function' && typeof xmlData !== 'undefined' && xmlData) {
         renderApi.renderBoard();
     }
@@ -475,7 +478,9 @@ function restoreBoardSessionState() {
     }
 
     if (parsed && parsed.boardSnapshot && typeof restoreBoardSnapshotFromConfig === 'function') {
-        restoreBoardSnapshotFromConfig(parsed.boardSnapshot);
+        restoreBoardSnapshotFromConfig(parsed.boardSnapshot, {
+            preferDomRestore: !!cardLayoutSnapshot
+        });
     }
 
     // restoreCenterRuntimeState wird immer aufgerufen, damit showPdfPages das PDF lädt
@@ -656,10 +661,25 @@ function initializeBoardUi() {
         initializeCenterView();
     }
     restoreBoardSessionState();
-    if (settings.autoFullscreenOnStart) {
+    const isConfigHistoryReturn = (() => {
+        try {
+            return !!sessionStorage.getItem(BOARD_HISTORY_RETURN_KEY);
+        } catch (err) {
+            return false;
+        }
+    })();
+
+    if (settings.autoFullscreenOnStart && !isConfigHistoryReturn) {
         setTimeout(() => {
             applyDefaultFullscreenState();
         }, 0);
+    }
+
+    if (isConfigHistoryReturn) {
+        try {
+            sessionStorage.removeItem(BOARD_HISTORY_RETURN_KEY);
+        } catch (err) {
+        }
     }
 }
 

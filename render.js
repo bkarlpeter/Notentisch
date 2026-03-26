@@ -133,6 +133,34 @@
 		return element;
 	}
 
+	function syncVisibleCardAudioBadges() {
+		const showAudioBadge = isAudioBadgeEnabled();
+		const visibleCards = document.querySelectorAll('.card-container[data-cardid]');
+
+		visibleCards.forEach((cardElement) => {
+			const cardId = cardElement.dataset.cardid;
+			if (!cardId) return;
+
+			const cardNode = getCardNodeById(cardId);
+			const hasAudioReference = cardHasAudioReference(cardNode);
+			const shouldShow = showAudioBadge && hasAudioReference;
+			const existingBadge = cardElement.querySelector('.card-audio-badge');
+
+			if (shouldShow) {
+				if (!existingBadge) {
+					const badge = document.createElement('span');
+					badge.className = 'card-audio-badge';
+					badge.title = 'Spielton vorhanden';
+					cardElement.appendChild(badge);
+				}
+			} else if (existingBadge) {
+				existingBadge.remove();
+			}
+		});
+
+		lastRenderedShowAudioBadge = showAudioBadge;
+	}
+
 	function getConfiguredBatchOverlap(limit) {
 		const safeLimit = Math.max(1, Number(limit) || 1);
 		let overlap = 2;
@@ -564,6 +592,7 @@
 	window.NotentischRender = {
 		renderBoard,
 		resetCardRenderCache,
+		syncVisibleCardAudioBadges,
 		getCardNodes,
 		getCardNodeById,
 		resetQuadrantOffsets,

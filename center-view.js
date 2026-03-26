@@ -138,12 +138,20 @@ function applyLiveZoomPreview() {
 function getCurrentCenterViewSettings() {
     const container = document.getElementById('center-content');
     const relativePosition = getRelativeScrollPosition(container);
+    const viewportWidth = Number(window.innerWidth || document.documentElement?.clientWidth || 0);
+    const viewportHeight = Number(window.innerHeight || document.documentElement?.clientHeight || 0);
+    const screenWidth = Number(window.screen?.width || 0);
+    const screenHeight = Number(window.screen?.height || 0);
     return {
         zoom: currentZoom,
         align: centerHorizontalAlign,
         zoomFocus: normalizeCenterZoomFocusMode(settings.centerZoomFocus),
         posRelX: relativePosition.x,
-        posRelY: relativePosition.y
+        posRelY: relativePosition.y,
+        viewportWidth: Number.isFinite(viewportWidth) && viewportWidth > 0 ? Math.round(viewportWidth) : null,
+        viewportHeight: Number.isFinite(viewportHeight) && viewportHeight > 0 ? Math.round(viewportHeight) : null,
+        screenWidth: Number.isFinite(screenWidth) && screenWidth > 0 ? Math.round(screenWidth) : null,
+        screenHeight: Number.isFinite(screenHeight) && screenHeight > 0 ? Math.round(screenHeight) : null
     };
 }
 

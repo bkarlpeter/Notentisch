@@ -449,16 +449,28 @@ function readCenterSettingsFromXml(cardId) {
     const focusText = centerNode.querySelector('ZoomFokus')?.textContent || '';
     const posRelXText = centerNode.querySelector('PosRelX')?.textContent || '';
     const posRelYText = centerNode.querySelector('PosRelY')?.textContent || '';
+    const viewportWidthText = centerNode.querySelector('ViewportWidth')?.textContent || '';
+    const viewportHeightText = centerNode.querySelector('ViewportHeight')?.textContent || '';
+    const screenWidthText = centerNode.querySelector('ScreenWidth')?.textContent || '';
+    const screenHeightText = centerNode.querySelector('ScreenHeight')?.textContent || '';
     const zoom = Number(zoomText);
     const posRelX = Number(posRelXText);
     const posRelY = Number(posRelYText);
+    const viewportWidth = Number(viewportWidthText);
+    const viewportHeight = Number(viewportHeightText);
+    const screenWidth = Number(screenWidthText);
+    const screenHeight = Number(screenHeightText);
 
     return {
         zoom: Number.isFinite(zoom) ? zoom : null,
         align: alignText || null,
         zoomFocus: focusText || null,
         posRelX: Number.isFinite(posRelX) ? Math.max(0, Math.min(1, posRelX)) : null,
-        posRelY: Number.isFinite(posRelY) ? Math.max(0, Math.min(1, posRelY)) : null
+        posRelY: Number.isFinite(posRelY) ? Math.max(0, Math.min(1, posRelY)) : null,
+        viewportWidth: Number.isFinite(viewportWidth) && viewportWidth > 0 ? Math.round(viewportWidth) : null,
+        viewportHeight: Number.isFinite(viewportHeight) && viewportHeight > 0 ? Math.round(viewportHeight) : null,
+        screenWidth: Number.isFinite(screenWidth) && screenWidth > 0 ? Math.round(screenWidth) : null,
+        screenHeight: Number.isFinite(screenHeight) && screenHeight > 0 ? Math.round(screenHeight) : null
     };
 }
 
@@ -508,6 +520,10 @@ function writeCenterSettingsToCardNode(cardId) {
     upsertCenterChild('ZoomFokus', currentView.zoomFocus || 'left-top');
     upsertCenterChild('PosRelX', Number(currentView.posRelX ?? 0).toFixed(4));
     upsertCenterChild('PosRelY', Number(currentView.posRelY ?? 0).toFixed(4));
+    upsertCenterChild('ViewportWidth', Number(currentView.viewportWidth ?? 0));
+    upsertCenterChild('ViewportHeight', Number(currentView.viewportHeight ?? 0));
+    upsertCenterChild('ScreenWidth', Number(currentView.screenWidth ?? 0));
+    upsertCenterChild('ScreenHeight', Number(currentView.screenHeight ?? 0));
 
     upsertCardChild('CenterAnsichtChanged', '1');
     markUnsavedChange();
@@ -964,7 +980,7 @@ function applyCardLayoutSnapshotFromConfig(snapshot, options = {}) {
     return true;
 }
 
-function restoreBoardSnapshotFromConfig(snapshot) {
+function restoreBoardSnapshotFromConfig(snapshot, options = {}) {
     if (!snapshot || !snapshot.xmlText) return false;
 
     try {
@@ -990,9 +1006,16 @@ function restoreBoardSnapshotFromConfig(snapshot) {
     lastCardIdFromCenter = snapshot.lastCardIdFromCenter ?? null;
     activeCenterCardId = snapshot.activeCenterCardId ?? null;
 
-    // Nach Config-Rueckkehr immer aus XML neu rendern, damit Marker-/Config-Änderungen
-    // nicht durch veraltetes Snapshot-Markup ueberdeckt werden.
-    getRenderApi()?.renderBoard();
+    const renderApi = getRenderApi();
+    const preferDomRestore = !!options.preferDomRestore;
+    const hasVisibleCards = document.querySelectorAll('.card-container[data-cardid]').length > 0;
+
+    if (!preferDomRestore || !hasVisibleCards) {
+        // Fallback: kompletter Neuaufbau nur wenn kein brauchbares DOM vorhanden ist.
+        renderApi?.renderBoard();
+    }
+
+    renderApi?.syncVisibleCardAudioBadges?.();
     getRenderApi()?.updateStackLayout();
 
     if (activeCenterCardId !== null && activeCenterCardId !== undefined) {
@@ -1304,7 +1327,7 @@ function shouldSkipAutoLoadSavedFolder() {
             sessionStorage.removeItem('notentischSkipAutoLoadSavedFolder');
             return true;
         }
-                getRenderApi()?.updateStackLayout();
+        return false;
     } catch {
         return false;
     }
