@@ -1,46 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mxfile host="app.diagrams.net" modified="2026-03-26" agent="5.0" version="28.2.5">
-  <diagram name="Tonsuche Ablauf" id="tonsuche-ablauf">
-    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="1200" background="ffffff" math="0" shadow="0">
-      <root>
-        <mxCell id="0"/>
-        <mxCell id="1" parent="0"/>
-        <mxCell id="title" value="Tonsuche-Modi: Kurz- und Langdruck (650ms)" style="text;html=1;fontSize=16;fontStyle=bold;align=center;" vertex="1" parent="1">
-          <mxGeometry x="150" y="30" width="700" height="30" as="geometry"/>
-        </mxCell>
-        <mxCell id="state-0" value="AUS (0)&#10;Button grau&#10;Tonsuche" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000;strokeWidth=2;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="150" y="150" width="150" height="120" as="geometry"/>
-        </mxCell>
-        <mxCell id="state-1" value="TON AN (1)&#10;Button grün&#10;Nur Suchen" style="ellipse;whiteSpace=wrap;html=1;fillColor=#99ff99;strokeColor=#000;strokeWidth=2;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="500" y="150" width="150" height="120" as="geometry"/>
-        </mxCell>
-        <mxCell id="state-2" value="TON REC (2)&#10;Button orange&#10;Aufnahme" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffcc99;strokeColor=#000;strokeWidth=2;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="500" y="400" width="150" height="120" as="geometry"/>
-        </mxCell>
-        <mxCell id="edge-01-short" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.2;exitDx=0;exitDy=0;entryX=0;entryY=0.2;entryDx=0;entryDy=0;strokeColor=#333;strokeWidth=2;" edge="1" source="state-0" target="state-1" parent="1">
-          <mxCell id="label-01" value="Kurzdruck&#10;0 → 1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;rounded=0;fontSize=11;fontColor=#000;backgroundColor=#e8f5e9;fillColor=#e8f5e9;" vertex="1" connectable="0" parent="edge-01-short">
-            <mxGeometry x="0" y="-25" relative="1" as="geometry"/>
-          </mxCell>
-        </mxCell>
-        <mxCell id="edge-12-short" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.95;exitY=1;exitDx=0;exitDy=0;entryX=0.95;entryY=0;entryDx=0;entryDy=0;strokeColor=#333;strokeWidth=2;" edge="1" source="state-1" target="state-2" parent="1">
-          <mxCell id="label-12" value="Kurzdruck&#10;1 → 2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;rounded=0;fontSize=11;fontColor=#000;backgroundColor=#ffe8b6;fillColor=#ffe8b6;" vertex="1" connectable="0" parent="edge-12-short">
-            <mxGeometry x="30" y="0" relative="1" as="geometry"/>
-          </mxCell>
-        </mxCell>
-        <mxCell id="edge-21-short" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.05;exitY=0;exitDx=0;exitDy=0;entryX=0.05;entryY=1;entryDx=0;entryDy=0;strokeColor=#333;strokeWidth=2;" edge="1" source="state-2" target="state-1" parent="1">
-          <mxCell id="label-21" value="Kurzdruck&#10;2 → 1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;rounded=0;fontSize=11;fontColor=#000;backgroundColor=#ffe8b6;fillColor=#ffe8b6;" vertex="1" connectable="0" parent="edge-21-short">
-            <mxGeometry x="-40" y="0" relative="1" as="geometry"/>
-          </mxCell>
-        </mxCell>
-        <mxCell id="edge-10-long" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ff5252;strokeWidth=3;fontSize=11;dashed=1;" edge="1" source="state-1" target="state-0" parent="1">
-          <mxCell id="label-10" value="Langdruck (≥650ms)&#10;1 → 0" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;rounded=0;fontSize=11;fontColor=#d32f2f;fontStyle=bold;backgroundColor=#ffebee;fillColor=#ffebee;" vertex="1" connectable="0" parent="edge-10-long">
-            <mxGeometry x="0" y="-40" relative="1" as="geometry"/>
-          </mxCell>
-        </mxCell>
-        <mxCell id="info-box" value="WICHTIG: Ab Modus 2 toggelt Kurzdruck nur zwischen 1 ↔ 2&#10;Langdruck nur aus Modus 1 möglich (schaltet auf 0)" style="shape=note;html=1;noLabel=0;textAlign=left;whiteSpace=wrap;fontSize=10;fillColor=#fffacd;strokeColor=#ccc;" vertex="1" parent="1">
-          <mxGeometry x="150" y="650" width="600" height="80" as="geometry"/>
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
+<mxfile host="app.diagrams.net" modified="2026-03-26T10:00:00.000Z" agent="5.0" version="20.8.20" etag="xyz">
+    <diagram id="tonsuche-flow" name="Tonsuche Kurz-Langdruck">
+        <mxGraphModel dx="1000" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="900" background="none" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Tonsuche – Three State Machine with Short &amp; Long Press" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="100" y="20" width="800" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="state0" value="AUS (0)&#10;Button: grau&#10;&quot;Tonsuche&quot;" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#f0f0f0;strokeColor=#000;strokeWidth=2;fontSize=11" parent="1" vertex="1">
+                    <mxGeometry x="150" y="140" width="140" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="state1" value="TON AN (1)&#10;Button: grün&#10;Nur Suchen" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#7fbf7f;strokeColor=#000;strokeWidth=2;fontSize=11" parent="1" vertex="1">
+                    <mxGeometry x="550" y="140" width="140" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="state2" value="TON REC (2)&#10;Button: orange&#10;Aufnahme" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#e8b366;strokeColor=#000;strokeWidth=2;fontSize=11" parent="1" vertex="1">
+                    <mxGeometry x="550" y="420" width="140" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="a01" value="Kurz&#10;0→1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;strokeWidth=2;fontSize=10" parent="1" source="state0" target="state1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="290" y="100" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a12" value="Kurz&#10;1→2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;fontSize=10" parent="1" source="state1" target="state2" edge="1">
+                    <mxGeometry x="20" relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a21" value="Kurz&#10;2→1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;strokeWidth=2;fontSize=10" parent="1" source="state2" target="state1" edge="1">
+                    <mxGeometry x="-20" relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a10" value="Lang (≥650ms)&#10;1→0" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ff0000;strokeWidth=3;dashed=1;fontSize=10;fontColor=#ff0000" parent="1" source="state1" target="state0" edge="1">
+                    <mxGeometry y="-40" relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="Key Rules:&#10;• Kurzdruck aus 0: 0→1&#10;• Kurzdruck aus 1: 1→2&#10;• Ab dann toggelt Kurzdruck zwischen 1↔2&#10;• Langdruck NUR aus Modus 1: 1→0" style="shape=note;html=1;noLabel=0;align=left;fontSize=10;fillColor=#fffacd;strokeColor=#666" parent="1" vertex="1">
+                    <mxGeometry x="150" y="680" width="600" height="120" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
 </mxfile>
