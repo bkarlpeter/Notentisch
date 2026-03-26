@@ -288,7 +288,10 @@ Das Skript nutzt automatisch:
 
 Die Funktion ist für lokales Arbeiten gedacht: Audio wird nur über den lokalen Server (`127.0.0.1`) in den Projektordner `mysounds/` geschrieben.
 
-Stand der Implementierung: 24.03.2026
+**Übersicht des State-Diagramms:**
+Ein visueller Überblick über den Kurz-/Langdruck-Flow ist im Diagramm `Dokumentation/Tonsuche_Kurz-Langdruck.drawio` zu finden (mit Draw.io zu öffnen).
+
+Stand der Implementierung: 26.03.2026 (Kurz-/Langdruck-Modus)
 
 - Drei Zustände über den Button `Tonsuche`:
   - `Aus`
