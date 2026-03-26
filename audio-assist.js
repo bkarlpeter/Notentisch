@@ -877,10 +877,13 @@ async function finalizeRecordedAudio(state, fingerprint) {
         return false;
     }
 
+    let targetCardIds = [String(state.cardId)];
     if (isReplaceAudioByTitleEnabled()) {
         const title = getCardTitleById(state.cardId) || state.title || '';
         const oldPaths = collectAudioPathsForTitle(title);
         clearAudioReferenceForTitle(title);
+        targetCardIds = collectCardIdsForTitle(title, state.cardId);
+        if (!targetCardIds.length) targetCardIds = [String(state.cardId)];
         for (const oldPath of new Set(oldPaths)) {
             if (String(oldPath).trim() !== String(uploadResult.path).trim()) {
                 await deleteAudioFileByPath(oldPath);
@@ -888,15 +891,20 @@ async function finalizeRecordedAudio(state, fingerprint) {
         }
     }
 
-    writeAudioMetadataToCard(state.cardId, {
-        path: uploadResult.path,
-        mimeType: state.mimeType,
-        fingerprint,
-        capturedAt: new Date().toISOString(),
-        appendReference: true
-    });
+    const capturedAt = new Date().toISOString();
+    for (const targetCardId of targetCardIds) {
+        writeAudioMetadataToCard(targetCardId, {
+            path: uploadResult.path,
+            mimeType: state.mimeType,
+            fingerprint,
+            capturedAt,
+            appendReference: true
+        });
+    }
     getRenderApi()?.resetCardRenderCache();
-    syncRenderedAudioBadge(state.cardId);
+    for (const targetCardId of targetCardIds) {
+        syncRenderedAudioBadge(targetCardId);
+    }
 
     if (typeof saveXml === 'function') {
         try {
@@ -1497,4 +1505,29 @@ if (document.readyState === 'loading') {
 } else {
     installAudioAssistButtonPressHandler();
     updateAudioAssistUi();
+}
+
+function collectCardIdsForTitle(title, sourceCardId = null) {
+    const cardNodes = getRenderApi()?.getCardNodes() || [];
+    if (!xmlData || !cardNodes.length) return [];
+    const titleKey = String(title || '').trim();
+    const sourceNode = sourceCardId !== null ? (getRenderApi()?.getCardNodeById(sourceCardId) || null) : null;
+
+    const normalizeStorageKey = (rawPath) => {
+        const value = String(rawPath || '').trim().replace(/\\/g, '/').toLowerCase();
+        if (!value) return '';
+        return value.split('#')[0].trim();
+    };
+
+    const sourceStorageKey = normalizeStorageKey(sourceNode?.querySelector('Speicherort')?.textContent || '');
+    if (!titleKey && !sourceStorageKey) return [];
+
+    return cardNodes.map((cardNode, idx) => {
+        const cardTitle = (cardNode.querySelector('Titel')?.textContent || '').trim();
+        const cardStorageKey = normalizeStorageKey(cardNode.querySelector('Speicherort')?.textContent || '');
+        const sameTitle = titleKey && cardTitle === titleKey;
+        const sameStorage = sourceStorageKey && cardStorageKey === sourceStorageKey;
+        if (!sameTitle && !sameStorage) return null;
+        return String(idx);
+    }).filter(Boolean);
 }

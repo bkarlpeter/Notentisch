@@ -41,6 +41,12 @@
 		return String(filePath).trim().length > 0;
 	}
 
+	function normalizeStorageKey(rawPath) {
+		const value = String(rawPath || '').trim().replace(/\\/g, '/').toLowerCase();
+		if (!value) return '';
+		return value.split('#')[0].trim();
+	}
+
 	function isAudioBadgeEnabled() {
 		if (typeof settings !== 'undefined' && typeof settings?.showAudioBadge === 'boolean') {
 			return settings.showAudioBadge;
@@ -378,11 +384,27 @@
 		const limit = getStackCount();
 		const overlapCount = getConfiguredBatchOverlap(limit);
 
-		cards.forEach((cardEl, idx) => {
+		const cardMeta = cards.map((cardEl, idx) => {
 			const titel = cardEl.querySelector('Titel')?.textContent || 'Unbekannt';
 			const speicherort = cardEl.querySelector('Speicherort')?.textContent || '';
 			const status = cardEl.querySelector('Arbeitsstatus')?.textContent || 'zurueckgestellt';
-			const hasAudioReference = cardHasAudioReference(cardEl);
+			const hasOwnAudioReference = cardHasAudioReference(cardEl);
+			return { idx, titel, speicherort, status, hasOwnAudioReference, storageKey: normalizeStorageKey(speicherort) };
+		});
+
+		const hasAudioByTitle = new Map();
+		const hasAudioByStorage = new Map();
+		cardMeta.forEach((entry) => {
+			if (!entry.hasOwnAudioReference) return;
+			hasAudioByTitle.set(String(entry.titel || ''), true);
+			if (entry.storageKey) hasAudioByStorage.set(entry.storageKey, true);
+		});
+
+		cardMeta.forEach((entry) => {
+			const { idx, titel, speicherort, status, hasOwnAudioReference, storageKey } = entry;
+			const hasAudioReference = hasOwnAudioReference
+				|| hasAudioByTitle.get(String(titel || '')) === true
+				|| (!!storageKey && hasAudioByStorage.get(storageKey) === true);
 
 			let quadrantId = 'Q1';
 			if (status.includes('wiederholen')) quadrantId = 'Q2';

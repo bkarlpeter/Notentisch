@@ -317,9 +317,6 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     if (renderApi && typeof renderApi.syncVisibleCardAudioBadges === 'function') {
         renderApi.syncVisibleCardAudioBadges();
     }
-    if (shouldRerender && renderApi && typeof renderApi.renderBoard === 'function' && typeof xmlData !== 'undefined' && xmlData) {
-        renderApi.renderBoard();
-    }
 }
 
 function applyBtnBaseColor(color) {
