@@ -311,11 +311,13 @@ Stand der Implementierung: 24.03.2026
 ### Manueller Kurztest (ca. 2 Minuten)
 
 1. `board.html` öffnen und XML laden.
-2. Einen Titel in den CENTER ziehen.
-3. `Tonsuche` auf `Ton Rec` schalten und Mikrofon erlauben.
-4. 3-5 Sekunden das Referenzmotiv spielen/summen, bis die Aufnahme automatisch stoppt.
-5. `Tonsuche` auf `Ton An` schalten und in ruhiger Umgebung erneut das Motiv spielen/summen.
-6. Erwartung: Nach kurzer stabiler Erkennung wird das passende Blatt automatisch in den CENTER gezogen.
+2. Kurzdruck auf `Tonsuche` → `Ton An` (grün).
+3. Weiterer Kurzdruck → `Ton Rec` (orange).
+4. Einen Titel in den CENTER ziehen.
+5. Mikrofon erlauben und 3-5 Sekunden das Referenzmotiv spielen/summen, bis die Aufnahme automatisch stoppt.
+6. Kurzdruck auf `Ton Rec` um zu `Ton An` zu wechseln.
+7. In ruhiger Umgebung erneut das Motiv spielen/summen.
+8. Erwartung: Nach kurzer stabiler Erkennung wird das passende Blatt automatisch in den CENTER gezogen.
 
 Hinweis zur Strenge:
 - `Advanced > Erkennungs-Strenge = Normal` ist der empfohlene Startwert.
@@ -324,19 +326,23 @@ Hinweis zur Strenge:
 
 ### Ablauf Tonsequenz (Ton Rec)
 
-1. Karte in den CENTER ziehen.
-2. `Tonsuche` auf `Ton Rec` schalten:
-  - Button wird orange.
-  - Zusatzbutton `Loeschen` erscheint.
-3. Sequenz spielen:
-  - während verwertbares Musiksignal erkannt wird, zeigt `Ton Rec` einen weißen Rahmen.
+**Einstieg:**
+1. Sicherstellen, dass `Tonsuche` auf `Aus` (Button: "Tonsuche") steht.
+2. Kurzdruck: `Aus` → `Ton An` (Button wird grün).
+3. Weiterer Kurzdruck: `Ton An` → `Ton Rec` (Button wird orange).
+4. Karte in den CENTER ziehen.
+
+**Während der Aufnahme (Ton Rec aktiv):**
+5. Sequenz spielen/summen:
+  - während verwertbares Musiksignal erkannt wird, zeigt der Button `Ton Rec` einen weißen Rahmen.
   - sobald genug Material gesammelt wurde, stoppt die Aufnahme automatisch und der weiße Rahmen verschwindet.
   - Speichern erfolgt direkt automatisch (kein separater Bestätigungsdialog).
-4. Danach gibt es vier typische Wege:
-  - a) User spielt weiter: es wird nicht weiter aufgenommen, bis bewusst neu gestartet wird.
-  - b) User stoppt/spielt nicht weiter und drückt `Nochmal`: sofortige Neuaufnahme derselben CENTER-Karte, Ablauf startet wieder bei Schritt 3.
-  - c) User drückt den orangefarbenen `Ton Rec`-Button erneut: wechselt zu `Ton An` (Tonhören-Modus, grün). Ein weiterer Druck schaltet die Audio-Automatik vollständig aus.
-  - d) User entfernt das Blatt aus dem CENTER: Aufnahme wird finalisiert, App wartet auf die nächste Karte (kein Suchbetrieb). Sobald eine neue Karte in den CENTER gezogen wird, startet die Aufnahme sofort → Ablauf ab Schritt 3.
+6. Danach gibt es fünf typische Wege:
+  - a) **Neuaufnahme derselben Karte**: Drücke `Nochmal` → sofortige Neuaufnahme, Ablauf ab Schritt 5.
+  - b) **Zu Tonhören (Ton An) wechseln**: Kurzdruck auf den `Ton Rec`-Button → wechselt zu `Ton An` (grün). Das Matching startet, es wird nicht mehr aufgenommen.
+  - c) **Schnell zwischen Rec und An toggeln**: Ab jetzt togglet jeder Kurzdruck zwischen `Ton Rec` (orange) und `Ton An` (grün).
+  - d) **Komplett ausschalten**: Aus `Ton An` (nicht aus `Ton Rec`!) einen Langdruck (>= 650 ms) halten → schaltet auf `Aus` (Button: "Tonsuche").
+  - e) **Neue Karte ziehen**: Entferne die aktuelle Karte aus dem CENTER oder ziehe eine neue → Aufnahme wird finalisiert. Sobald eine neue Karte in den CENTER gezogen wird und `Ton Rec` aktiv ist, startet die Aufnahme sofort → Ablauf ab Schritt 5.
 
 Wichtig:
 - Wenn `Alte Sequenz bei Neuaufnahme = Löschen`, bleibt pro Titel nur die neueste Referenz erhalten.
