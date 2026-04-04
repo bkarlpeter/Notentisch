@@ -793,7 +793,7 @@ async function uploadRecordedAudio(blob, filename) {
             body: blob
         });
     } catch (err) {
-        throw new Error('Lokaler Server nicht erreichbar. Bitte Notentisch neu starten bzw. local_server.py neu starten.');
+        throw new Error('Lokaler Server nicht erreichbar. Bitte Notentisch neu starten bzw. python/local_server.py neu starten.');
     }
 
     if (!response.ok) {
@@ -1448,17 +1448,17 @@ function toggleAudioAssistMode() {
         nextMode = 1;
         audioAssistDirection = 1;
     } else if (audioAssistMode === 2) {
-        // In Aufnahme: Kurzdruck zurück zu Ton An.
-        nextMode = 1;
+        // In Aufnahme: jeder Druck → Aus. Kein versehentliches Feststecken mehr.
+        nextMode = 0;
         audioAssistDirection = -1;
     } else {
-        // mode === 1: Kurzdruck auf Aufnahme, Langdruck auf Aus.
+        // mode === 1 (Ton An): Langdruck → Aufnahme, Kurzdruck → Aus.
         if (isLongPress) {
-            nextMode = 0;
-            audioAssistDirection = -1;
-        } else {
             nextMode = 2;
             audioAssistDirection = 1;
+        } else {
+            nextMode = 0;
+            audioAssistDirection = -1;
         }
     }
 

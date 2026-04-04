@@ -3,6 +3,8 @@ const BOARD_SESSION_STATE_KEY = 'notentischBoardSessionState';
 const BOARD_SESSION_FALLBACK_KEY = 'notentischBoardSessionStateFallback';
 const BOARD_CARD_LAYOUT_KEY = 'notentischBoardCardLayoutBuffer';
 const BOARD_HISTORY_RETURN_KEY = 'notentischReturnToBoardViaHistory';
+const BOARD_PENDING_CONFIG_RETURN_KEY = 'notentischPendingConfigReturn';
+const BOARD_RETURN_FULLSCREEN_KEY = 'notentischReturnFullscreen';
 let shutdownSessionToken = null;
 const USER_CONFIG_DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS
     ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS }
@@ -400,6 +402,12 @@ function openConfigPage() {
 
     try {
         sessionStorage.setItem(BOARD_HISTORY_RETURN_KEY, String(Date.now()));
+        sessionStorage.setItem(BOARD_PENDING_CONFIG_RETURN_KEY, '1');
+    } catch (err) {
+    }
+
+    try {
+        sessionStorage.setItem(BOARD_RETURN_FULLSCREEN_KEY, document.fullscreenElement ? '1' : '0');
     } catch (err) {
     }
 
@@ -476,7 +484,7 @@ function restoreBoardSessionState() {
 
     if (parsed && parsed.boardSnapshot && typeof restoreBoardSnapshotFromConfig === 'function') {
         restoreBoardSnapshotFromConfig(parsed.boardSnapshot, {
-            preferDomRestore: !!cardLayoutSnapshot
+            preferDomRestore: true
         });
     }
 
@@ -666,7 +674,18 @@ function initializeBoardUi() {
         }
     })();
 
-    if (settings.autoFullscreenOnStart && !isConfigHistoryReturn) {
+    const shouldRestoreFullscreenOnConfigReturn = (() => {
+        if (!isConfigHistoryReturn) return false;
+        try {
+            // Fallback: bei Config-Rückkehr standardmäßig wieder in Fullscreen gehen,
+            // auch wenn der Browser den vorherigen Zustand nicht eindeutig meldet.
+            return sessionStorage.getItem(BOARD_RETURN_FULLSCREEN_KEY) !== '0';
+        } catch (err) {
+            return false;
+        }
+    })();
+
+    if (settings.autoFullscreenOnStart && (!isConfigHistoryReturn || shouldRestoreFullscreenOnConfigReturn)) {
         setTimeout(() => {
             applyDefaultFullscreenState();
         }, 0);
@@ -675,6 +694,7 @@ function initializeBoardUi() {
     if (isConfigHistoryReturn) {
         try {
             sessionStorage.removeItem(BOARD_HISTORY_RETURN_KEY);
+            sessionStorage.removeItem(BOARD_RETURN_FULLSCREEN_KEY);
         } catch (err) {
         }
     }
