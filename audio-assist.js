@@ -3,6 +3,7 @@ let audioAssistDirection = 1; // 1=aufwärts (0→1→2), -1=abwärts (2→1→0
 let audioAssistMonitorTimer = null;
 let audioAssistBusy = false;
 let audioAssistPressStartedAt = 0;
+let audioAssistLastToggleAt = 0;
 
 let audioRecordState = null;
 let audioMatchState = null;
@@ -1434,7 +1435,15 @@ function installAudioAssistButtonPressHandler() {
     btn.dataset.pressBound = 'true';
 }
 
-function toggleAudioAssistMode() {
+function toggleAudioAssistMode(event) {
+    if (event && event.isTrusted === false) return;
+
+    const nowTs = Date.now();
+    if (audioAssistLastToggleAt > 0 && (nowTs - audioAssistLastToggleAt) < 220) {
+        return;
+    }
+    audioAssistLastToggleAt = nowTs;
+
     // Wenn Fingerprint bereit zur Speicherung, wird es verworfen beim Mode-Wechsel
     audioReadyToSaveState = null;
     audioSaveWasConfirmed = false;

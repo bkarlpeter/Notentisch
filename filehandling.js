@@ -9,7 +9,6 @@ let saveWarnBlinkTimer = null;
 let hasUnsavedChanges = false;
 let isPlayMode = true;
 let saveCenterSettingsModeActive = false;
-const BOARD_PENDING_CONFIG_RETURN_KEY = 'notentischPendingConfigReturn';
 
 function getRenderApi() {
     return window.NotentischRender || null;
@@ -19,8 +18,96 @@ function persistSafetyBackup() {}
 
 function clearSafetyBackup() {}
 
+function setSaveWarningState(active, message) {
+    const saveBtn = document.getElementById('modeToggleBtn');
+    const hint = document.getElementById('saveDateHint');
+
+    if (saveWarnBlinkTimer) {
+        clearInterval(saveWarnBlinkTimer);
+        saveWarnBlinkTimer = null;
+    }
+
+    if (!saveBtn) return;
+
+    saveBtn.style.border = '';
+    saveBtn.style.outline = '';
+    saveBtn.style.outlineOffset = '';
+    saveBtn.style.boxShadow = '';
+    saveBtn.style.opacity = '1';
+
+    if (active) {
+        let on = false;
+        let toggles = 0;
+        const maxToggles = 6;
+        saveWarnBlinkTimer = setInterval(() => {
+            on = !on;
+            toggles++;
+            saveBtn.style.outline = on ? '3px solid #ffd54a' : '3px solid transparent';
+            saveBtn.style.outlineOffset = '1px';
+            saveBtn.style.boxShadow = on ? '0 0 0 2px rgba(255, 213, 74, 0.35)' : '';
+
+            if (toggles >= maxToggles) {
+                clearInterval(saveWarnBlinkTimer);
+                saveWarnBlinkTimer = null;
+                saveBtn.style.outline = '';
+                saveBtn.style.outlineOffset = '';
+                saveBtn.style.boxShadow = '';
+            }
+        }, 260);
+        if (hint) hint.textContent = message || '';
+    } else {
+        if (hint && message) hint.textContent = message;
+    }
+}
+
+function markUnsavedChange() {
+    hasUnsavedChanges = true;
+}
+
+function getModeHintText() {
+    return isPlayMode
+        ? 'Modus: Spielen (Datum automatisch)'
+        : 'Modus: Sichten (kein Datum)';
+}
+
+function applyModeButtonState() {
+    const btn = document.getElementById('modeToggleBtn');
+    if (!btn) return;
+
+    btn.textContent = isPlayMode ? 'Spielen' : 'Sichten';
+    btn.style.background = isPlayMode ? '#27ae60' : '#3498db';
+    btn.style.color = '#fff';
+    btn.style.fontWeight = 'bold';
+    btn.style.border = 'none';
+
+    const hint = document.getElementById('saveDateHint');
+    if (hint) hint.textContent = getModeHintText();
+}
+
+function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    applyModeButtonState();
+}
+
 function restoreSafetyBackupIfAvailable() {
     return false;
+}
+
+function setSaveDateState(enabled, hintText) {
+    const btn = document.getElementById('saveDateBtn');
+    const hint = document.getElementById('saveDateHint');
+    if (btn) {
+        btn.disabled = !enabled;
+        btn.style.backgroundColor = enabled ? '' : '#6a7480';
+        btn.style.color = 'white';
+        btn.style.fontWeight = enabled ? 'bold' : 'normal';
+        btn.style.marginLeft = 'auto';
+        btn.style.border = '1px solid #a3b1c2';
+        btn.style.opacity = '1';
+    }
+    if (hint) {
+        hint.textContent = hintText || '';
+    }
 }
 // Speichere Ordner-Handle in localStorage für Persistenz
 /*
@@ -472,9 +559,559 @@ function setStatusText(text) {
 }
 
 // Render-/Stack-Logik wurde nach render.js ausgelagert.
-// Search-Overlay logic moved to board-search.js.
-// Drag-and-drop logic moved to board-dnd.js.
-// Config-session snapshot/restore helpers moved to board-session-state.js.
+
+function setupDropListeners() {
+    const dropTargets = ['Q1', 'Q2', 'Q3', 'Q4', 'CENTER'];
+    dropTargets.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.dropBound) {
+            // Inline-Handler in board.html nutzen, um doppelte Drop-Verarbeitung zu vermeiden.
+            if (typeof el.ondragover !== 'function') {
+                el.addEventListener('dragover', (e) => e.preventDefault());
+            }
+            if (typeof el.ondrop !== 'function') {
+                el.addEventListener('drop', drop);
+            }
+            el.dataset.dropBound = 'true';
+        }
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Suchfunktion
+// ---------------------------------------------------------------------------
+let pendingSearchMatch = null;
+
+function openSearchOverlay() {
+    const overlay = document.getElementById('search-overlay');
+    const input   = document.getElementById('search-input');
+    if (!overlay) return;
+    pendingSearchMatch = null;
+    overlay.classList.add('visible');
+    if (input) { input.value = ''; input.focus(); }
+    renderSearchResults([]);
+    setSearchMessage('');
+    const fertigBtn = document.querySelector('#search-panel .search-btn-row .btn');
+    if (fertigBtn) fertigBtn.textContent = 'Abbrechen';
+}
+
+function closeSearchOverlay() {
+    if (pendingSearchMatch) {
+        executeSearchDrop(pendingSearchMatch);
+        pendingSearchMatch = null;
+    }
+    const overlay = document.getElementById('search-overlay');
+    if (overlay) overlay.classList.remove('visible');
+}
+
+function searchKeyDown(event) {
+    if (event.key === 'Escape') {
+        pendingSearchMatch = null;
+        const overlay = document.getElementById('search-overlay');
+        if (overlay) overlay.classList.remove('visible');
+    }
+}
+
+const STATUS_LABELS = {
+    'gelernt':        'Stapel Gelernt (Q4)',
+    'geübt':          'Stapel Geübt (Q3)',
+    'wiederholen':    'Stapel Wiederholen (Q2)',
+    'zurückgestellt': 'Stapel Zurückgestellt (Q1)'
+};
+
+function getStatusLabel(status) {
+    const s = (status || '').toLowerCase();
+    if (s.includes('gelernt'))     return STATUS_LABELS['gelernt'];
+    if (s.includes('geübt'))       return STATUS_LABELS['geübt'];
+    if (s.includes('wiederholen')) return STATUS_LABELS['wiederholen'];
+    return STATUS_LABELS['zurückgestellt'];
+}
+
+function setSearchMessage(msg) {
+    const el = document.getElementById('search-message');
+    if (el) el.textContent = msg;
+}
+
+function renderSearchResults(matches) {
+    const list = document.getElementById('search-result-list');
+    if (!list) return;
+    list.innerHTML = '';
+    matches.forEach(m => {
+        const li = document.createElement('li');
+        li.innerHTML =
+            '<div class="result-title">' + m.titel.replace(/</g, '&lt;') + '</div>' +
+            '<div class="result-status">' + getStatusLabel(m.status) + '</div>';
+        li.addEventListener('click', () => pickSearchResult(m));
+        list.appendChild(li);
+    });
+}
+
+function searchCards() {
+    const input = document.getElementById('search-input');
+    const query = (input ? input.value : '').trim().toLowerCase();
+    setSearchMessage('');
+    if (!xmlData || query.length < 1) { renderSearchResults([]); return; }
+
+    const nodes = getRenderApi()?.getCardNodes() || [];
+    const matches = [];
+    nodes.forEach((node, idx) => {
+        const titel  = node.querySelector('Titel')?.textContent || '';
+        const status = node.querySelector('Arbeitsstatus')?.textContent || '';
+        const speicherort = node.querySelector('Speicherort')?.textContent || '';
+        if (titel.toLowerCase().includes(query)) {
+            matches.push({ idx, titel, status, speicherort });
+        }
+    });
+    renderSearchResults(matches);
+    if (matches.length === 0) setSearchMessage('Kein Blatt gefunden.');
+}
+
+function pickSearchResult(match) {
+    if (!xmlData) return;
+    if (currentPdfDoc) {
+        alert('Tisch leeren!');
+        return;
+    }
+    pendingSearchMatch = match;
+
+    const statusLabel = getStatusLabel(match.status);
+    setSearchMessage('Ich entnehme das Blatt \u201e' + match.titel + '\u201c aus deinem ' + statusLabel.replace(/\s*\(Q\d\)/, '') + '.');
+    renderSearchResults([]);
+    const input = document.getElementById('search-input');
+    if (input) input.value = '';
+
+    const fertigBtn = document.querySelector('#search-panel .search-btn-row .btn');
+    if (fertigBtn) fertigBtn.textContent = 'Fertig';
+}
+
+function executeSearchDrop(match) {
+    if (!xmlData || !match) return;
+
+    // Quadrant bestimmen
+    const s = (match.status || '').toLowerCase();
+    let quadId = 'Q1';
+    if (s.includes('wiederholen'))  quadId = 'Q2';
+    else if (s.includes('geübt'))   quadId = 'Q3';
+    else if (s.includes('gelernt')) quadId = 'Q4';
+
+    // Position der Karte im Quadranten ermitteln
+    const cards = getRenderApi()?.getCardNodes() || [];
+    let posInQuad = 0;
+    let counter = 0;
+    cards.forEach((node, idx) => {
+        const st = node.querySelector('Arbeitsstatus')?.textContent || '';
+        let q = 'Q1';
+        if (st.includes('wiederholen')) q = 'Q2';
+        else if (st.includes('geübt')) q = 'Q3';
+        else if (st.includes('gelernt')) q = 'Q4';
+        if (q === quadId) {
+            if (idx === match.idx) posInQuad = counter;
+            counter++;
+        }
+    });
+
+    getRenderApi()?.setQuadrantOffset(quadId, posInQuad);
+    getRenderApi()?.renderBoard();
+
+    const cardEl = document.getElementById('card-' + match.idx);
+    if (!cardEl) return;
+
+    const userConfig = getUserConfigForDropBehavior();
+    const shouldApplyStoredCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+    if (typeof discardCenterPendingScrollState === 'function') {
+        discardCenterPendingScrollState();
+    }
+    cardEl.classList.add('in-center');
+    lastCardIdFromCenter = cardEl.dataset.cardid;
+    activeCenterCardId   = cardEl.dataset.cardid;
+    if (shouldApplyStoredCenterView) {
+        applyCenterSettingsFromXml(cardEl.dataset.cardid);
+    }
+    showPdfPages(cardEl.dataset.pdf);
+    setSaveDateState(false, getModeHintText());
+}
+
+function drag(event) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text', event.currentTarget.id);
+    console.log('Drag started: ' + event.currentTarget.id);
+}
+
+function getUserConfigForDropBehavior() {
+    if (typeof loadUserConfig === 'function') {
+        return loadUserConfig();
+    }
+    return {
+        useZoomSettingsOnDrop: true,
+        dropGlowDurationMs: 1400
+    };
+}
+
+function placeCardAtTopOfQuadrant(targetQuadrant, card) {
+    if (!targetQuadrant || !card) return;
+    const firstCard = targetQuadrant.querySelector('.card-container');
+    if (firstCard) {
+        targetQuadrant.insertBefore(card, firstCard);
+        return;
+    }
+    const controls = targetQuadrant.querySelector('.quadrant-stack-controls');
+    if (controls) {
+        targetQuadrant.insertBefore(card, controls);
+        return;
+    }
+    targetQuadrant.appendChild(card);
+}
+
+function applyDropGlow(cardElement, durationMs) {
+    if (!cardElement) return;
+    const duration = Math.max(0, Math.floor(Number(durationMs) || 0));
+    if (duration <= 0) return;
+
+    cardElement.classList.remove('drop-glow');
+    void cardElement.offsetWidth;
+    cardElement.classList.add('drop-glow');
+
+    setTimeout(() => {
+        cardElement.classList.remove('drop-glow');
+    }, duration);
+}
+
+function clearCenterAfterCardExit() {
+    if (typeof currentPdfDoc !== 'undefined') currentPdfDoc = null;
+    if (typeof currentPdfPath !== 'undefined') currentPdfPath = '';
+    if (typeof totalPages !== 'undefined') totalPages = 0;
+    if (typeof currentPageOffset !== 'undefined') currentPageOffset = 0;
+    if (typeof discardCenterPendingScrollState === 'function') {
+        discardCenterPendingScrollState();
+    }
+    const centerContainer = document.getElementById('center-content');
+    if (centerContainer) {
+        centerContainer.innerHTML = '';
+    }
+    if (typeof updatePageInfo === 'function') {
+        updatePageInfo([]);
+    }
+    if (typeof updateScrollButtons === 'function') {
+        updateScrollButtons();
+    }
+    updateSaveCenterSettingsButtonState();
+}
+
+function captureCenterVisualSnapshot() {
+    const centerContainer = document.getElementById('center-content');
+    const pageInfo = document.getElementById('pageInfo');
+    if (!centerContainer) return null;
+
+    const canvases = Array.from(centerContainer.querySelectorAll('#center-pages-host canvas'));
+    if (!canvases.length) return null;
+
+    const pages = canvases.map((canvas) => ({
+        dataUrl: canvas.toDataURL('image/png'),
+        width: canvas.style.width || '',
+        height: canvas.style.height || ''
+    }));
+
+    return {
+        pages,
+        pageInfoText: pageInfo ? pageInfo.textContent : '',
+        scrollLeft: centerContainer.scrollLeft || 0,
+        scrollTop: centerContainer.scrollTop || 0
+    };
+}
+
+function restoreCenterVisualSnapshot(snapshot) {
+    if (!snapshot || !Array.isArray(snapshot.pages) || !snapshot.pages.length) return false;
+    const centerContainer = document.getElementById('center-content');
+    if (!centerContainer) return false;
+
+    const host = document.createElement('div');
+    host.id = 'center-pages-host';
+    host.style.display = 'flex';
+    host.style.alignItems = 'flex-start';
+    host.style.flex = '0 0 auto';
+    host.style.width = 'max-content';
+
+    snapshot.pages.forEach((page) => {
+        if (!page || !page.dataUrl) return;
+        const img = document.createElement('img');
+        img.src = page.dataUrl;
+        img.style.width = page.width || 'auto';
+        img.style.height = page.height || 'auto';
+        img.style.border = '1px solid #555';
+        img.style.borderRadius = '4px';
+        img.style.margin = '2px';
+        host.appendChild(img);
+    });
+
+    centerContainer.innerHTML = '';
+    centerContainer.appendChild(host);
+
+    if (Number.isFinite(Number(snapshot.scrollLeft))) {
+        centerContainer.scrollLeft = Number(snapshot.scrollLeft);
+    }
+    if (Number.isFinite(Number(snapshot.scrollTop))) {
+        centerContainer.scrollTop = Number(snapshot.scrollTop);
+    }
+
+    const pageInfo = document.getElementById('pageInfo');
+    if (pageInfo && typeof snapshot.pageInfoText === 'string') {
+        pageInfo.textContent = snapshot.pageInfoText;
+    }
+
+    if (typeof updateScrollButtons === 'function') {
+        setTimeout(() => updateScrollButtons(), 30);
+    }
+
+    return true;
+}
+
+function getBoardSnapshotForConfig() {
+    if (!xmlData) return null;
+
+    let xmlText = '';
+    try {
+        xmlText = new XMLSerializer().serializeToString(xmlData);
+    } catch {
+        return null;
+    }
+
+    return {
+        xmlText,
+        xmlFileName: xmlFileName || null,
+        quadrantOffsets: getRenderApi()?.getQuadrantOffsets() || { Q1: 0, Q2: 0, Q3: 0, Q4: 0 },
+        centerVisual: (() => { try { return captureCenterVisualSnapshot(); } catch (e) { return null; } })(),
+        stackCount: getRenderApi()?.getStackCount() || 8,
+        lastCardIdFromCenter,
+        activeCenterCardId
+    };
+}
+
+function getCardLayoutSnapshotForConfig() {
+    const quadrants = { Q1: [], Q2: [], Q3: [], Q4: [] };
+
+    ['Q1', 'Q2', 'Q3', 'Q4'].forEach((quadrantId) => {
+        const quadrant = document.getElementById(quadrantId);
+        if (!quadrant) return;
+        quadrants[quadrantId] = Array.from(quadrant.querySelectorAll('.card-container[data-cardid]'))
+            .map((el) => String(el.dataset.cardid || '').trim())
+            .filter(Boolean);
+    });
+
+    let centerCardId = activeCenterCardId;
+    if (centerCardId === null || centerCardId === undefined || centerCardId === '') {
+        const inCenter = document.querySelector('.card-container.in-center[data-cardid]');
+        centerCardId = inCenter ? inCenter.dataset.cardid : null;
+    }
+
+    return {
+        savedAt: Date.now(),
+        quadrants,
+        centerCardId: (centerCardId !== null && centerCardId !== undefined && centerCardId !== '') ? String(centerCardId) : null,
+        stackCount: getRenderApi()?.getStackCount() || 8,
+        quadrantOffsets: getRenderApi()?.getQuadrantOffsets() || { Q1: 0, Q2: 0, Q3: 0, Q4: 0 }
+    };
+}
+
+function applyCardLayoutSnapshotFromConfig(snapshot, options = {}) {
+    if (!snapshot || typeof snapshot !== 'object') return false;
+
+    const attempts = Math.max(1, Number(options.attempts) || 18);
+    const retryDelayMs = Math.max(20, Number(options.retryDelayMs) || 80);
+    let remaining = attempts;
+
+    const applyOnce = () => {
+        const stackInput = document.getElementById('stackCount');
+        if (stackInput && Number.isFinite(Number(snapshot.stackCount))) {
+            stackInput.value = String(Math.max(1, Math.min(10, Number(snapshot.stackCount))));
+        }
+
+        if (snapshot.quadrantOffsets && typeof snapshot.quadrantOffsets === 'object') {
+            getRenderApi()?.setQuadrantOffsets(snapshot.quadrantOffsets);
+        }
+
+        const quadrants = snapshot.quadrants || {};
+        let movedAny = false;
+
+        ['Q1', 'Q2', 'Q3', 'Q4'].forEach((quadrantId) => {
+            const ids = Array.isArray(quadrants[quadrantId]) ? quadrants[quadrantId] : [];
+            if (!ids.length) return;
+
+            const target = document.getElementById(quadrantId);
+            if (!target) return;
+
+            for (let i = ids.length - 1; i >= 0; i--) {
+                const cardId = String(ids[i] || '').trim();
+                if (!cardId) continue;
+                const card = document.querySelector('.card-container[data-cardid="' + cardId + '"]');
+                if (!card) continue;
+                placeCardAtTopOfQuadrant(target, card);
+                movedAny = true;
+            }
+        });
+
+        const allCards = document.querySelectorAll('.card-container.in-center');
+        allCards.forEach((el) => el.classList.remove('in-center'));
+
+        if (snapshot.centerCardId !== null && snapshot.centerCardId !== undefined && snapshot.centerCardId !== '') {
+            const centerCard = document.querySelector('.card-container[data-cardid="' + String(snapshot.centerCardId) + '"]');
+            if (centerCard) {
+                centerCard.classList.add('in-center');
+                activeCenterCardId = String(snapshot.centerCardId);
+            }
+        }
+
+        if (movedAny) {
+            getRenderApi()?.updateStackLayout();
+            return true;
+        }
+
+        return false;
+    };
+
+    const tryApply = () => {
+        const done = applyOnce();
+        if (done) return;
+        remaining -= 1;
+        if (remaining <= 0) return;
+        setTimeout(tryApply, retryDelayMs);
+    };
+
+    tryApply();
+    return true;
+}
+
+function restoreBoardSnapshotFromConfig(snapshot, options = {}) {
+    if (!snapshot || !snapshot.xmlText) return false;
+
+    try {
+        const parsedXml = new DOMParser().parseFromString(snapshot.xmlText, 'text/xml');
+        xmlData = parsedXml;
+        getRenderApi()?.resetCardRenderCache();
+        if (snapshot.xmlFileName) {
+            xmlFileName = snapshot.xmlFileName;
+        }
+    } catch {
+        return false;
+    }
+
+    if (snapshot.quadrantOffsets && typeof snapshot.quadrantOffsets === 'object') {
+        getRenderApi()?.setQuadrantOffsets(snapshot.quadrantOffsets);
+    }
+
+    const stackInput = document.getElementById('stackCount');
+    if (stackInput && Number.isFinite(Number(snapshot.stackCount))) {
+        stackInput.value = String(Math.max(1, Math.min(10, Number(snapshot.stackCount))));
+    }
+
+    lastCardIdFromCenter = snapshot.lastCardIdFromCenter ?? null;
+    activeCenterCardId = snapshot.activeCenterCardId ?? null;
+
+    const renderApi = getRenderApi();
+    const preferDomRestore = !!options.preferDomRestore;
+    const hasVisibleCards = document.querySelectorAll('.card-container[data-cardid]').length > 0;
+    const currentStackCount = renderApi?.getStackCount?.();
+    const snapshotStackCount = Number.isFinite(Number(snapshot.stackCount))
+        ? Number(snapshot.stackCount)
+        : null;
+    const stackCountChanged = Number.isFinite(snapshotStackCount)
+        && Number.isFinite(Number(currentStackCount))
+        && Number(snapshotStackCount) !== Number(currentStackCount);
+
+    if (!preferDomRestore || !hasVisibleCards || stackCountChanged) {
+        // Fallback: kompletter Neuaufbau nur wenn kein brauchbares DOM vorhanden ist.
+        renderApi?.renderBoard();
+    }
+
+    renderApi?.syncVisibleCardAudioBadges?.();
+    // Verzögere updateStackLayout() nach renderBoard() mit ausreichend Puffer für DOM-Rendering
+    setTimeout(() => {
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                getRenderApi()?.updateStackLayout();
+            }, 0);
+        });
+    }, 50);
+    if (activeCenterCardId !== null && activeCenterCardId !== undefined) {
+        const centerCard = document.querySelector('.card-container[data-cardid="' + activeCenterCardId + '"]');
+        if (centerCard) {
+            centerCard.classList.add('in-center');
+        }
+    }
+
+    const centerVisualRestored = restoreCenterVisualSnapshot(snapshot.centerVisual);
+
+    return {
+        restored: true,
+        centerVisualRestored
+    };
+}
+
+function drop(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    console.log('Drop on: ' + event.currentTarget.id);
+    
+    const cardId = event.dataTransfer.getData('text');
+    const card = document.getElementById(cardId);
+    if (!card) {
+        console.log('Card nicht gefunden: ' + cardId);
+        return;
+    }
+    
+    const targetId = event.currentTarget.id;
+    const isCenter = targetId === 'CENTER';
+    const isQuadrant = ['Q1', 'Q2', 'Q3', 'Q4'].includes(targetId);
+    
+    console.log('Target: ' + targetId + ', isCenter: ' + isCenter + ', isQuadrant: ' + isQuadrant);
+    
+    if (isCenter) {
+        // Prüfe, ob Center voll ist (PDF bereits geladen)
+        if (currentPdfDoc) {
+            alert('Tisch leeren!');
+            return;
+        }
+        if (card.dataset.pdf) {
+            const userConfig = getUserConfigForDropBehavior();
+            const shouldApplyStoredCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+            if (typeof discardCenterPendingScrollState === 'function') {
+                discardCenterPendingScrollState();
+            }
+            card.classList.add('in-center');
+            lastCardIdFromCenter = card.dataset.cardid;  // Merke für saveDate
+            activeCenterCardId = card.dataset.cardid;
+            if (shouldApplyStoredCenterView) {
+                applyCenterSettingsFromXml(card.dataset.cardid);
+            }
+            showPdfPages(card.dataset.pdf);
+            // Reset Button wenn neue Karte ins CENTER kommt
+            setSaveDateState(false, getModeHintText());
+            console.log('Moved to center, lastCardIdFromCenter = ' + lastCardIdFromCenter);
+        }
+    } else if (isQuadrant) {
+        const userConfig = getUserConfigForDropBehavior();
+        const shouldPersistCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+        const cameFromCenter = card.classList.contains('in-center');
+        if (cameFromCenter && shouldPersistCenterView) {
+            writeCenterSettingsToCardNode(card.dataset.cardid);
+        }
+        placeCardAtTopOfQuadrant(event.currentTarget, card);
+        card.classList.remove('in-center');
+        applyDropGlow(card, userConfig.dropGlowDurationMs);
+        lastCardIdFromCenter = card.dataset.cardid;  // Merke für saveDate auch nach ablegen
+        if (cameFromCenter) {
+            activeCenterCardId = null;
+            clearCenterAfterCardExit();
+        }
+        saveDateToXml(card.dataset.cardid, targetId);
+        if (isPlayMode) {
+            savePlayedDateToXml(card.dataset.cardid);
+        }
+        saveXml(true);
+        console.log('Moved to quadrant: ' + targetId + ', lastCardIdFromCenter = ' + lastCardIdFromCenter);
+        getRenderApi()?.updateStackLayout();
+    }
+}
 
 function resetSaveDateButtonStyle() {
     const btn = document.getElementById('saveDateBtn');
@@ -697,65 +1334,6 @@ function handleViewportResize() {
     getRenderApi()?.updateStackLayout();
 }
 
-function handleBoardPageShow(event) {
-    const renderApi = getRenderApi();
-    if (!renderApi) return;
-
-    const hasPendingConfigReturn = (() => {
-        try {
-            return sessionStorage.getItem(BOARD_PENDING_CONFIG_RETURN_KEY) === '1';
-        } catch {
-            return false;
-        }
-    })();
-
-    if (hasPendingConfigReturn && typeof restoreBoardSessionState === 'function') {
-        restoreBoardSessionState();
-        try {
-            sessionStorage.removeItem(BOARD_PENDING_CONFIG_RETURN_KEY);
-        } catch {
-        }
-        return;
-    }
-
-    // Kein bfcache (persisted=false): DOMContentLoaded hat bereits alles aufgebaut.
-    // Kein erneutes renderBoard() aufrufen, das würde DOM-Positionen überschreiben.
-    if (!event?.persisted) {
-        renderApi.updateStackLayout();
-        return;
-    }
-
-    // bfcache-Wiederherstellung: prüfen ob ein Config-Rücksprung-Snapshot wartet.
-    const hasConfigReturn = (() => {
-        try {
-            return !!(sessionStorage.getItem(BOARD_SESSION_STATE_KEY) ||
-                     localStorage.getItem(BOARD_SESSION_FALLBACK_KEY) ||
-                     localStorage.getItem(BOARD_CARD_LAYOUT_KEY));
-        } catch { return false; }
-    })();
-
-    if (hasConfigReturn && typeof restoreBoardSessionState === 'function') {
-        restoreBoardSessionState();
-        return;
-    }
-
-    const configuredCount = renderApi.getStackCount();
-    const visibleCounts = ['Q1', 'Q2', 'Q3', 'Q4'].map((quadrantId) => {
-        const quadrant = document.getElementById(quadrantId);
-        if (!quadrant) return 0;
-        return quadrant.querySelectorAll('.card-container[data-cardid]:not(.in-center)').length;
-    });
-    const maxVisibleCount = visibleCounts.length ? Math.max(...visibleCounts) : 0;
-
-    if (maxVisibleCount !== configuredCount && xmlData) {
-        // Rebuild from in-memory XML to apply new stack limit without reloading files.
-        renderApi.renderBoard();
-        return;
-    }
-
-    renderApi.updateStackLayout();
-}
-
 function shouldSkipAutoLoadSavedFolder() {
     try {
         if (sessionStorage.getItem('notentischSkipAutoLoadSavedFolder') === '1') {
@@ -806,46 +1384,58 @@ function restoreSaveCenterSettingsModeState() {
     updateSaveCenterSettingsButtonState();
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        setupDropListeners();
-        restorePlayModeState();
+function initializeBoardFilehandling() {
+    const safeRun = (fn) => {
+        try { fn(); } catch (err) {}
+    };
+
+    safeRun(() => setupDropListeners());
+
+    safeRun(() => {
         if (typeof restoreBoardSessionState === 'function') {
             restoreBoardSessionState();
         }
-        try {
-            sessionStorage.removeItem(BOARD_PENDING_CONFIG_RETURN_KEY);
-        } catch {
-        }
-        getRenderApi()?.initializeStackControls();
-        getRenderApi()?.updateStackLayout();
+    });
+
+    safeRun(() => getRenderApi()?.initializeStackControls());
+
+    // Layout erst nach erstem Paint berechnen; darf Board-Start nicht blockieren.
+    setTimeout(() => {
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                safeRun(() => getRenderApi()?.updateStackLayout());
+            }, 0);
+        });
+    }, 150);
+
+    safeRun(() => {
         if (!shouldSkipAutoLoadSavedFolder()) {
             loadSavedFolder();
         }
-        applyModeButtonState();
-        restoreSafetyBackupIfAvailable();
-        restoreSaveCenterSettingsModeState();
-        window.addEventListener('resize', handleViewportResize);
-        window.addEventListener('pageshow', handleBoardPageShow);
     });
+
+    safeRun(() => applyModeButtonState());
+    safeRun(() => restoreSafetyBackupIfAvailable());
+    safeRun(() => restoreSaveCenterSettingsModeState());
+    safeRun(() => window.addEventListener('resize', handleViewportResize));
+
+    // Bei History-/bfcache-Rueckkehr sicherstellen, dass die aktuelle Staffelung angewendet wird.
+    safeRun(() => {
+        window.addEventListener('pageshow', () => {
+            setTimeout(() => {
+                const renderApi = getRenderApi();
+                if (!renderApi) return;
+                if (xmlData) {
+                    renderApi.renderBoard?.();
+                }
+                renderApi.updateStackLayout?.();
+            }, 0);
+        });
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeBoardFilehandling);
 } else {
-    setupDropListeners();
-    restorePlayModeState();
-    if (typeof restoreBoardSessionState === 'function') {
-        restoreBoardSessionState();
-    }
-    try {
-        sessionStorage.removeItem(BOARD_PENDING_CONFIG_RETURN_KEY);
-    } catch {
-    }
-    getRenderApi()?.initializeStackControls();
-    getRenderApi()?.updateStackLayout();
-    if (!shouldSkipAutoLoadSavedFolder()) {
-        loadSavedFolder();
-    }
-    applyModeButtonState();
-    restoreSafetyBackupIfAvailable();
-    restoreSaveCenterSettingsModeState();
-    window.addEventListener('resize', handleViewportResize);
-    window.addEventListener('pageshow', handleBoardPageShow);
+    initializeBoardFilehandling();
 }

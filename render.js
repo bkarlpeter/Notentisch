@@ -1,5 +1,5 @@
 (function initializeNotentischRenderApi() {
-	const MAX_STACK_CARDS = 10;
+	const MAX_STACK_CARDS = 12;
 	const STACK_COUNT_KEY = 'notentischStackCount';
 	const QUADRANT_IDS = ['Q1', 'Q2', 'Q3', 'Q4'];
 	const cardElementCache = new Map();
@@ -282,15 +282,9 @@
 	}
 
 	function getStackCount() {
-		const input = document.getElementById('stackCount');
-		const rawInput = String(input?.value || '').trim();
-		const parsedInput = rawInput === '' ? NaN : parseInt(rawInput, 10);
 		const stored = parseInt(localStorage.getItem(STACK_COUNT_KEY) || '', 10);
-		const raw = Number.isFinite(parsedInput)
-			? parsedInput
-			: (Number.isFinite(stored) ? stored : 8);
+		const raw = Number.isFinite(stored) ? stored : 6;
 		const safe = Math.max(1, Math.min(MAX_STACK_CARDS, raw));
-		if (input) input.value = String(safe);
 		return safe;
 	}
 
@@ -304,13 +298,19 @@
 
 		const stackCount = getStackCount();
 		const cardHeight = parseFloat(getComputedStyle(root).getPropertyValue('--card-height')) || 250;
+		const firstStackItem = document.querySelector('.quadrant .card-container:not(.in-center)');
+		const measuredStackItemHeight = firstStackItem?.offsetHeight || (cardHeight + 18);
+		root.style.setProperty('--stack-item-height', Math.max(cardHeight, measuredStackItemHeight) + 'px');
+		const usableHeights = quadrants.map((q) => {
+			const style = getComputedStyle(q);
+			const paddingTop = parseFloat(style.paddingTop) || 0;
+			const paddingBottom = parseFloat(style.paddingBottom) || 0;
+			return Math.max(1, q.clientHeight - paddingTop - paddingBottom);
+		});
+		const usableHeight = Math.min(...usableHeights);
 
-		const quadrantHeight = Math.min(...quadrants.map(q => q.clientHeight));
-		let visibleZone = cardHeight;
-
-		if (stackCount > 1) {
-			visibleZone = (quadrantHeight - cardHeight) / (stackCount - 1);
-		}
+		// Gleich große Staffelabschnitte: nutzbare Höhe in N Abschnitte teilen.
+		let visibleZone = usableHeight / Math.max(1, stackCount);
 
 		visibleZone = Math.max(1, Math.min(cardHeight, Math.floor(visibleZone)));
 		root.style.setProperty('--visible-zone', visibleZone + 'px');

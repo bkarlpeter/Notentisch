@@ -126,6 +126,11 @@
                 <label for="scrollStep">Scroll-Schritt in Pixel (60 - 800)</label>
                 <input id="scrollStep" type="number" min="60" max="800" step="10">
             </div>
+
+            <div class="field">
+                <label for="staffelungInput">Staffelung (1-12)</label>
+                <input id="staffelungInput" type="number" min="1" max="12" value="6"/>
+            </div>
         </div>
 
         <div class="actions">
@@ -639,16 +644,53 @@
             saveConfig(cfg);
             document.getElementById('status').textContent = 'Auf Standard zurückgesetzt.';
         });
+        
+        // Staffelung (Stack Count) Input Handler
+        const STACK_COUNT_KEY = 'notentischStackCount';
+        const MAX_STACK_CARDS = 12;
+        const staffelungInput = document.getElementById('staffelungInput');
+        
+        // Load Stack Count on config page load
+        function loadStackCount() {
+            try {
+                const stored = parseInt(localStorage.getItem(STACK_COUNT_KEY) || '', 10);
+                if (Number.isFinite(stored)) {
+                    const clamped = Math.max(1, Math.min(MAX_STACK_CARDS, stored));
+                    if (staffelungInput) staffelungInput.value = String(clamped);
+                    return clamped;
+                }
+            } catch (err) {}
+            if (staffelungInput) staffelungInput.value = '6';
+            return 6;
+        }
+        
+        // Save Stack Count to localStorage
+        function saveStackCount() {
+            if (!staffelungInput) return;
+            try {
+                const raw = parseInt(staffelungInput.value || '', 10);
+                const clamped = Number.isFinite(raw) ? Math.max(1, Math.min(MAX_STACK_CARDS, raw)) : 6;
+                staffelungInput.value = String(clamped);
+                localStorage.setItem(STACK_COUNT_KEY, String(clamped));
+                saveFromFormWithStatus('Staffelung gespeichert.');
+            } catch (err) {}
+        }
+        
+        // Initialize and bind Stack Count input
+        if (staffelungInput) {
+            loadStackCount();
+            staffelungInput.addEventListener('input', saveStackCount);
+            staffelungInput.addEventListener('change', saveStackCount);
+            staffelungInput.addEventListener('blur', saveStackCount);
+        }
+        
         document.getElementById('advancedBtn').addEventListener('click', () => { window.location.assign('advanced_config.html'); });
         function goBackToBoard() {
-            if (window.history.length > 1) {
-                window.history.back();
-                return;
-            }
             window.location.replace('board.html');
         }
 
         document.getElementById('backToBoardBtn').addEventListener('click', () => {
+            saveStackCount();
             goBackToBoard();
         });
 

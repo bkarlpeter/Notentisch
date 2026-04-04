@@ -660,12 +660,18 @@ window.addEventListener('storage', (event) => {
 });
 
 function initializeBoardUi() {
-    applyUserConfigAndRefresh(false);
-    syncFullscreenButtonState();
-    if (typeof initializeCenterView === 'function') {
-        initializeCenterView();
-    }
-    restoreBoardSessionState();
+    const safeRun = (fn) => {
+        try { fn(); } catch (err) {}
+    };
+
+    safeRun(() => applyUserConfigAndRefresh(false));
+    safeRun(() => syncFullscreenButtonState());
+    safeRun(() => {
+        if (typeof initializeCenterView === 'function') {
+            initializeCenterView();
+        }
+    });
+    safeRun(() => restoreBoardSessionState());
     const isConfigHistoryReturn = (() => {
         try {
             return !!sessionStorage.getItem(BOARD_HISTORY_RETURN_KEY);
@@ -687,7 +693,7 @@ function initializeBoardUi() {
 
     if (settings.autoFullscreenOnStart && (!isConfigHistoryReturn || shouldRestoreFullscreenOnConfigReturn)) {
         setTimeout(() => {
-            applyDefaultFullscreenState();
+            safeRun(() => applyDefaultFullscreenState());
         }, 0);
     }
 
