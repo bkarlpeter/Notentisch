@@ -37,7 +37,7 @@ Um zu prüfen, ob das Projekt in deiner aktuellen Umgebung korrekt funktioniert,
 2. Starte im Projektordner einen lokalen Server:
 
   ```powershell
-  python -m http.server 8000
+  py -3 python/local_server.py 8000
   ```
 
 3. Öffne im Browser die Seite:
@@ -75,6 +75,12 @@ Highlights dieser stabilen Version:
 - Robustere PDF-Pfad-Fallbacks für Card-Vorschau und Center-Anzeige
 - No-Cache-Header im lokalen Server gegen veraltete Browser-Stände
 
+Aktueller Stand (04.04.2026):
+- Rückkehr von `Config` stellt Stapel-Reihenfolge bevorzugt aus dem vorhandenen DOM wieder her.
+- Spielmodus (`Spielen`/`Sichten`) bleibt beim Rückweg erhalten.
+- Tonsuche-Button: Kurzdruck `Ton An -> Aus`, Langdruck in `Ton An -> Aufnahme`, in `Aufnahme -> Aus`.
+- Bekannte Einschränkung: Bei einigen Browser-/Fullscreen-Kombinationen kann der Fullscreen beim Wechsel `Board -> Config -> Zurück` trotzdem verlassen werden.
+
 Details siehe [CHANGELOG.md](CHANGELOG.md).
 
 ## Sicherheitscheck (Stand: 16.03.2026)
@@ -91,7 +97,7 @@ Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. te
 
 - Shutdown-Test ohne Token: `POST /__shutdown__` ohne Auth-Header muss blockiert werden.
 - Shutdown-Test mit gueltigem Session-Token: `POST /__shutdown__` mit Header `X-Notentisch-Token` muss funktionieren.
-- Syntax-/Laufzeitcheck nach Anpassungen fuer `local_server.py` sowie der neuen Setup-Sicherheitslogik.
+- Syntax-/Laufzeitcheck nach Anpassungen fuer `python/local_server.py` sowie der neuen Setup-Sicherheitslogik.
 
 ### Testergebnisse
 
@@ -127,8 +133,9 @@ Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. te
   - Q2: wiederholen
   - Q3: geuebt
   - Q4: gelernt
-- Kartenstapel pro Quadrant mit einstellbarer Blattzahl (`1` bis `10`)
-- Quadranten-`/` zum Blaettern, wenn mehr Karten vorhanden sind als sichtbar
+- Kartenstapel pro Quadrant mit einstellbarer Staffelzahl (`1` bis `10`); Einstellung in Config unter `Staffelung`
+- Staffelung teilt die Quadranthöhe gleichmäßig auf die sichtbaren Karten auf; jede Karte zeigt einen proportionalen Abschnitt
+- Quadranten-`▲▼` zum Blättern, wenn mehr Karten vorhanden sind als sichtbar
 - CENTER-Bereich zeigt PDF (2 Seiten), inkl. `/`-Scroll und Zoom
 - Drag & Drop zwischen Quadranten und CENTER
 - Doppelklick im CENTER verschiebt die aktive Karte nach Q3 (weitere siehe use case)
@@ -138,7 +145,7 @@ Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. te
 - **Blatt suchen** (`Suchen`-Button): Suchoverlay mit Texteingabe, zeigt Treffer mit Stapelzuordnung; Bestätigung per `Fertig` lädt das Blatt direkt in den CENTER
 
 ## Start auf einem anderen Windows-System
- so gehts: .\setup_notentisch.ps1
+ so gehts: .\scripts\setup_notentisch.ps1
 
   Das Skript erledigt für dich:
 
@@ -177,7 +184,7 @@ cmd /c mklink /J "Blätter" "D:\Pfad\zu\deinen\PDFs"
 - oder im Projektordner:
 
 ```powershell
-python -m http.server 8000
+py -3 python/local_server.py 8000
 ```
 
 Browser-URL:
@@ -199,19 +206,19 @@ Wenn beim Klick auf `LADEN` kein XML ausgewählt wird (Abbruch im Dateipicker), 
 
 Wenn ein XML geladen wird, erscheint der Dialog **nicht**.
 
-### Variante 2 – PowerShell-Skript `create_xml_from_pdfs.ps1`
+### Variante 2 – PowerShell-Skript `scripts/create_xml_from_pdfs.ps1`
 
 Für neue Installationen ohne bestehende XML oder für Batch-Nutzung:
 
 ```powershell
 # Frische XML aus Ordner erstellen:
-.\create_xml_from_pdfs.ps1 -PdfDir "C:\...\Noten\Blätter" -OutputXml "Notentisch-Neu.xml"
+.\scripts\create_xml_from_pdfs.ps1 -PdfDir "C:\...\Noten\Blätter" -OutputXml "Notentisch-Neu.xml"
 
 # Bestehende XML um fehlende PDFs ergänzen (Merge):
-.\create_xml_from_pdfs.ps1 -PdfDir "C:\...\Noten\Blätter" -OutputXml "Notentisch.xml" -Merge
+.\scripts\create_xml_from_pdfs.ps1 -PdfDir "C:\...\Noten\Blätter" -OutputXml "Notentisch.xml" -Merge
 
 # Abweichender Standard-Status (Default: "zurückgestellt"):
-.\create_xml_from_pdfs.ps1 -PdfDir "C:\...\Noten\Blätter" -OutputXml "Notentisch.xml" -Merge -Arbeitsstatus "wiederholen"
+.\scripts\create_xml_from_pdfs.ps1 -PdfDir "C:\...\Noten\Blätter" -OutputXml "Notentisch.xml" -Merge -Arbeitsstatus "wiederholen"
 ```
 
 Parameter:
@@ -227,10 +234,10 @@ Parameter:
 
 ## Card-Bilder generieren
 
-Mit `extract_cards.ps1` koennen Card-Vorschaubilder aus PDFs erzeugt werden:
+Mit `scripts/extract_cards.ps1` koennen Card-Vorschaubilder aus PDFs erzeugt werden:
 
 ```powershell
-.\extract_cards.ps1
+.\scripts\extract_cards.ps1
 ```
 
 Das Skript nutzt automatisch:
@@ -272,9 +279,9 @@ Das Skript nutzt automatisch:
   - ohne Blatt im CENTER: Live-Matching gegen gespeicherte Audio-Fingerprints; bei stabilem Treffer wird das Blatt automatisch ins CENTER geladen
 - Karten mit vorhandener Audio-Referenz zeigen optional einen gelben Marker oben rechts (Config: `Spielton-Marker`)
 - Config-Vorschau: nutzt zuerst lokalen PNG-Cache, dann XML/PDF-Fund (Ausschnitt) und sonst Bild-Fallback
-- `Blaetter`: sichtbare Karten pro Quadrant einstellen (max. 10)
-- `Stapel-Überlappung je Batch` (Advanced): bestimmt die Überlappung beim Blaettern im Quadrantenstapel
-- Quadranten-`/`: Schrittweite = `Stapelgröße - Stapel-Überlappung` (mindestens `1`)
+- `Staffelung` (Config): Anzahl der sichtbaren Karten pro Quadrant (`1` bis `10`); die Quadranthöhe wird gleichmäßig auf diese Anzahl aufgeteilt
+- `Stapel-Überlappung je Batch` (Advanced): bestimmt die Überlappung beim Blättern im Quadrantenstapel
+- Quadranten-`▲▼`: Schrittweite = `Stapelgröße - Stapel-Überlappung` (mindestens `1`)
 - `Ende`: beendet den lokalen Server und schliesst die Ansicht
 - Karte ins CENTER ziehen: PDF anzeigen
 - Karte aus CENTER in Quadrant verschieben (Drop oder Klick auf Q1-Q4): `Arbeitsstatus` aktualisieren
@@ -308,7 +315,7 @@ Stand der Implementierung: 26.03.2026 (Kurz-/Langdruck-Modus)
 ### Voraussetzungen
 
 - Browser mit `MediaRecorder` + Mikrofonfreigabe (Edge/Chrome/Firefox aktuell)
-- laufender lokaler Server (`local_server.py`)
+- laufender lokaler Server (`python/local_server.py`)
 - geladene XML
 - mindestens eine gespeicherte `AudioReferenz` für die zu suchenden Titel
 
@@ -444,7 +451,7 @@ Zusätzlich:
 - Problem: Treffer erscheint im Log, aber kein Blatt wird geladen.
   - Lösung: Prüfen, ob im Diagnose-Log `matching_blocked_low_confidence` steht; dann Strenge reduzieren (`Normal`/`Locker`) oder Referenz neu aufnehmen.
 - Problem: Audio kann nicht gespeichert werden.
-  - Lösung: Prüfen, ob `local_server.py` läuft und der Ordner `mysounds/` beschreibbar ist.
+  - Lösung: Prüfen, ob `python/local_server.py` läuft und der Ordner `mysounds/` beschreibbar ist.
 
 ### Center-/Zoom-Parameter (Basis fuer weitere Aenderungen)
 
@@ -535,10 +542,10 @@ die Blätter werden auf vier Felder rund um das Center verteilt ("Quadranten") e
 - `render.js` - Karten-Rendering, Stack-/Offset-Logik, Vorschau-Bildaufbau, Render-API (`window.NotentischRender`)
 - `filehandling.js` - XML I/O, Drag & Drop, Suche, Statusspeicherung, Board-/Center-Workflow
 - `audio-assist.js` - Audio Auto (Mikrofonaufnahme, Fingerprint-Bildung, Matching, XML-Felder `AudioReferenz`)
-- `extract_cards.ps1` - Card-Bilder aus PDFs generieren (Poppler)
-- `Notentisch.bat` - Batch-Launcher fuer Windows (startet `local_server.py` + Browser; setzt waehrend der Session Energiespar-Timeouts auf `Nie` und restauriert danach)
+- `scripts/extract_cards.ps1` - Card-Bilder aus PDFs generieren (Poppler)
+- `Notentisch.bat` - Batch-Launcher fuer Windows (startet `python/local_server.py` + Browser; setzt waehrend der Session Energiespar-Timeouts auf `Nie` und restauriert danach)
 - `notentisch.vbs` - VB-Wrapper fuer unsichtbaren Start
-- `local_server.py` - lokaler HTTP-Server mit Shutdown-Endpoint (`/__shutdown__`) sowie Audio-Upload/-Delete (`/__audio_upload__`, `/__audio_delete__`)
+- `python/local_server.py` - lokaler HTTP-Server mit Shutdown-Endpoint (`/__shutdown__`) sowie Audio-Upload/-Delete (`/__audio_upload__`, `/__audio_delete__`)
 - `Cards_Export/` - Ordner fuer statische Card-Bilder (`card_*.png`)
 
 ## Test-Ordner
