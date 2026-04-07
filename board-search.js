@@ -12,6 +12,72 @@ function normalizeStatusForSearch(status) {
     return String(status || '').toLowerCase().replace(/ue/g, 'u').replace(/\u00fc/g, 'u').replace(/ü/g, 'u');
 }
 
+function hideQuadrantsForRender() {
+    ['Q1', 'Q2', 'Q3', 'Q4'].forEach(qid => {
+        const el = document.getElementById(qid);
+        if (el) el.style.visibility = 'hidden';
+    });
+}
+
+function showQuadrantsAfterRender() {
+    requestAnimationFrame(() => {
+        ['Q1', 'Q2', 'Q3', 'Q4'].forEach(qid => {
+            const el = document.getElementById(qid);
+            if (el) el.style.visibility = 'visible';
+        });
+    });
+}
+
+function placeCardAtTopOfQuadrant(targetQuadrant, card) {
+    if (!targetQuadrant || !card) return;
+    const firstCard = targetQuadrant.querySelector('.card-container');
+    if (firstCard) {
+        targetQuadrant.insertBefore(card, firstCard);
+        return;
+    }
+    const controls = targetQuadrant.querySelector('.quadrant-stack-controls');
+    if (controls) {
+        targetQuadrant.insertBefore(card, controls);
+        return;
+    }
+    targetQuadrant.appendChild(card);
+}
+
+function moveCardToQuadrant(cardIdx, targetQuadId) {
+    // Versuche Karte im DOM zu finden
+    let cardEl = document.querySelector('.card-container[data-cardid="' + String(cardIdx) + '"]');
+
+    if (!cardEl) {
+        // Karte nicht im DOM: erstelle nur diese eine Karte (nicht renderBoard)
+        cardEl = getRenderApi()?.ensureCardElementById?.(cardIdx) || null;
+        if (!cardEl) return null;
+    }
+
+    // Bestimme aktuellen Quadrant der Karte
+    const currentParent = cardEl.parentElement;
+    const currentQuadId = currentParent?.id;
+
+    // Falls bereits im Zielquadrant: nur oben platzieren
+    if (currentQuadId === targetQuadId) {
+        const targetQuadrant = document.getElementById(targetQuadId);
+        if (targetQuadrant) {
+            placeCardAtTopOfQuadrant(targetQuadrant, cardEl);
+        }
+    } else {
+        // Karte ist in anderem Quadrant oder nirgendwo: entferne aus altem, füge in neuen ein
+        if (currentParent && currentParent.id && ['Q1', 'Q2', 'Q3', 'Q4'].includes(currentParent.id)) {
+            cardEl.remove();
+        }
+
+        const targetQuadrant = document.getElementById(targetQuadId);
+        if (targetQuadrant) {
+            placeCardAtTopOfQuadrant(targetQuadrant, cardEl);
+        }
+    }
+
+    return cardEl;
+}
+
 function openSearchOverlay() {
     const overlay = document.getElementById('search-overlay');
     const input = document.getElementById('search-input');
@@ -122,32 +188,20 @@ function executeSearchDrop(match) {
     else if (s.includes('geubt')) quadId = 'Q3';
     else if (s.includes('gelernt')) quadId = 'Q4';
 
-    const cards = getRenderApi()?.getCardNodes() || [];
-    let posInQuad = 0;
-    let counter = 0;
-    cards.forEach((node, idx) => {
-        const st = normalizeStatusForSearch(node.querySelector('Arbeitsstatus')?.textContent || '');
-        let q = 'Q1';
-        if (st.includes('wiederholen')) q = 'Q2';
-        else if (st.includes('geubt')) q = 'Q3';
-        else if (st.includes('gelernt')) q = 'Q4';
-        if (q === quadId) {
-            if (idx === match.idx) posInQuad = counter;
-            counter++;
-        }
-    });
-
-    getRenderApi()?.setQuadrantOffset(quadId, posInQuad);
-    getRenderApi()?.renderBoard();
-
-    const cardEl = document.getElementById('card-' + match.idx);
+    // Karte in den richtigen Quadrant verschieben (wie bei Drop)
+    let cardEl = moveCardToQuadrant(match.idx, quadId);
     if (!cardEl) return;
 
+    // Layout aktualisieren (wie bei Drop)
+    getRenderApi()?.updateStackLayout();
+
+    // Center vorbereiten (wie bei Drop)
     const userConfig = getUserConfigForDropBehavior();
     const shouldApplyStoredCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
     if (typeof discardCenterPendingScrollState === 'function') {
         discardCenterPendingScrollState();
     }
+    document.querySelectorAll('.card-container.in-center').forEach((el) => el.classList.remove('in-center'));
     cardEl.classList.add('in-center');
     lastCardIdFromCenter = cardEl.dataset.cardid;
     activeCenterCardId = cardEl.dataset.cardid;

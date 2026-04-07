@@ -1,5 +1,16 @@
 # Changelog - Notentisch
 
+## [v2026.04.07] - 7. April 2026
+
+### Verbessert
+- **Audio-Match ohne sichtbaren Stapel-Neuaufbau**: Beim Ton-Fund wird die Karte intelligent in den richtigen Quadrant verschoben, statt alle 4 Quadranten komplett neu zu rendern.
+- **Drop-ähnliche Audio-Match-Logik**: Nur betroffene Quadranten werden aktualisiert; nicht gefundene Karten werden mit `ensureCardElementById` minimal erstellt (kein `renderBoard`).
+
+### Technisch
+- `filehandling.js`: Neue Hilfsfunktion `moveCardToQuadrant()` orchestriert intelligente Kartenbewegung: im DOM suchen → ggf. einzeln erstellen → aus altem Quadrant entfernen → oben im neuen Quadrant einfügen.
+- `executeSearchDrop()`: Nutzt `moveCardToQuadrant()` statt `renderBoard()`, ruft nur `updateStackLayout()` auf.
+- `board-search.js`: Synchronized mit `filehandling.js`; `executeSearchDrop()` realisiert gleiche Drop-ähnliche Bewegungslogik.
+
 ## [v2026.03.26] - 26. März 2026
 
 ### Verbessert
@@ -15,6 +26,68 @@
 - `functions.js`: Config-Anwendung synchronisiert sichtbare Marker sofort; Session-Restore übergibt die DOM-Restore-Präferenz und unterdrückt Auto-Fullscreen bei History-Rückkehr.
 - `center-view.js`: Aktuelle Viewport- und Screen-Maße werden mit den Center-Einstellungen erfasst.
 - `render.js`: Neuer Sync für sichtbare Audio-Badges ohne komplettes Re-Rendering.
+
+## [v2026.03.08.2] - 08. März 2026
+
+### Neu
+- **CenterAnsicht in XML erweitert**: `Zoom`, `Align`, `ZoomFokus`, `PosRelX`, `PosRelY` werden pro Blatt gespeichert.
+- **Access-Import-Flag**: `CenterAnsichtChanged=1` wird bei `Save Zoom` gesetzt.
+
+### Verbessert
+- **Config-Roundtrip**: Board-Stacks und Center-Ansicht werden beim Wechsel in die Config als Snapshot gesichert und beim Zurückkehren sofort wiederhergestellt.
+- **Standard-Config-Vorschau**: Schnellere Reihenfolge über PNG-Cache → XML/PDF-Ausschnitt → Bild-Fallback.
+- **Drop-Verhalten**: Ablage in Quadranten immer als Top-Insert mit konfigurierbarem Glow (`dropGlowDurationMs`).
+- **Drop ins Center**: Option `useZoomSettingsOnDrop` steuert die Anwendung blattbezogener Zoomwerte.
+
+### Technisch
+- `functions.js`: Session-Restore für Config↔Board um Board- und Center-Snapshot erweitert.
+- `filehandling.js`: XML-Lesen/Schreiben für Center-Profil + Changed-Flag ergänzt.
+- `config.html`: Vorschaupfad und Caching für schnelleren Wiederaufruf überarbeitet.
+
+## [v2026.03.08] - 08. März 2026
+
+### Neu
+- **Center-Ausrichtung umschaltbar**: Button `Links/Rechts` im Board (`alignBtn`) mit persistenter Speicherung.
+- **Kontinuierlicher Zoom**: Gedrückt halten auf `ZOOM - / ZOOM +` startet wiederholtes Zoomen.
+- **Konfigurierbare Zoom-/Scroll-Schritte**: `zoomStep` und `scrollStep` über Konfiguration und LocalStorage.
+
+### Verbessert
+- **Zoom-Verhalten**: Kleinere, feinere Zoomstufen und stabilere Zoom-Grenzen.
+- **Zoom-Anker**: Zoom bleibt visuell um den aktuellen Viewport-Mittelpunkt stabil.
+- **Kartenrückgabe aus Center**: Beim Zurücklegen nur Layout-Update statt vollständigem Stack-Rebuild.
+- **PDF-Pfad-Fallbacks**: Robustere Kandidatenbildung, Encoding und Caching bei Pfadversuchen.
+- **Config-Navigation im gleichen Tab**: Rückweg ohne unnötigen neuen Browser-Tab.
+- **Config → Board Rückkehr dokumentiert**: README enthält jetzt ein klares Prozedere mit automatischem Smoke-Check und manuellem 4-Schritte-Test.
+
+### Behoben
+- **Center wird geleert beim Zurücklegen**: Rückgabe einer Karte aus dem Center leert die Ansicht nicht mehr erzwungen.
+- **Leere Card-Vorschauen**: Verbesserte Fallback-Pfadauflösung für PDF-basierte Thumbnails.
+
+### Technisch
+- `board.html`: IDs für Zoom-Buttons ergänzt, Script-Versionen angehoben.
+- `functions.js`: Config-Defaults erweitert (`centerAlign`, `zoomStep`, `scrollStep`), Continuous-Zoom-Binding ergänzt.
+- `filehandling.js`: Rückgabe-Logik aus Center auf Top-Insert + `updateStackLayout()` umgestellt.
+- `local_server.py`: No-Cache-Header ergänzt, um veraltete Browser-Caches zu vermeiden.
+- `test/e2e_config_return_check.ps1`: Neuer E2E-Smoketest für Config↔Board-Rückkehr.
+
+## [v2.1] - Februar 2026
+
+### Neu 
+- **Dynamische Blätter-Steuerung**: Sichtbare Karten pro Quadrant konfigurierbar (`1` bis `10`)
+- **Quadranten-Navigation**: `/`-Buttons erscheinen nur bei Karten-Overflow
+- **Center-Navigation vereinheitlicht**: `/`-Buttons im selben Look & Feel wie in Quadranten
+- **Card-Thumbnail-Fallback**: Wenn `Cards_Export/card_*.png` fehlt, wird Vorschau aus PDF-Seite 1 gerendert
+
+### Verbessert 
+- **Stack-Schrittweite**: Blättern in Quadranten nutzt jetzt halbe Stapelgröße (gerundet)
+- **PDF-Pfadauflösung**: Robuste Erkennung für gemischte Pfadangaben (`#`-Pattern, Windows/relativ)
+- **XML-Kompatibilität**: Karten werden aus `<NotenTisch>` und `<Notentisch>` gelesen
+- **README aktualisiert**: Doku auf aktuellen Stand der Bedienung und Dateirollen gebracht
+
+### Behoben 
+- **Fehlende Karten**: Tag-Mismatch im XML führte nicht mehr zu ausgelassenen Einträgen
+- **PDF erreichbar, aber Card blind**: Fallback-Rendering aus PDF löst fehlende Exportbilder
+- **Verschwindende Buttonzeile**: Layout-/Strukturprobleme in `board.html` bereinigt
 
 ## [v2026.03.08.2] - 08. März 2026
 
