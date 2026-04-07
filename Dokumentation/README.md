@@ -580,3 +580,28 @@ Manueller Kurztest (4 Schritte):
 4. Prüfen: gleiches Blatt, gleicher Zoom, gleiche Ausrichtung, gleicher CENTER-Modus.
 
 Du kannst eigene Tests ergänzen, um Funktionen und Module automatisch zu überprüfen. Für größere Test-Suiten empfiehlt sich ein Framework wie Mocha oder Jest.
+
+---
+
+## Anhang: Beatfinder – Funktionsbeschreibung
+
+**Eingabe:** Mikrofon-Stream (Web Audio API, FFT-Größe 2048)
+
+**1. Bass-Energie messen (alle 20 ms)**
+Aus dem FFT werden nur die Bins 1–12 (≈ 0–280 Hz) ausgewertet – dort liegt der Kick/Bass, der den Takt dominiert.
+
+**2. Onset-Erkennung (Spectral Flux)**
+Differenz zur vorherigen Messung (half-wave rectifiziert). Liegt der Wert über `Mittelwert × 1,5` → Onset erkannt = ein Schlag.
+
+**3. BPM-Berechnung**
+Abstände zwischen aufeinanderfolgenden Onsets werden gesammelt. Nach 4 Schlägen wird der **Median** der Intervalle gebildet → BPM = 60.000 / Intervall ms. Nur Werte im Bereich 40–210 BPM werden akzeptiert.
+
+**4. Beat-Lock & Metronom**
+Sobald BPM stabil ist, startet ein `setInterval` im erkannten Takt-Intervall. Jeder Tick ruft `flashBeatButton()` auf.
+
+**5. Abweichungsanzeige**
+Bei jedem neuen Onset wird verglichen: liegt er innerhalb des erwarteten Fensters (`nextExpectedBeatAt ± Schwelle`)? → **grün**. Außerhalb → **rot**.
+
+**Konfiguration:** Schwellwert in % (Standard 5 %) → Advanced Settings (`beatDeviationThresholdPct`).
+
+**Stopp:** Beim Verlassen des Centers oder Deaktivieren des Toggle-Buttons wird der Stream geschlossen und alles zurückgesetzt.
