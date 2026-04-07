@@ -394,11 +394,21 @@
             padding: 0 8px;
         }
 
-        #beatBtn {
+        #beatMetronome {
             display: none;
-            width: 34px;
-            min-width: 34px;
-            background: #333;
+            width: 28px;
+            min-width: 28px;
+            height: 36px;
+            --beat-color: #555;
+        }
+        #beatMetronome .metro-arm {
+            transform-origin: 14px 5px;
+            animation: metronomeSwing 1000ms ease-in-out infinite;
+            animation-play-state: paused;
+        }
+        @keyframes metronomeSwing {
+            0%, 100% { transform: rotate(-22deg); }
+            50%       { transform: rotate(22deg); }
         }
 
         .toolbar-right {
@@ -849,7 +859,16 @@
             <button class="btn" onclick="toggleAudioAssistMode(event)" id="audioAssistBtn" title="Kurz: 0->1, 1<->2 | Lang in Ton An (>=650ms): Aus">Tonsuche</button>
             <button class="btn" id="beatFinderToggleBtn" onclick="toggleBeatFinderEnabled()" title="Beatfinder ein-/ausschalten">Beatfinder</button>
             <span id="bpmDisplay" class="page-info" title="Erkanntes Tempo">… BPM</span>
-            <button id="beatBtn" class="btn btn-small" title="Beatfinder: blinkt im erkannten Tempo. Grün = im Takt, Rot = Abweichung">&#9833;</button>
+            <div id="beatMetronome" title="Beatfinder: schwingt im erkannten Tempo. Grün = im Takt, Rot = Abweichung">
+                <svg viewBox="0 0 28 36" width="28" height="36" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="8" y="30" width="12" height="6" rx="2" fill="#666"/>
+                    <circle cx="14" cy="5" r="2" fill="#888"/>
+                    <g class="metro-arm">
+                        <line x1="14" y1="5" x2="14" y2="29" stroke="#ccc" stroke-width="1.5" stroke-linecap="round"/>
+                        <circle cx="14" cy="29" r="4" fill="var(--beat-color)"/>
+                    </g>
+                </svg>
+            </div>
             <span id="audioSaveBtn" title="Auto-Speichern Status">Speichern</span>
             <button class="btn btn-config" onclick="openConfigPage()" title="Staffelung">C</button>
             <button class="btn btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreenMode()" title="Vollbild (F11 / Esc)">F11</button>

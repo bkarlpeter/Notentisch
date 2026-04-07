@@ -181,6 +181,12 @@ function restartBeatMetronome(intervalMs) {
         flashBeatButton(beatFinderState.lastDeviationPct);
         beatFinderState.nextExpectedBeatAt = Date.now() + (beatFinderState.beatInterval || 500);
     }, Math.round(intervalMs));
+    // Metronom-Pendel auf erkanntes Tempo einstellen
+    const arm = document.querySelector('#beatMetronome .metro-arm');
+    if (arm) {
+        arm.style.animationDuration = (Math.round(intervalMs) * 2) + 'ms';
+        arm.style.animationPlayState = 'running';
+    }
 }
 
 function toggleBeatFinderEnabled() {
@@ -233,34 +239,29 @@ function notifyCardLeftCenter() {
 }
 
 function flashBeatButton(deviationPct) {
-    const btn = document.getElementById('beatBtn');
-    if (!btn) return;
+    const metro = document.getElementById('beatMetronome');
+    if (!metro) return;
     const isOff = deviationPct > getBeatDeviationThresholdPct();
-    const onColor = isOff ? '#c0392b' : '#27ae60';
-    btn.style.background = onColor;
-    btn.style.boxShadow = '0 0 10px ' + onColor;
-    if (btn._beatFlash) clearTimeout(btn._beatFlash);
-    btn._beatFlash = setTimeout(() => {
-        if (btn) { btn.style.background = '#333'; btn.style.boxShadow = ''; }
-    }, 110);
+    metro.style.setProperty('--beat-color', isOff ? '#c0392b' : '#27ae60');
 }
 
 function updateBeatFinderUi(forceHide) {
     const display = document.getElementById('bpmDisplay');
-    const btn = document.getElementById('beatBtn');
-    if (!display || !btn) return;
+    const metro = document.getElementById('beatMetronome');
+    if (!display || !metro) return;
     const show = !forceHide && beatFinderEnabled && !!beatFinderState;
     if (!show) {
         display.style.display = 'none';
-        btn.style.display = 'none';
+        metro.style.display = 'none';
+        const arm = metro.querySelector('.metro-arm');
+        if (arm) arm.style.animationPlayState = 'paused';
         return;
     }
     display.style.display = '';
-    btn.style.display = '';
+    metro.style.display = '';
     display.textContent = beatFinderState.bpm > 0 ? beatFinderState.bpm + ' BPM' : '… BPM';
     if (!beatFinderState.bpmLocked) {
-        btn.style.background = '#333';
-        btn.style.boxShadow = '';
+        metro.style.setProperty('--beat-color', '#555');
     }
 }
 // ─────────────────────────────────────────────────────────────────────────────
