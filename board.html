@@ -382,6 +382,19 @@
             user-select: none;
         }
 
+        #bpmDisplay {
+            display: none;
+            min-width: 68px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        #beatBtn {
+            display: none;
+            width: 34px;
+            min-width: 34px;
+            background: #333;
+        }
+
         .toolbar-right {
             margin-left: auto;
             display: inline-flex;
@@ -828,6 +841,8 @@
         <div class="toolbar-right">
             <button class="btn" id="textSearchBtn" onclick="openSearchOverlay()" title="Blatt suchen">Textsuche</button>
             <button class="btn" onclick="toggleAudioAssistMode(event)" id="audioAssistBtn" title="Kurz: 0->1, 1<->2 | Lang in Ton An (>=650ms): Aus">Tonsuche</button>
+            <span id="bpmDisplay" class="page-info" title="Erkanntes Tempo">… BPM</span>
+            <button id="beatBtn" class="btn btn-small" title="Beatfinder: blinkt im erkannten Tempo. Grün = im Takt, Rot = Abweichung">&#9833;</button>
             <span id="audioSaveBtn" title="Auto-Speichern Status">Speichern</span>
             <button class="btn btn-config" onclick="openConfigPage()" title="Staffelung">C</button>
             <button class="btn btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreenMode()" title="Vollbild (F11 / Esc)">F11</button>

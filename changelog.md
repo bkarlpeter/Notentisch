@@ -1,5 +1,18 @@
 # Changelog - Notentisch
 
+## [v2026.04.07b] - 7. April 2026
+
+### Neu
+- **Beatfinder nach Treffererkennung**: Nach erfolgreichem Ton-Match bleibt das Mikrofon aktiv; der Beatfinder analysiert die Bass-Frequenzen (Bins 1–12 ≈ 0–280 Hz) via Spectral-Flux-Onset-Detection und ermittelt automatisch das Tempo (BPM).
+- **BPM-Anzeige in der Kontrollleiste**: Neues Feld `… BPM` zeigt das erkannte Tempo direkt in der Toolbar.
+- **Beat-Button ♩ mit Puls**: Neuer Button blinkt im erkannten Tempo — grün wenn im Takt, rot wenn Abweichung den Schwellwert überschreitet.
+- **Konfigurierbarer Abweichungs-Schwellwert**: Advanced Config → „Beatfinder Abweichungs-Schwelle (%)" (Standard: 5 %, Bereich: 1–50 %).
+
+### Technisch
+- `audio-assist.js`: Beatfinder-State-Maschine mit `startBeatFinder()`, `stopBeatFinder()`, `beatFinderTick()`, `onBeatOnset()`, `restartBeatMetronome()`, `flashBeatButton()`, `updateBeatFinderUi()`. Übergang nach Match: Analyser/Stream werden nicht geschlossen sondern an den Beatfinder übergeben.
+- `board.html`: `#bpmDisplay` + `#beatBtn` in der Toolbar; CSS-Regeln für initiales `display:none`.
+- `advanced_config.html`: Feld `beatDeviationThresholdPct`, applyToForm, readFromForm und Auto-Save erweitert.
+
 ## [v2026.04.07] - 7. April 2026
 
 ### Verbessert

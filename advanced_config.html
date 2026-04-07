@@ -56,6 +56,7 @@
             <div class="field"><label for="audioWaitAfterMatchMs">Wartezeit nach Tontreffer (ms)</label><input id="audioWaitAfterMatchMs" type="number" min="4000" max="8000" step="100"></div>
             <div class="field"><label for="audioMatchStrictness">Erkennungs-Strenge</label><select id="audioMatchStrictness"><option value="locker">Locker</option><option value="normal">Normal</option><option value="streng">Streng</option></select></div>
             <div class="field"><label for="replaceAudioByTitle">Alte Sequenz bei Neuaufnahme</label><select id="replaceAudioByTitle"><option value="show">Löschen</option><option value="hide">Beibehalten</option></select></div>
+            <div class="field"><label for="beatDeviationThresholdPct">Beatfinder Abweichungs-Schwelle (%)</label><input id="beatDeviationThresholdPct" type="number" min="1" max="50" step="1"></div>
 
             <div class="field field-btn-color">
                 <label>Button Grundfarbe (Ausgangszustand)</label>
@@ -170,6 +171,7 @@
             document.getElementById('audioWaitAfterMatchMs').value = clampNumber(config.audioWaitAfterMatchMs, 4000, 8000, DEFAULTS.audioWaitAfterMatchMs ?? 4000);
             document.getElementById('audioMatchStrictness').value = normalizeAudioMatchStrictness(config.audioMatchStrictness);
             document.getElementById('replaceAudioByTitle').value = normalizeBoolean(config.replaceAudioByTitle, DEFAULTS.replaceAudioByTitle ?? true) ? 'show' : 'hide';
+            document.getElementById('beatDeviationThresholdPct').value = clampNumber(config.beatDeviationThresholdPct, 1, 50, DEFAULTS.beatDeviationThresholdPct ?? 5);
             const baseColor = normalizeHexColor(config.btnBaseColor, DEFAULTS.btnBaseColor || '#3498db');
             const toggleColor1 = normalizeHexColor(config.btnToggleColor1, DEFAULTS.btnToggleColor1 || '#27ae60');
             const toggleColor2 = normalizeHexColor(config.btnToggleColor2, DEFAULTS.btnToggleColor2 || '#52be80');
@@ -210,6 +212,7 @@
                 audioWaitAfterMatchMs: clampNumber(document.getElementById('audioWaitAfterMatchMs').value, 4000, 8000, DEFAULTS.audioWaitAfterMatchMs ?? 4000),
                 audioMatchStrictness: normalizeAudioMatchStrictness(document.getElementById('audioMatchStrictness').value),
                 replaceAudioByTitle: normalizeBoolean(document.getElementById('replaceAudioByTitle').value, DEFAULTS.replaceAudioByTitle ?? true),
+                beatDeviationThresholdPct: clampNumber(document.getElementById('beatDeviationThresholdPct').value, 1, 50, DEFAULTS.beatDeviationThresholdPct ?? 5),
                 btnBaseColor: normalizeHexColor(document.getElementById('btnBaseColorHex').value, DEFAULTS.btnBaseColor || '#3498db'),
                 btnToggleColor1: normalizeHexColor(document.getElementById('btnToggleColor1Hex').value, DEFAULTS.btnToggleColor1 || '#27ae60'),
                 btnToggleColor2: normalizeHexColor(document.getElementById('btnToggleColor2Hex').value, DEFAULTS.btnToggleColor2 || '#52be80')
@@ -262,7 +265,7 @@
         bindColorInputs('btnToggleColor1Picker', 'btnToggleColor1Hex', 'swatchToggle1', DEFAULTS.btnToggleColor1 || '#27ae60');
         bindColorInputs('btnToggleColor2Picker', 'btnToggleColor2Hex', 'swatchToggle2', DEFAULTS.btnToggleColor2 || '#52be80');
 
-        ['centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerSmoothScroll', 'pageInfoTone', 'autoFullscreenOnStart', 'dropGlowDurationMs', 'stackBatchOverlapCount', 'audioReferenceTargetMs', 'audioRecordStartDelayMs', 'audioWaitAfterMatchMs', 'audioMatchStrictness', 'replaceAudioByTitle'].forEach((id) => {
+        ['centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerSmoothScroll', 'pageInfoTone', 'autoFullscreenOnStart', 'dropGlowDurationMs', 'stackBatchOverlapCount', 'audioReferenceTargetMs', 'audioRecordStartDelayMs', 'audioWaitAfterMatchMs', 'audioMatchStrictness', 'replaceAudioByTitle', 'beatDeviationThresholdPct'].forEach((id) => {
             const el = document.getElementById(id);
             el.addEventListener('input', () => saveWithStatus('Automatisch gespeichert.'));
             el.addEventListener('change', () => saveWithStatus('Automatisch gespeichert.'));

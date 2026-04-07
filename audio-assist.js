@@ -43,6 +43,177 @@ const AUDIO_DIAG_FLUSH_MS = 3000;
 const AUDIO_DIAG_MAX_QUEUE = 80;
 const AUDIO_ASSIST_LONG_PRESS_MS = 650;
 
+// ── Beat Finder ───────────────────────────────────────────────────────────────
+let beatFinderState = null;
+
+const BEAT_FINDER_TICK_MS        = 20;   // Analyseintervall (ms)
+const BEAT_FINDER_BASS_MAX_BIN   = 12;   // Bass-Bins 1-12 ≈ 0-280 Hz bei 48kHz/2048
+const BEAT_FINDER_MIN_BPM        = 40;
+const BEAT_FINDER_MAX_BPM        = 210;
+const BEAT_FINDER_MIN_INTERVAL   = Math.round(60000 / 210); // ≈ 286ms
+const BEAT_FINDER_MAX_INTERVAL   = Math.round(60000 / 40);  // 1500ms
+const BEAT_FINDER_FLUX_FACTOR    = 1.5;  // Onset-Schwellwert: Flux > Durchschnitt × X
+const BEAT_FINDER_LOCK_BEATS     = 4;    // Beats bis BPM-Lock
+const BEAT_FINDER_HISTORY_SIZE   = 12;   // Maximale Onset-History
+
+function getBeatDeviationThresholdPct() {
+    const fallback = 5;
+    try {
+        if (typeof loadUserConfig === 'function') {
+            const config = loadUserConfig();
+            if (Number.isFinite(Number(config?.beatDeviationThresholdPct))) {
+                return Math.min(50, Math.max(1, Number(config.beatDeviationThresholdPct)));
+            }
+        }
+    } catch {}
+    return fallback;
+}
+
+function startBeatFinder(analyser, audioContext, stream) {
+    stopBeatFinder();
+    if (!analyser) return;
+    beatFinderState = {
+        analyser, audioContext, stream,
+        prevBassEnergy: 0,
+        fluxHistory: [],
+        onsetTimes: [],
+        bpm: 0,
+        bpmLocked: false,
+        beatInterval: 500,
+        nextExpectedBeatAt: 0,
+        lastDeviationPct: 0,
+        beatTimer: null,
+        ticker: null
+    };
+    beatFinderState.ticker = setInterval(beatFinderTick, BEAT_FINDER_TICK_MS);
+    updateBeatFinderUi();
+}
+
+function stopBeatFinder() {
+    if (!beatFinderState) return;
+    clearInterval(beatFinderState.ticker);
+    clearInterval(beatFinderState.beatTimer);
+    stopMediaStream(beatFinderState.stream);
+    beatFinderState.audioContext?.close().catch(() => {});
+    beatFinderState = null;
+    updateBeatFinderUi(true);
+}
+
+function beatFinderTick() {
+    const state = beatFinderState;
+    if (!state || !state.analyser) return;
+    const data = new Uint8Array(state.analyser.frequencyBinCount);
+    state.analyser.getByteFrequencyData(data);
+
+    // Bass-Energie (Bins 1..BASS_MAX_BIN, ohne Bin 0 = DC-Offset)
+    const maxBin = Math.min(BEAT_FINDER_BASS_MAX_BIN, data.length - 1);
+    let sum = 0;
+    for (let i = 1; i <= maxBin; i++) sum += data[i] / 255;
+    const bassEnergy = sum / maxBin;
+
+    // Half-wave-rectified spectral flux
+    const flux = Math.max(0, bassEnergy - state.prevBassEnergy);
+    state.prevBassEnergy = bassEnergy;
+    state.fluxHistory.push(flux);
+    if (state.fluxHistory.length > 30) state.fluxHistory.shift();
+
+    if (bassEnergy < 0.03) return; // kein Signal – ignorieren
+
+    const meanFlux = state.fluxHistory.reduce((a, b) => a + b, 0) / state.fluxHistory.length;
+    const threshold = meanFlux * BEAT_FINDER_FLUX_FACTOR;
+    const now = Date.now();
+    const lastOnset = state.onsetTimes.length > 0 ? state.onsetTimes[state.onsetTimes.length - 1] : 0;
+    const minGap = state.bpmLocked ? state.beatInterval * 0.6 : BEAT_FINDER_MIN_INTERVAL;
+
+    if (flux > threshold && flux > 0.03 && (now - lastOnset) > minGap) {
+        onBeatOnset(now);
+    }
+}
+
+function onBeatOnset(now) {
+    const state = beatFinderState;
+    if (!state) return;
+    state.onsetTimes.push(now);
+    if (state.onsetTimes.length > BEAT_FINDER_HISTORY_SIZE) state.onsetTimes.shift();
+    if (state.onsetTimes.length < 2) return;
+
+    // Intervalle aus Onset-History
+    const intervals = [];
+    for (let i = 1; i < state.onsetTimes.length; i++) {
+        const d = state.onsetTimes[i] - state.onsetTimes[i - 1];
+        if (d >= BEAT_FINDER_MIN_INTERVAL && d <= BEAT_FINDER_MAX_INTERVAL) intervals.push(d);
+    }
+    if (intervals.length < BEAT_FINDER_LOCK_BEATS - 1) return;
+
+    const sorted = [...intervals].sort((a, b) => a - b);
+    const medianInterval = sorted[Math.floor(sorted.length / 2)];
+    const bpm = Math.round(60000 / medianInterval);
+    if (bpm < BEAT_FINDER_MIN_BPM || bpm > BEAT_FINDER_MAX_BPM) return;
+
+    const prevBpm = state.bpm;
+    state.bpm = bpm;
+
+    if (!state.bpmLocked) {
+        state.bpmLocked = true;
+        state.beatInterval = medianInterval;
+        state.nextExpectedBeatAt = now + medianInterval;
+        restartBeatMetronome(medianInterval);
+    } else {
+        // Abweichung vom erwarteten Beat
+        if (state.nextExpectedBeatAt > 0) {
+            state.lastDeviationPct = Math.abs(now - state.nextExpectedBeatAt) / state.beatInterval * 100;
+        }
+        // BPM-Drift sanft nachkorrigieren
+        state.beatInterval = state.beatInterval * 0.8 + medianInterval * 0.2;
+        state.nextExpectedBeatAt = now + state.beatInterval;
+        if (Math.abs(bpm - prevBpm) > 6) restartBeatMetronome(state.beatInterval);
+    }
+    updateBeatFinderUi();
+}
+
+function restartBeatMetronome(intervalMs) {
+    const state = beatFinderState;
+    if (!state) return;
+    if (state.beatTimer) clearInterval(state.beatTimer);
+    state.beatTimer = setInterval(() => {
+        if (!beatFinderState) return;
+        flashBeatButton(beatFinderState.lastDeviationPct);
+        beatFinderState.nextExpectedBeatAt = Date.now() + (beatFinderState.beatInterval || 500);
+    }, Math.round(intervalMs));
+}
+
+function flashBeatButton(deviationPct) {
+    const btn = document.getElementById('beatBtn');
+    if (!btn) return;
+    const isOff = deviationPct > getBeatDeviationThresholdPct();
+    const onColor = isOff ? '#c0392b' : '#27ae60';
+    btn.style.background = onColor;
+    btn.style.boxShadow = '0 0 10px ' + onColor;
+    if (btn._beatFlash) clearTimeout(btn._beatFlash);
+    btn._beatFlash = setTimeout(() => {
+        if (btn) { btn.style.background = '#333'; btn.style.boxShadow = ''; }
+    }, 110);
+}
+
+function updateBeatFinderUi(forceHide) {
+    const display = document.getElementById('bpmDisplay');
+    const btn = document.getElementById('beatBtn');
+    if (!display || !btn) return;
+    if (forceHide || !beatFinderState) {
+        display.style.display = 'none';
+        btn.style.display = 'none';
+        return;
+    }
+    display.style.display = '';
+    btn.style.display = '';
+    display.textContent = beatFinderState.bpm > 0 ? beatFinderState.bpm + ' BPM' : '… BPM';
+    if (!beatFinderState.bpmLocked) {
+        btn.style.background = '#333';
+        btn.style.boxShadow = '';
+    }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function getAudioMatchStrictnessProfile() {
     const fallback = (window.NOTENTISCH_USER_CONFIG_DEFAULTS && window.NOTENTISCH_USER_CONFIG_DEFAULTS.audioMatchStrictness) || 'normal';
     let strictness = String(fallback).toLowerCase();
@@ -1291,7 +1462,17 @@ async function evaluateAudioMatching() {
         triggerPath: isStrictTrigger ? 'strict' : 'relaxed-stable'
     });
     audioWaitAfterMatchUntil = Date.now() + getAudioWaitAfterMatchMs();
-    stopAudioMatching();
+    // Stream für Beat Finder weiterverwenden statt schließen
+    const bfAnalyser    = audioMatchState.analyser;
+    const bfAudioCtx    = audioMatchState.audioContext;
+    const bfStream      = audioMatchState.stream;
+    clearInterval(audioMatchState.samplerTimer);
+    audioMatchState.running = false;
+    audioMatchState = null;
+    audioHitHistory = [];
+    queueAudioDiagEvent('matching_stopped', { mode: audioAssistMode });
+    updateAudioAssistUi();
+    startBeatFinder(bfAnalyser, bfAudioCtx, bfStream);
     executeSearchDrop(match);
     flushAudioDiagQueue();
 }
@@ -1413,6 +1594,7 @@ function disableAudioAssistMode() {
         audioAssistMonitorTimer = null;
     }
     stopAudioMatching();
+    stopBeatFinder();
     stopAudioRecording(false).catch(() => {});
     queueAudioDiagEvent('audio_mode_changed', {
         fromMode: previousMode,
