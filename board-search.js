@@ -210,4 +210,5 @@ function executeSearchDrop(match) {
     }
     showPdfPages(cardEl.dataset.pdf);
     setSaveDateState(false, getModeHintText());
+    if (typeof notifyCardEnteredCenter === 'function') notifyCardEnteredCenter(cardEl.dataset.cardid);
 }

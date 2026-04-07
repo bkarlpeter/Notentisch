@@ -204,6 +204,34 @@ function updateBeatFinderToggleBtn() {
     }
 }
 
+async function startBeatFinderFromMic() {
+    if (!beatFinderEnabled) return;
+    if (beatFinderState) return; // läuft bereits
+    if (!navigator.mediaDevices?.getUserMedia) return;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.8;
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        startBeatFinder(analyser, audioContext, stream);
+    } catch (err) {
+        console.warn('Beatfinder: Mikrofon konnte nicht geöffnet werden:', err);
+    }
+}
+
+function notifyCardEnteredCenter(cardId) {
+    if (!beatFinderEnabled || !cardId) return;
+    if (beatFinderState) return; // läuft bereits (z.B. nach Ton-Match)
+    startBeatFinderFromMic();
+}
+
+function notifyCardLeftCenter() {
+    stopBeatFinder();
+}
+
 function flashBeatButton(deviationPct) {
     const btn = document.getElementById('beatBtn');
     if (!btn) return;

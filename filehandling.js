@@ -787,6 +787,7 @@ function executeSearchDrop(match) {
             showPdfPages(cardEl.dataset.pdf);
         }
         setSaveDateState(false, getModeHintText());
+        if (typeof notifyCardEnteredCenter === 'function') notifyCardEnteredCenter(cardEl.dataset.cardid);
     } catch (err) {
         recoverBoardUiStateAfterError('executeSearchDrop', {
             error: err,
@@ -1203,6 +1204,7 @@ function drop(event) {
             showPdfPages(card.dataset.pdf);
             // Reset Button wenn neue Karte ins CENTER kommt
             setSaveDateState(false, getModeHintText());
+            if (typeof notifyCardEnteredCenter === 'function') notifyCardEnteredCenter(card.dataset.cardid);
             console.log('Moved to center, lastCardIdFromCenter = ' + lastCardIdFromCenter);
         }
     } else if (isQuadrant) {
@@ -1219,6 +1221,7 @@ function drop(event) {
         if (cameFromCenter) {
             activeCenterCardId = null;
             clearCenterAfterCardExit();
+            if (typeof notifyCardLeftCenter === 'function') notifyCardLeftCenter();
         }
         saveDateToXml(card.dataset.cardid, targetId);
         if (isPlayMode) {
@@ -1425,6 +1428,7 @@ function moveCardFromCenterTo(quadrantId) {
         applyDropGlow(card, userConfig.dropGlowDurationMs);
         activeCenterCardId = null;
         clearCenterAfterCardExit();
+        if (typeof notifyCardLeftCenter === 'function') notifyCardLeftCenter();
         lastCardIdFromCenter = card.dataset.cardid;
         saveDateToXml(card.dataset.cardid, quadrantId);
         if (isPlayMode) {
