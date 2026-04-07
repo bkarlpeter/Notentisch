@@ -45,6 +45,7 @@ const AUDIO_ASSIST_LONG_PRESS_MS = 650;
 
 // ── Beat Finder ───────────────────────────────────────────────────────────────
 let beatFinderState = null;
+let beatFinderEnabled = false;
 
 const BEAT_FINDER_TICK_MS        = 20;   // Analyseintervall (ms)
 const BEAT_FINDER_BASS_MAX_BIN   = 12;   // Bass-Bins 1-12 ≈ 0-280 Hz bei 48kHz/2048
@@ -182,6 +183,27 @@ function restartBeatMetronome(intervalMs) {
     }, Math.round(intervalMs));
 }
 
+function toggleBeatFinderEnabled() {
+    beatFinderEnabled = !beatFinderEnabled;
+    if (!beatFinderEnabled) { stopBeatFinder(); }
+    updateBeatFinderToggleBtn();
+    updateBeatFinderUi();
+}
+
+function updateBeatFinderToggleBtn() {
+    const btn = document.getElementById('beatFinderToggleBtn');
+    if (!btn) return;
+    if (beatFinderEnabled) {
+        btn.textContent = 'Beat An';
+        btn.style.background = '#27ae60';
+        btn.style.color = '#fff';
+    } else {
+        btn.textContent = 'Beatfinder';
+        btn.style.background = '';
+        btn.style.color = '';
+    }
+}
+
 function flashBeatButton(deviationPct) {
     const btn = document.getElementById('beatBtn');
     if (!btn) return;
@@ -199,7 +221,8 @@ function updateBeatFinderUi(forceHide) {
     const display = document.getElementById('bpmDisplay');
     const btn = document.getElementById('beatBtn');
     if (!display || !btn) return;
-    if (forceHide || !beatFinderState) {
+    const show = !forceHide && beatFinderEnabled && !!beatFinderState;
+    if (!show) {
         display.style.display = 'none';
         btn.style.display = 'none';
         return;
@@ -1472,7 +1495,7 @@ async function evaluateAudioMatching() {
     audioHitHistory = [];
     queueAudioDiagEvent('matching_stopped', { mode: audioAssistMode });
     updateAudioAssistUi();
-    startBeatFinder(bfAnalyser, bfAudioCtx, bfStream);
+    if (beatFinderEnabled) { startBeatFinder(bfAnalyser, bfAudioCtx, bfStream); }
     executeSearchDrop(match);
     flushAudioDiagQueue();
 }
