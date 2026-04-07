@@ -1,5 +1,29 @@
 # Changelog - Notentisch
 
+## [v2026.04.07e] - 7. April 2026
+
+### Dokumentation
+- **INSTALL.md – neues Kapitel „Beatfinder"**: Beschreibt Aktivierung, Bedienung (BPM-Anzeige, Beat-Button), Start/Stopp-Verhalten, konfigurierbare Abweichungs-Schwelle und Mikrofon-Voraussetzung.
+
+## [v2026.04.07d] - 7. April 2026
+
+### Verbessert
+- **Beatfinder für alle Center-Eingangswege**: Beatfinder startet nun auch beim Drag-&-Drop ins Center und bei der Textsuche, nicht nur nach der Tonsuche.
+
+### Technisch
+- `audio-assist.js`: Neue Funktionen `notifyCardEnteredCenter(cardId)` und `notifyCardLeftCenter()` als lose Kopplung für externe Aufrufer; `startBeatFinderFromMic()` öffnet einen neuen Mic-Stream für Card-Entries ohne aktive Tonsuche.
+- `filehandling.js`: `drop()` CENTER-Zweig und beide `clearCenterAfterCardExit()`-Aufrufer rufen die neuen Notify-Funktionen (via `typeof`-Guard).
+- `board-search.js`: `executeSearchDrop()` ruft ebenfalls `notifyCardEnteredCenter()` nach Ablage.
+
+## [v2026.04.07c] - 7. April 2026
+
+### Neu
+- **Beatfinder-Toggle-Button**: Neuer Button „Beatfinder" in der Kontrollleiste. BPM-Anzeige und Beat-Button bleiben verborgen, bis der Beatfinder explizit aktiviert wird.
+
+### Technisch
+- `audio-assist.js`: `beatFinderEnabled`-Flag, `toggleBeatFinderEnabled()`, `updateBeatFinderToggleBtn()`. Beatfinder startet nur noch, wenn Flag aktiv; `startBeatFinder()` nach Match wird geprüft.
+- `board.html`: `#beatFinderToggleBtn` vor `#bpmDisplay` eingefügt; Button-Style (`width:auto`, `min-width:76px`).
+
 ## [v2026.04.07b] - 7. April 2026
 
 ### Neu

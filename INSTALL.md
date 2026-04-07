@@ -128,6 +128,43 @@ Du kannst das Skript jederzeit erneut ausführen, falls du die Ordnerstruktur od
 
 ---
 
+## Beatfinder
+
+Der Beatfinder erkennt das Tempo (BPM) aus den Bass-Frequenzen des Mikrofons und zeigt es in der Kontrollleiste an, sobald ein Blatt im Center liegt.
+
+### Aktivierung
+
+1. In der Kontrollleiste auf **„Beatfinder"** klicken – der Button wird grün und zeigt **„Beat An"**.
+2. Ab jetzt startet der Beatfinder automatisch, wenn ein Blatt ins Center kommt (per Drag & Drop, Textsuche oder Tonsuche).
+
+### Bedienung
+
+| Element | Bedeutung |
+|---|---|
+| **Beatfinder**-Button | Schaltet die Funktion ein/aus |
+| **120 BPM** (Anzeige neben Button) | Erkanntes Tempo; erscheint nach den ersten Schlägen |
+| **♩**-Button (grün) | Blinkt im Takt; Abweichung liegt im erlaubten Bereich |
+| **♩**-Button (rot) | Blinkt im Takt; Abweichung überschreitet den Schwellwert |
+
+### Wann startet/stoppt der Beatfinder?
+
+- **Start:** Sobald ein Blatt ins Center gelegt wird (Beatfinder muss aktiv sein).
+- **Stopp:** Wenn das Blatt aus dem Center entfernt wird oder der Beatfinder-Button deaktiviert wird.
+
+### Konfiguration
+
+In den **Erweiterten Einstellungen** (`Einstellungen → Erweitert`) gibt es das Feld:
+
+> **Beatfinder Abweichungs-Schwelle (%)** – Standardwert 5 %, Bereich 1–50 %
+
+Liegt die gemessene Abweichung vom erkannten Schlag-Intervall unterhalb dieses Wertes, leuchtet der Beat-Button grün, sonst rot.
+
+### Voraussetzung
+
+Der Browser benötigt Mikrofon-Berechtigung. Beim ersten Aktivieren erscheint ggf. eine Berechtigungsabfrage des Browsers.
+
+---
+
 ## Weitere Hilfe
 Siehe [README.md](README.md) für:
 - Bedienung
