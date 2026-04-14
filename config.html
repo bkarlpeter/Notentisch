@@ -148,7 +148,7 @@
             window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
     </script>
-    <script src="center-config.js?v=20260317b"></script>
+    <script src="center-config.js?v=20260412n"></script>
     <script>
         const USER_CONFIG_KEY = 'notentischUserConfig';
         const DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS } : {};
@@ -686,6 +686,10 @@
         
         document.getElementById('advancedBtn').addEventListener('click', () => { window.location.assign('advanced_config.html'); });
         function goBackToBoard() {
+            if (window.history.length > 1) {
+                window.history.back();
+                return;
+            }
             window.location.replace('board.html');
         }
 

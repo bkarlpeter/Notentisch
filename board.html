@@ -357,6 +357,69 @@
             padding: 0 10px;
         }
 
+        #audio-record-progress {
+            display: none;
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -44px;
+            text-align: center;
+            padding: 0 8px;
+            margin: 0;
+            font-size: 12px;
+            color: #999;
+            z-index: 10;
+            pointer-events: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #audio-progress-label {
+            margin-right: 8px;
+            font-weight: 500;
+        }
+
+        #audio-progress-dots {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        #audio-progress-dots span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #ccc;
+            transition: background-color 0.15s ease;
+        }
+
+        #audio-progress-dots span.filled {
+            background-color: #27ae60;
+        }
+
+        #audio-record-progress.search-difficult {
+            color: #9b7b57;
+        }
+
+        #audio-record-progress.search-difficult #audio-progress-dots span.filled {
+            background-color: #8b5a2b;
+        }
+
+        #audio-record-progress-end {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: linear-gradient(135deg, #27ae60, #3498db);
+            border-radius: 50%;
+            margin-left: 6px;
+        }
+
+        #audio-record-progress.search-difficult #audio-record-progress-end {
+            background: linear-gradient(135deg, #8b5a2b, #b78652);
+        }
+
         #audioAssistBtn,
         #textSearchBtn {
             width: calc(10ch + 20px);
@@ -380,34 +443,6 @@
             cursor: default;
             -webkit-user-select: none;
             user-select: none;
-        }
-
-        #bpmDisplay {
-            display: none;
-            min-width: 68px;
-            font-variant-numeric: tabular-nums;
-        }
-
-        #beatFinderToggleBtn {
-            width: 100px;
-            min-width: 100px;
-        }
-
-        #beatMetronome {
-            display: none;
-            width: 28px;
-            min-width: 28px;
-            height: 36px;
-            --beat-color: #555;
-        }
-        #beatMetronome .metro-arm {
-            transform-origin: 14px 5px;
-            animation: metronomeSwing 1000ms ease-in-out infinite;
-            animation-play-state: paused;
-        }
-        @keyframes metronomeSwing {
-            0%, 100% { transform: rotate(-22deg); }
-            50%       { transform: rotate(22deg); }
         }
 
         .toolbar-right {
@@ -687,6 +722,21 @@
             font-size: 12px;
         }
 
+        #center-filename-label {
+            position: absolute;
+            bottom: -22px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 11px;
+            color: #888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 8px;
+            pointer-events: none;
+        }
+
         /* --- KARTEN - GESTAFFELT (10px pro Karte) --- */
         .card-container {
             width: 190px;
@@ -764,6 +814,16 @@
             pointer-events: none;
         }
 
+        .card-audio-badge.good {
+            background: #4fd66d;
+            box-shadow: 0 0 0 1px rgba(79, 214, 109, 0.35);
+        }
+
+        .card-audio-badge.weak {
+            background: #ffd54a;
+            box-shadow: 0 0 0 1px rgba(255, 213, 74, 0.35);
+        }
+
         /* --- GRID POSITIONEN --- */
         #Q1 { grid-column: 1; grid-row: 1; }
         #Q2 { grid-column: 2; grid-row: 1; }
@@ -806,7 +866,7 @@
         <div class="center-hole" id="CENTER"
              ondrop="drop(event)"
              ondragover="event.preventDefault()"
-             ondblclick="moveCardToQ2()">
+             ondblclick="moveCardToQ2(event)">
             <div id="center-content">
                 <div class="center-placeholder">
                     PDF im Center anzeigen
@@ -815,6 +875,11 @@
             <div id="scroll-buttons" class="quadrant-stack-controls right center-stack-controls">
                 <button type="button" class="quadrant-stack-btn" onclick="scrollPdf('up')">&#9650;</button>
                 <button type="button" class="quadrant-stack-btn" onclick="scrollPdf('down')">&#9660;</button>
+            </div>
+            <div id="center-filename-label"></div>
+            <div id="audio-record-progress">
+                <span id="audio-progress-label">Searching</span>
+                <span id="audio-progress-dots"></span>
             </div>
         </div>
 
@@ -855,19 +920,7 @@
         <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)" class="hidden-file-input">
         <div class="toolbar-right">
             <button class="btn" id="textSearchBtn" onclick="openSearchOverlay()" title="Blatt suchen">Textsuche</button>
-            <button class="btn" onclick="toggleAudioAssistMode(event)" id="audioAssistBtn" title="Kurz: 0->1, 1<->2 | Lang in Ton An (>=650ms): Aus">Tonsuche</button>
-            <button class="btn" id="beatFinderToggleBtn" onclick="toggleBeatFinderEnabled()" title="Beatfinder ein-/ausschalten">Beatfinder</button>
-            <span id="bpmDisplay" class="page-info" title="Erkanntes Tempo">… BPM</span>
-            <div id="beatMetronome" title="Beatfinder: schwingt im erkannten Tempo. Grün = im Takt, Rot = Abweichung">
-                <svg viewBox="0 0 28 36" width="28" height="36" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="8" y="30" width="12" height="6" rx="2" fill="#666"/>
-                    <circle cx="14" cy="5" r="2" fill="#888"/>
-                    <g class="metro-arm">
-                        <line x1="14" y1="5" x2="14" y2="29" stroke="#ccc" stroke-width="1.5" stroke-linecap="round"/>
-                        <circle cx="14" cy="29" r="4" fill="var(--beat-color)"/>
-                    </g>
-                </svg>
-            </div>
+            <button class="btn" onclick="toggleAudioAssistMode(event)" id="audioAssistBtn" title="Kurz: Aus→Ton an, Ton an→Aus. Lang (in Ton an): Aufnahme. In Aufnahme: Kurz=Aus.">Tonsuche</button>
             <span id="audioSaveBtn" title="Auto-Speichern Status">Speichern</span>
             <button class="btn btn-config" onclick="openConfigPage()" title="Staffelung">C</button>
             <button class="btn btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreenMode()" title="Vollbild (F11 / Esc)">F11</button>
@@ -878,12 +931,12 @@
 </div>
 
     <!-- SCRIPTS -->
-    <script src="center-config.js?v=20260317b"></script>
+    <script src="center-config.js?v=20260412n"></script>
     <script src="functions.js?v=20260317c"></script>
-    <script src="center-view.js?v=20260315a"></script>
-    <script src="render.js?v=20260317a"></script>
-    <script src="filehandling.js?v=20260317h"></script>
-    <script src="audio-assist.js?v=20260321m"></script>
+    <script src="center-view.js?v=20260411f"></script>
+    <script src="render.js?v=20260412q"></script>
+    <script src="filehandling.js?v=20260412b"></script>
+    <script src="audio-assist.js?v=20260414a"></script>
 
 </body>
 </html>

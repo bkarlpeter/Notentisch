@@ -9,18 +9,38 @@ let audioRecordState = null;
 let audioMatchState = null;
 let audioRecordStartDelayState = null;
 let audioHitHistory = []; // Voting-Fenster: letzte N bestCardId-Ergebnisse (over threshold)
+let audioLastBestCardId = null;
+let audioBestCardStreak = 0;
 let audioDiscardSuppressedCardId = null;
 let audioWaitAfterMatchUntil = 0;
 let audioWaitAfterMatchBlinkUntil = 0;
+let audioSearchDifficultSince = 0;
+let audioSearchDifficultCount = 0;
+let audioSearchLastHintAt = 0;
+let audioMatchStartedAt = 0;
+let audioMatchCandidateStartedAt = 0;
+let audioMatchCandidateCardId = null;
 let audioReadyToSaveState = null;
 let audioSaveWasConfirmed = false;
 let audioDiagQueue = [];
 let audioDiagFlushTimer = null;
+let audioReferenceCandidateCache = null;
+let audioReferenceCandidateCacheVersion = 0;
 
 const AUDIO_FINGERPRINT_BANDS = 24;
-const AUDIO_MATCH_THRESHOLD = 0.88;
+const AUDIO_MATCH_THRESHOLD = 0.86;       // + robust: 0.88 → 0.86
 const AUDIO_MATCH_REQUIRED_HITS = 5;      // Min-Votes im Fenster zum Auslösen
-const AUDIO_MATCH_VOTE_WINDOW = 15;       // Fenster-Größe: 15 × 180ms ≈ 2.7s
+const AUDIO_MATCH_VOTE_WINDOW = 10;       // + stabil: 15 → 10 (≈ 1.8s Fenster)
+const AUDIO_MATCH_EVAL_INTERVAL_MS = 450;
+const AUDIO_MATCH_MIN_LIVE_FRAMES = 5;
+const AUDIO_MATCH_ENABLE_FAST_TRIGGER = true;
+const AUDIO_MATCH_TRIGGER_MIN_LIVE_FRAMES = 5;
+const AUDIO_MATCH_TRIGGER_FLOOR_MIN_GAP = 0.006;
+const AUDIO_MATCH_EARLY_HITS = 3;
+const AUDIO_MATCH_EARLY_MIN_SCORE = 0.992;
+const AUDIO_MATCH_EARLY_MIN_GAP = 0.028;
+const AUDIO_MATCH_EARLY_MIN_VOTE_LEAD = 2;
+const AUDIO_REFERENCE_MIN_FRAMES = 6;
 // Trigger-Grenzen nach Mel+Delta-Umstellung: vorherige Werte (0.994/0.993)
 // waren für reale Aufnahmen zu streng und blockierten valide Treffer.
 const AUDIO_MATCH_TRIGGER_MIN_SCORE = 0.975;
@@ -42,241 +62,27 @@ const AUDIO_DIAG_BATCH_SIZE = 12;
 const AUDIO_DIAG_FLUSH_MS = 3000;
 const AUDIO_DIAG_MAX_QUEUE = 80;
 const AUDIO_ASSIST_LONG_PRESS_MS = 650;
+const AUDIO_MATCH_AUTO_RESTART_MS = 22000;
+const AUDIO_MATCH_AUTO_RESTART_MIN_CYCLES = 20;
 
 // ── Beat Finder ───────────────────────────────────────────────────────────────
-let beatFinderState = null;
-let beatFinderEnabled = false;
-
-const BEAT_FINDER_TICK_MS        = 20;   // Analyseintervall (ms)
-const BEAT_FINDER_BASS_MAX_BIN   = 12;   // Bass-Bins 1-12 ≈ 0-280 Hz bei 48kHz/2048
-const BEAT_FINDER_MIN_BPM        = 40;
-const BEAT_FINDER_MAX_BPM        = 210;
-const BEAT_FINDER_MIN_INTERVAL   = Math.round(60000 / 210); // ≈ 286ms
-const BEAT_FINDER_MAX_INTERVAL   = Math.round(60000 / 40);  // 1500ms
-const BEAT_FINDER_FLUX_FACTOR    = 1.5;  // Onset-Schwellwert: Flux > Durchschnitt × X
-const BEAT_FINDER_LOCK_BEATS     = 4;    // Beats bis BPM-Lock
-const BEAT_FINDER_HISTORY_SIZE   = 12;   // Maximale Onset-History
-
-function getBeatDeviationThresholdPct() {
-    const fallback = 5;
-    try {
-        if (typeof loadUserConfig === 'function') {
-            const config = loadUserConfig();
-            if (Number.isFinite(Number(config?.beatDeviationThresholdPct))) {
-                return Math.min(50, Math.max(1, Number(config.beatDeviationThresholdPct)));
-            }
-        }
-    } catch {}
-    return fallback;
-}
-
-function startBeatFinder(analyser, audioContext, stream) {
-    stopBeatFinder();
-    if (!analyser) return;
-    beatFinderState = {
-        analyser, audioContext, stream,
-        prevBassEnergy: 0,
-        fluxHistory: [],
-        onsetTimes: [],
-        bpm: 0,
-        bpmLocked: false,
-        beatInterval: 500,
-        nextExpectedBeatAt: 0,
-        lastDeviationPct: 0,
-        beatTimer: null,
-        ticker: null
-    };
-    beatFinderState.ticker = setInterval(beatFinderTick, BEAT_FINDER_TICK_MS);
-    updateBeatFinderUi();
-}
-
-function stopBeatFinder() {
-    if (!beatFinderState) return;
-    clearInterval(beatFinderState.ticker);
-    clearInterval(beatFinderState.beatTimer);
-    stopMediaStream(beatFinderState.stream);
-    beatFinderState.audioContext?.close().catch(() => {});
-    beatFinderState = null;
-    updateBeatFinderUi(true);
-}
-
-function beatFinderTick() {
-    const state = beatFinderState;
-    if (!state || !state.analyser) return;
-    const data = new Uint8Array(state.analyser.frequencyBinCount);
-    state.analyser.getByteFrequencyData(data);
-
-    // Bass-Energie (Bins 1..BASS_MAX_BIN, ohne Bin 0 = DC-Offset)
-    const maxBin = Math.min(BEAT_FINDER_BASS_MAX_BIN, data.length - 1);
-    let sum = 0;
-    for (let i = 1; i <= maxBin; i++) sum += data[i] / 255;
-    const bassEnergy = sum / maxBin;
-
-    // Half-wave-rectified spectral flux
-    const flux = Math.max(0, bassEnergy - state.prevBassEnergy);
-    state.prevBassEnergy = bassEnergy;
-    state.fluxHistory.push(flux);
-    if (state.fluxHistory.length > 30) state.fluxHistory.shift();
-
-    if (bassEnergy < 0.03) return; // kein Signal – ignorieren
-
-    const meanFlux = state.fluxHistory.reduce((a, b) => a + b, 0) / state.fluxHistory.length;
-    const threshold = meanFlux * BEAT_FINDER_FLUX_FACTOR;
-    const now = Date.now();
-    const lastOnset = state.onsetTimes.length > 0 ? state.onsetTimes[state.onsetTimes.length - 1] : 0;
-    const minGap = state.bpmLocked ? state.beatInterval * 0.6 : BEAT_FINDER_MIN_INTERVAL;
-
-    if (flux > threshold && flux > 0.03 && (now - lastOnset) > minGap) {
-        onBeatOnset(now);
-    }
-}
-
-function onBeatOnset(now) {
-    const state = beatFinderState;
-    if (!state) return;
-    state.onsetTimes.push(now);
-    if (state.onsetTimes.length > BEAT_FINDER_HISTORY_SIZE) state.onsetTimes.shift();
-    if (state.onsetTimes.length < 2) return;
-
-    // Intervalle aus Onset-History
-    const intervals = [];
-    for (let i = 1; i < state.onsetTimes.length; i++) {
-        const d = state.onsetTimes[i] - state.onsetTimes[i - 1];
-        if (d >= BEAT_FINDER_MIN_INTERVAL && d <= BEAT_FINDER_MAX_INTERVAL) intervals.push(d);
-    }
-    if (intervals.length < BEAT_FINDER_LOCK_BEATS - 1) return;
-
-    const sorted = [...intervals].sort((a, b) => a - b);
-    const medianInterval = sorted[Math.floor(sorted.length / 2)];
-    const bpm = Math.round(60000 / medianInterval);
-    if (bpm < BEAT_FINDER_MIN_BPM || bpm > BEAT_FINDER_MAX_BPM) return;
-
-    const prevBpm = state.bpm;
-    state.bpm = bpm;
-
-    if (!state.bpmLocked) {
-        state.bpmLocked = true;
-        state.beatInterval = medianInterval;
-        state.nextExpectedBeatAt = now + medianInterval;
-        restartBeatMetronome(medianInterval);
-    } else {
-        // Abweichung vom erwarteten Beat
-        if (state.nextExpectedBeatAt > 0) {
-            state.lastDeviationPct = Math.abs(now - state.nextExpectedBeatAt) / state.beatInterval * 100;
-        }
-        // BPM-Drift sanft nachkorrigieren
-        state.beatInterval = state.beatInterval * 0.8 + medianInterval * 0.2;
-        state.nextExpectedBeatAt = now + state.beatInterval;
-        if (Math.abs(bpm - prevBpm) > 6) restartBeatMetronome(state.beatInterval);
-    }
-    updateBeatFinderUi();
-}
-
-function restartBeatMetronome(intervalMs) {
-    const state = beatFinderState;
-    if (!state) return;
-    if (state.beatTimer) clearInterval(state.beatTimer);
-    state.beatTimer = setInterval(() => {
-        if (!beatFinderState) return;
-        flashBeatButton(beatFinderState.lastDeviationPct);
-        beatFinderState.nextExpectedBeatAt = Date.now() + (beatFinderState.beatInterval || 500);
-    }, Math.round(intervalMs));
-    // Metronom-Pendel auf erkanntes Tempo einstellen
-    const arm = document.querySelector('#beatMetronome .metro-arm');
-    if (arm) {
-        arm.style.animationDuration = (Math.round(intervalMs) * 2) + 'ms';
-        arm.style.animationPlayState = 'running';
-    }
-}
-
-function toggleBeatFinderEnabled() {
-    beatFinderEnabled = !beatFinderEnabled;
-    if (!beatFinderEnabled) { stopBeatFinder(); }
-    updateBeatFinderToggleBtn();
-    updateBeatFinderUi();
-}
-
-function updateBeatFinderToggleBtn() {
-    const btn = document.getElementById('beatFinderToggleBtn');
-    if (!btn) return;
-    if (beatFinderEnabled) {
-        btn.textContent = 'Beat An';
-        btn.style.background = '#27ae60';
-        btn.style.color = '#fff';
-    } else {
-        btn.textContent = 'Beatfinder';
-        btn.style.background = '';
-        btn.style.color = '';
-    }
-}
-
-async function startBeatFinderFromMic() {
-    if (!beatFinderEnabled) return;
-    if (beatFinderState) return; // läuft bereits
-    if (!navigator.mediaDevices?.getUserMedia) return;
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const analyser = audioContext.createAnalyser();
-        analyser.fftSize = 2048;
-        analyser.smoothingTimeConstant = 0.8;
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
-        startBeatFinder(analyser, audioContext, stream);
-    } catch (err) {
-        console.warn('Beatfinder: Mikrofon konnte nicht geöffnet werden:', err);
-    }
-}
-
-function notifyCardEnteredCenter(cardId) {
-    if (!beatFinderEnabled || !cardId) return;
-    if (beatFinderState) return; // läuft bereits (z.B. nach Ton-Match)
-    startBeatFinderFromMic();
-}
-
-function notifyCardLeftCenter() {
-    stopBeatFinder();
-}
-
-function flashBeatButton(deviationPct) {
-    const metro = document.getElementById('beatMetronome');
-    if (!metro) return;
-    const isOff = deviationPct > getBeatDeviationThresholdPct();
-    metro.style.setProperty('--beat-color', isOff ? '#c0392b' : '#27ae60');
-}
-
-function updateBeatFinderUi(forceHide) {
-    const display = document.getElementById('bpmDisplay');
-    const metro = document.getElementById('beatMetronome');
-    if (!display || !metro) return;
-    const show = !forceHide && beatFinderEnabled && !!beatFinderState;
-    if (!show) {
-        display.style.display = 'none';
-        metro.style.display = 'none';
-        const arm = metro.querySelector('.metro-arm');
-        if (arm) arm.style.animationPlayState = 'paused';
-        return;
-    }
-    display.style.display = '';
-    metro.style.display = '';
-    display.textContent = beatFinderState.bpm > 0 ? beatFinderState.bpm + ' BPM' : '… BPM';
-    if (!beatFinderState.bpmLocked) {
-        metro.style.setProperty('--beat-color', '#555');
-    }
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
 function getAudioMatchStrictnessProfile() {
     const fallback = (window.NOTENTISCH_USER_CONFIG_DEFAULTS && window.NOTENTISCH_USER_CONFIG_DEFAULTS.audioMatchStrictness) || 'normal';
     let strictness = String(fallback).toLowerCase();
+    let exceptionalModesEnabled = false;
     try {
         if (typeof loadUserConfig === 'function') {
             const config = loadUserConfig();
             if (config && config.audioMatchStrictness) {
                 strictness = String(config.audioMatchStrictness).toLowerCase();
             }
+            exceptionalModesEnabled = !!config?.audioMatchExceptionalModesEnabled;
         }
     } catch {}
+
+    if (!exceptionalModesEnabled && strictness !== 'normal') {
+        strictness = 'normal';
+    }
 
     if (strictness === 'locker') {
         return {
@@ -286,18 +92,20 @@ function getAudioMatchStrictnessProfile() {
             relaxedMinScore: 0.93,
             relaxedMinGap: 0.001,
             relaxedMinHits: 4,
-            relaxedMinVoteLead: 1
+            relaxedMinVoteLead: 1,
+            requiredHits: 4
         };
     }
     if (strictness === 'streng') {
         return {
             strictness,
-            strictMinScore: 0.985,
+            strictMinScore: 0.98,
             strictMinGap: 0.010,
-            relaxedMinScore: 0.965,
+            relaxedMinScore: 0.96,
             relaxedMinGap: 0.004,
-            relaxedMinHits: 6,
-            relaxedMinVoteLead: 3
+            relaxedMinHits: 5,
+            relaxedMinVoteLead: 2,
+            requiredHits: 6
         };
     }
 
@@ -308,7 +116,8 @@ function getAudioMatchStrictnessProfile() {
         relaxedMinScore: 0.94,
         relaxedMinGap: 0.002,
         relaxedMinHits: 5,
-        relaxedMinVoteLead: 1
+        relaxedMinVoteLead: 1,
+        requiredHits: 5
     };
 }
 
@@ -429,8 +238,79 @@ function getAudioReadyBlinkMs() {
     return fallback;
 }
 
+function resetAudioSearchDifficultyState() {
+    audioSearchDifficultSince = 0;
+    audioSearchDifficultCount = 0;
+    updateAudioAssistUi();
+}
+
+function resetAudioMatchCandidateProgress() {
+    audioMatchCandidateStartedAt = 0;
+    audioMatchCandidateCardId = null;
+}
+
+function markAudioSearchDifficulty(reason, context = {}) {
+    const now = Date.now();
+    if (!audioSearchDifficultSince) {
+        audioSearchDifficultSince = now;
+    }
+    audioSearchDifficultCount += 1;
+    if (audioSearchDifficultCount === 4) {
+        updateAudioAssistUi();
+    }
+
+    const elapsedMs = now - audioSearchDifficultSince;
+    const shouldHint = (
+        audioSearchDifficultCount >= 8 &&
+        elapsedMs >= 12000 &&
+        (now - audioSearchLastHintAt) >= 12000
+    );
+
+    if (shouldHint) {
+        audioSearchLastHintAt = now;
+        queueAudioDiagEvent('matching_user_hint_difficult', {
+            reason,
+            difficultCount: audioSearchDifficultCount,
+            elapsedMs,
+            ...context
+        });
+        updateAudioAssistUi();
+    }
+
+    // Nach längerem Kampf (>15s, >15 blockierte Zyklen) Suche automatisch neu starten.
+    const requiredHits = Number(context?.requiredHits) || AUDIO_MATCH_REQUIRED_HITS;
+    const votes = Number(context?.votes) || 0;
+    const bestStreak = Number(context?.bestStreak) || 0;
+    const closeToTrigger = votes >= Math.max(1, requiredHits - 1) || bestStreak >= 3;
+
+    const shouldAutoRestart = (
+        audioSearchDifficultCount >= AUDIO_MATCH_AUTO_RESTART_MIN_CYCLES &&
+        elapsedMs >= AUDIO_MATCH_AUTO_RESTART_MS &&
+        audioAssistMode === 1 &&
+        !!audioMatchState &&
+        !closeToTrigger
+    );
+    if (shouldAutoRestart) {
+        const difficultCountSnapshot = audioSearchDifficultCount;
+        queueAudioDiagEvent('matching_auto_restart', {
+            reason,
+            difficultCount: difficultCountSnapshot,
+            elapsedMs,
+            ...context
+        });
+        resetAudioSearchDifficultyState();
+        stopAudioMatching();
+        showAudioToast('Tonsuche startet neu.');
+        setTimeout(() => {
+            if (audioAssistMode === 1 && !audioMatchState) {
+                startAudioMatching().catch(() => {});
+            }
+        }, 700);
+    }
+}
+
 function getAudioReferenceTargetFrames() {
-    const fallbackMs = (window.NOTENTISCH_USER_CONFIG_DEFAULTS && window.NOTENTISCH_USER_CONFIG_DEFAULTS.audioReferenceTargetMs) || 5000;
+    const fallbackMs = (window.NOTENTISCH_USER_CONFIG_DEFAULTS && window.NOTENTISCH_USER_CONFIG_DEFAULTS.audioReferenceTargetMs) || 7000;  // + mehr Material: 5s → 7s
     let targetMs = fallbackMs;
     try {
         if (typeof loadUserConfig === 'function') {
@@ -512,6 +392,66 @@ function getCurrentCenterCardId() {
     return null;
 }
 
+function updateAudioRecordProgress() {
+    const progressEl = document.getElementById('audio-record-progress');
+    if (!progressEl) return;
+    const labelEl = document.getElementById('audio-progress-label');
+    const dotsContainer = document.getElementById('audio-progress-dots');
+    if (!dotsContainer) return;
+
+    progressEl.classList.remove('search-difficult');
+
+    // Aufnahme-Modus: Fortschritt bis Ziel-FrameCount.
+    if (audioAssistMode === 2 && audioRecordState) {
+        progressEl.style.display = 'block';
+        if (labelEl) labelEl.textContent = 'Searching';
+
+        const targetFrames = audioRecordState.targetFrameCount || 1;
+        const currentFrames = audioRecordState.frameCount || 0;
+        const targetSecs = Math.ceil((targetFrames * AUDIO_FRAME_SAMPLE_MS) / 1000);
+        const currentSecs = Math.ceil((currentFrames * AUDIO_FRAME_SAMPLE_MS) / 1000);
+
+        let html = '';
+        for (let i = 1; i <= targetSecs; i++) {
+            const cls = i <= currentSecs ? ' class="filled"' : '';
+            html += `<span${cls}></span>`;
+        }
+        html += '<span id="audio-record-progress-end"></span>';
+        dotsContainer.innerHTML = html;
+        return;
+    }
+
+    // Such-Modus: Wartepunkte bis Auto-Restart-Schwelle.
+    if (audioAssistMode === 1 && audioMatchState && audioMatchCandidateStartedAt > 0) {
+        progressEl.style.display = 'block';
+        if (labelEl) labelEl.textContent = 'Warten';
+
+        const targetSecs = Math.ceil(AUDIO_MATCH_AUTO_RESTART_MS / 1000);
+        const elapsedMs = Math.max(0, Date.now() - audioMatchCandidateStartedAt);
+        const elapsedSecs = Math.ceil(elapsedMs / 1000);
+        const currentSecs = Math.min(targetSecs, Math.max(1, elapsedSecs));
+        const difficultSearch = (
+            audioSearchDifficultCount >= 8 &&
+            audioSearchDifficultSince > 0 &&
+            (Date.now() - audioSearchDifficultSince) >= 12000
+        );
+        if (difficultSearch) {
+            progressEl.classList.add('search-difficult');
+        }
+
+        let html = '';
+        for (let i = 1; i <= targetSecs; i++) {
+            const cls = i <= currentSecs ? ' class="filled"' : '';
+            html += `<span${cls}></span>`;
+        }
+        html += '<span id="audio-record-progress-end"></span>';
+        dotsContainer.innerHTML = html;
+        return;
+    }
+
+    progressEl.style.display = 'none';
+}
+
 function updateAudioAssistUi() {
     const btn = document.getElementById('audioAssistBtn');
     const hasPendingRecordStart = !!(audioAssistMode === 2 && audioRecordStartDelayState && !audioRecordState);
@@ -568,6 +508,8 @@ function updateAudioAssistUi() {
         }
         saveBtn.style.opacity = '';
     }
+
+    updateAudioRecordProgress();
 }
 
 function sanitizeSoundFileBase(value) {
@@ -637,21 +579,27 @@ function syncRenderedAudioBadge(cardId) {
     if (!cardElement) return;
 
     const cardNode = getRenderApi()?.getCardNodeById(cardId) || null;
-    const hasAudioReference = !!readAudioMetadataFromCardNode(cardNode);
+    const audioList = readAudioMetadataListFromCardNode(cardNode);
+    const hasAudioReference = audioList.length > 0;
+    const bestQuality = audioList.reduce((best, audio) => Math.max(best, getAudioReferenceQuality(audio)), 0);
+    const badgeTone = bestQuality >= 0.85 ? 'good' : 'weak';
     const shouldShowBadge = hasAudioReference && isAudioBadgeVisibleInUi();
     const existingBadge = cardElement.querySelector('.card-audio-badge');
 
     if (shouldShowBadge) {
         if (!existingBadge) {
             const badge = document.createElement('span');
-            badge.className = 'card-audio-badge';
-            badge.title = 'Spielton vorhanden';
+            badge.className = 'card-audio-badge ' + badgeTone;
+            badge.title = badgeTone === 'good' ? 'Tonprint gut' : 'Tonprint prüfen';
             const titleNode = cardElement.querySelector('.card-title');
             if (titleNode) {
                 cardElement.insertBefore(badge, titleNode);
             } else {
                 cardElement.appendChild(badge);
             }
+        } else {
+            existingBadge.className = 'card-audio-badge ' + badgeTone;
+            existingBadge.title = badgeTone === 'good' ? 'Tonprint gut' : 'Tonprint prüfen';
         }
     } else if (existingBadge) {
         existingBadge.remove();
@@ -743,9 +691,16 @@ function writeAudioMetadataToCard(cardId, data) {
     upsertXmlChild(audioNode, 'MimeType', data.mimeType || '');
     upsertXmlChild(audioNode, 'Fingerprint', data.fingerprint || '');
     upsertXmlChild(audioNode, 'ErfasstAm', data.capturedAt || '');
+    if (Number.isFinite(Number(data?.frameCount))) {
+        upsertXmlChild(audioNode, 'FrameCount', Math.max(0, Number(data.frameCount)));
+    }
+    if (Number.isFinite(Number(data?.targetFrameCount))) {
+        upsertXmlChild(audioNode, 'TargetFrameCount', Math.max(0, Number(data.targetFrameCount)));
+    }
     if (typeof markUnsavedChange === 'function') {
         markUnsavedChange();
     }
+    invalidateAudioReferenceCandidateCache();
     return true;
 }
 
@@ -764,9 +719,29 @@ function readAudioMetadataListFromCardNode(cardNode) {
         return {
             path,
             fingerprint,
-            mimeType: (audioNode.querySelector('MimeType')?.textContent || '').trim()
+            mimeType: (audioNode.querySelector('MimeType')?.textContent || '').trim(),
+            frameCount: Number(audioNode.querySelector('FrameCount')?.textContent || 0) || 0,
+            targetFrameCount: Number(audioNode.querySelector('TargetFrameCount')?.textContent || 0) || 0
         };
     }).filter(Boolean);
+}
+
+function invalidateAudioReferenceCandidateCache() {
+    audioReferenceCandidateCacheVersion += 1;
+    audioReferenceCandidateCache = null;
+}
+
+function getAudioReferenceQuality(audio) {
+    const frameCount = Number(audio?.frameCount) || 0;
+    const targetFrameCount = Number(audio?.targetFrameCount) || 0;
+
+    if (frameCount <= 0) {
+        return 1.0;
+    }
+
+    const normalizedTarget = Math.max(targetFrameCount || frameCount, AUDIO_REFERENCE_MIN_FRAMES);
+    const ratio = frameCount / normalizedTarget;
+    return Math.min(1, Math.max(0.55, ratio));
 }
 
 function createEmptyBandVector() {
@@ -967,7 +942,18 @@ function buildMatchingVector(fingerprint) {
 function collectAudioReferenceCandidates() {
     const cardNodes = getRenderApi()?.getCardNodes() || [];
     if (!xmlData || !cardNodes.length) return [];
-    return cardNodes.map((cardNode, idx) => {
+
+    const cached = audioReferenceCandidateCache;
+    if (
+        cached &&
+        cached.xmlData === xmlData &&
+        cached.cardCount === cardNodes.length &&
+        cached.version === audioReferenceCandidateCacheVersion
+    ) {
+        return cached.candidates;
+    }
+
+    const candidates = cardNodes.map((cardNode, idx) => {
         const audioList = readAudioMetadataListFromCardNode(cardNode);
         if (!audioList.length) return null;
         const references = audioList.map((audio) => {
@@ -978,7 +964,10 @@ function collectAudioReferenceCandidates() {
             return {
                 path: audio.path,
                 fingerprint: parsedFingerprint,
-                matchingFingerprint
+                matchingFingerprint,
+                frameCount: Number(audio.frameCount) || 0,
+                targetFrameCount: Number(audio.targetFrameCount) || 0,
+                quality: getAudioReferenceQuality(audio)
             };
         }).filter(Boolean);
         if (!references.length) return null;
@@ -988,9 +977,19 @@ function collectAudioReferenceCandidates() {
             status: cardNode.querySelector('Arbeitsstatus')?.textContent || '',
             speicherort: cardNode.querySelector('Speicherort')?.textContent || '',
             references,
-            referenceCount: references.length
+            referenceCount: references.length,
+            referenceQuality: references.reduce((best, ref) => Math.max(best, Number(ref.quality) || 0), 0)
         };
     }).filter(Boolean);
+
+    audioReferenceCandidateCache = {
+        xmlData,
+        cardCount: cardNodes.length,
+        version: audioReferenceCandidateCacheVersion,
+        candidates
+    };
+
+    return candidates;
 }
 
 function buildMatchObjectForCardId(cardId) {
@@ -1122,6 +1121,8 @@ async function finalizeRecordedAudio(state, fingerprint) {
             mimeType: state.mimeType,
             fingerprint,
             capturedAt,
+            frameCount: Number(state.frameCount || 0),
+            targetFrameCount: Number(state.targetFrameCount || 0),
             appendReference: true
         });
     }
@@ -1187,6 +1188,14 @@ async function startAudioRecordingForCenterCard(cardId) {
     audioReadyToSaveState = null;
     audioSaveWasConfirmed = false;
 
+    // Wenn bereits ein Print vorhanden: mehr Material sammeln für bessere Erkennung.
+    const existingPrint = (cardNode.querySelector('AudioReferenz Fingerprint')?.textContent || '').trim();
+    const baseTargetFrames = getAudioReferenceTargetFrames();
+    const computedTargetFrameCount = existingPrint ? Math.round(baseTargetFrames * 1.5) : baseTargetFrames;
+    if (existingPrint) {
+        showAudioToast('Neuaufnahme, etwas länger einspielen.');
+    }
+
     const mimeType = getPreferredAudioMimeType();
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -1208,7 +1217,7 @@ async function startAudioRecordingForCenterCard(cardId) {
         chunks: [],
         bandSums: createEmptyBandVector(),
         frameCount: 0,
-        targetFrameCount: getAudioReferenceTargetFrames(),
+        targetFrameCount: computedTargetFrameCount,
         lastAcceptedAt: 0,
         autoStopRequested: false,
         discardOnStop: false,
@@ -1348,6 +1357,8 @@ async function startAudioMatching() {
         }, 180)
     };
     audioMatchState = matchState;
+    audioMatchStartedAt = Date.now();
+    resetAudioMatchCandidateProgress();
     queueAudioDiagEvent('matching_started', {
         mode: audioAssistMode,
         candidateCount: candidates.length
@@ -1364,7 +1375,11 @@ function stopAudioMatching() {
     stopMediaStream(audioMatchState.stream);
     audioMatchState.audioContext?.close().catch(() => {});
     audioMatchState = null;
+    audioMatchStartedAt = 0;
+    resetAudioMatchCandidateProgress();
     audioHitHistory = [];
+    audioLastBestCardId = null;
+    audioBestCardStreak = 0;
     queueAudioDiagEvent('matching_stopped', {
         mode: audioAssistMode
     });
@@ -1374,9 +1389,10 @@ function stopAudioMatching() {
 async function evaluateAudioMatching() {
     if (!audioMatchState || !audioMatchState.running || !xmlData) return;
     if (typeof currentPdfDoc !== 'undefined' && currentPdfDoc) return;
-    if (audioMatchState.frameCount < 4) return;
+    if (audioMatchState.frameCount < AUDIO_MATCH_MIN_LIVE_FRAMES) return;
 
-    const liveFingerprint = parseFingerprint(normalizeBandVector(audioMatchState.bandSums, audioMatchState.frameCount));
+    const liveFrameCount = audioMatchState.frameCount;
+    const liveFingerprint = parseFingerprint(normalizeBandVector(audioMatchState.bandSums, liveFrameCount));
     audioMatchState.bandSums = createEmptyBandVector();
     audioMatchState.frameCount = 0;
     if (!liveFingerprint) return;
@@ -1386,7 +1402,7 @@ async function evaluateAudioMatching() {
     const candidates = collectAudioReferenceCandidates();
     if (!candidates.length) {
         queueAudioDiagEvent('matching_no_candidates', {
-            liveFrameCount: 0
+            liveFrameCount
         });
         return;
     }
@@ -1404,57 +1420,172 @@ async function evaluateAudioMatching() {
         }
         if (!best || score > best.score) {
             secondBest = best;
-            best = { ...candidate, score };
+            best = { ...candidate, score, liveFrameCount };
         } else if (!secondBest || score > secondBest.score) {
-            secondBest = { ...candidate, score };
+            secondBest = { ...candidate, score, liveFrameCount };
         }
     }
 
     const scoreGap = best && secondBest ? (best.score - secondBest.score) : Number.POSITIVE_INFINITY;
 
     if (!best || best.score < AUDIO_MATCH_THRESHOLD) {
-        // Kein ausreichendes Signal: Votingfenster zurücksetzen
-        audioHitHistory = [];
+        // Kein ausreichendes Signal: Verlauf nur sanft abbauen, nicht hart abbrechen.
+        if (audioHitHistory.length > 0) {
+            audioHitHistory.shift();
+        }
+        if (audioBestCardStreak > 0) {
+            audioBestCardStreak = Math.max(0, audioBestCardStreak - 1);
+        }
+        if (!audioHitHistory.length) {
+            audioLastBestCardId = null;
+            audioBestCardStreak = 0;
+            resetAudioMatchCandidateProgress();
+            resetAudioSearchDifficultyState();
+        } else {
+            markAudioSearchDifficulty('low_signal', {
+                bestScore: best ? Number(best.score.toFixed(4)) : null,
+                historySize: audioHitHistory.length
+            });
+        }
         return;
     }
 
+    const strictnessProfile = getAudioMatchStrictnessProfile();
+    const bestCardId = String(best.idx);
+    if (audioMatchCandidateCardId !== bestCardId) {
+        audioMatchCandidateCardId = bestCardId;
+        audioMatchCandidateStartedAt = Date.now();
+    }
+    if (audioLastBestCardId !== bestCardId) {
+        const decisiveSwitch = (
+            audioLastBestCardId !== null &&
+            best.score >= Math.max(strictnessProfile.relaxedMinScore, 0.955) &&
+            scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.01)
+        );
+        if (decisiveSwitch) {
+            audioHitHistory = [];
+            queueAudioDiagEvent('matching_vote_reset_piece_change', {
+                fromCardId: audioLastBestCardId,
+                toCardId: bestCardId,
+                bestScore: Number(best.score.toFixed(4)),
+                scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null
+            });
+        }
+        audioLastBestCardId = bestCardId;
+        audioBestCardStreak = 1;
+    } else {
+        audioBestCardStreak += 1;
+    }
+
     // Voting-Fenster aktualisieren
-    audioHitHistory.push(String(best.idx));
+    audioHitHistory.push(bestCardId);
     if (audioHitHistory.length > AUDIO_MATCH_VOTE_WINDOW) audioHitHistory.shift();
-    const votesForBest = audioHitHistory.filter(id => id === String(best.idx)).length;
+
+    // Wenn ein neuer Kandidat kurz nacheinander stabil vorne liegt,
+    // alten Suchlauf aktiv abbrechen (nur neue Kandidaten-Stimmen behalten).
+    if (
+        audioBestCardStreak >= 2 &&
+        best.score >= Math.max(strictnessProfile.relaxedMinScore - 0.01, 0.93) &&
+        scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.004)
+    ) {
+        const beforeLen = audioHitHistory.length;
+        audioHitHistory = audioHitHistory.filter((id) => id === bestCardId);
+        if (audioHitHistory.length !== beforeLen) {
+            queueAudioDiagEvent('matching_retry_takeover', {
+                bestCardId,
+                bestScore: Number(best.score.toFixed(4)),
+                scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null,
+                bestStreak: audioBestCardStreak,
+                droppedVotes: beforeLen - audioHitHistory.length
+            });
+        }
+    }
+
+    const votesForBest = audioHitHistory.filter(id => id === bestCardId).length;
     const votesByCardId = Object.create(null);
     for (const cardId of audioHitHistory) {
         votesByCardId[cardId] = (votesByCardId[cardId] || 0) + 1;
     }
     let runnerUpVotes = 0;
     for (const [cardId, voteCount] of Object.entries(votesByCardId)) {
-        if (cardId !== String(best.idx) && voteCount > runnerUpVotes) {
+        if (cardId !== bestCardId && voteCount > runnerUpVotes) {
             runnerUpVotes = voteCount;
         }
     }
     const voteLead = votesForBest - runnerUpVotes;
+    const requiredHits = Number.isFinite(Number(strictnessProfile.requiredHits))
+        ? Math.max(2, Math.floor(Number(strictnessProfile.requiredHits)))
+        : AUDIO_MATCH_REQUIRED_HITS;
+    const requiredStreak = strictnessProfile.strictness === 'streng'
+        ? 4
+        : (strictnessProfile.strictness === 'locker' ? 2 : 3);
+    const allowVotesDominantPath = (
+        votesForBest >= (requiredHits + 1) &&
+        best.score >= strictnessProfile.relaxedMinScore &&
+        scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.003)
+    );
 
     queueAudioDiagEvent('matching_scored', {
         candidateCount: candidates.length,
         totalReferenceCount: candidates.reduce((sum, c) => sum + (Number(c.referenceCount) || 0), 0),
-        bestCardId: String(best.idx),
+        bestCardId,
         bestScore: Number(best.score.toFixed(4)),
         secondBestScore: secondBest ? Number(secondBest.score.toFixed(4)) : null,
         scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null,
+        liveFrameCount,
+        referenceQuality: Number((best.referenceQuality || 0).toFixed(3)),
         votes: votesForBest,
         runnerUpVotes,
         voteLead,
+        bestStreak: audioBestCardStreak,
         window: audioHitHistory.length,
         threshold: AUDIO_MATCH_THRESHOLD,
-        requiredHits: AUDIO_MATCH_REQUIRED_HITS
+        requiredHits,
+        requiredStreak
     });
 
-    if (votesForBest < AUDIO_MATCH_REQUIRED_HITS) {
-        queueAudioDiagEvent('matching_pending_votes', {
-            bestCardId: String(best.idx),
+    const earlyQualityPenalty = Math.max(0, 0.85 - (best.referenceQuality || 0)) * 0.05;
+    const earlyLivePenalty = liveFrameCount <= AUDIO_MATCH_MIN_LIVE_FRAMES ? 0.006 : 0;
+    const earlyTriggerMinScore = AUDIO_MATCH_EARLY_MIN_SCORE + earlyQualityPenalty + earlyLivePenalty;
+    const earlyTriggerMinGap = AUDIO_MATCH_EARLY_MIN_GAP + (earlyQualityPenalty * 0.8);
+    const isEarlyTrigger = AUDIO_MATCH_ENABLE_FAST_TRIGGER && (
+        votesForBest >= AUDIO_MATCH_EARLY_HITS &&
+        best.score >= earlyTriggerMinScore &&
+        scoreGap >= earlyTriggerMinGap &&
+        voteLead >= AUDIO_MATCH_EARLY_MIN_VOTE_LEAD
+    );
+
+    if (isEarlyTrigger) {
+        queueAudioDiagEvent('matching_fast_trigger', {
+            bestCardId,
+            bestScore: Number(best.score.toFixed(4)),
+            scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null,
             votes: votesForBest,
-            required: AUDIO_MATCH_REQUIRED_HITS,
+            voteLead,
+            liveFrameCount,
+            referenceQuality: Number((best.referenceQuality || 0).toFixed(3)),
+            earlyTriggerMinScore: Number(earlyTriggerMinScore.toFixed(4)),
+            earlyTriggerMinGap: Number(earlyTriggerMinGap.toFixed(4))
+        });
+    }
+
+    if (!isEarlyTrigger && (votesForBest < requiredHits || (audioBestCardStreak < requiredStreak && !allowVotesDominantPath))) {
+        queueAudioDiagEvent('matching_pending_votes', {
+            bestCardId,
+            votes: votesForBest,
+            required: requiredHits,
+            bestStreak: audioBestCardStreak,
+            requiredStreak,
+            allowVotesDominantPath,
             window: audioHitHistory.length,
+            scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null
+        });
+        markAudioSearchDifficulty('pending_votes', {
+            bestCardId,
+            votes: votesForBest,
+            requiredHits,
+            bestStreak: audioBestCardStreak,
+            requiredStreak,
             scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null
         });
         return;
@@ -1462,7 +1593,39 @@ async function evaluateAudioMatching() {
 
     // Sicherheitscheck: Strict (hoher Score + klarer Gap) oder Relaxed (moderater Score + viele Votes).
     // Die Grenzwerte sind über Advanced "Erkennungs-Strenge" konfigurierbar.
-    const strictnessProfile = getAudioMatchStrictnessProfile();
+    const hasSecondBest = !!secondBest;
+    const meetsTriggerLiveFrames = liveFrameCount >= AUDIO_MATCH_TRIGGER_MIN_LIVE_FRAMES;
+    const highConfidenceContinuation = (
+        votesForBest >= (requiredHits + 1) &&
+        audioBestCardStreak >= requiredStreak &&
+        best.score >= Math.max(strictnessProfile.strictMinScore, 0.97)
+    );
+    const effectiveGapFloor = highConfidenceContinuation
+        ? Math.min(AUDIO_MATCH_TRIGGER_FLOOR_MIN_GAP, 0.003)
+        : AUDIO_MATCH_TRIGGER_FLOOR_MIN_GAP;
+    const meetsTriggerGapFloor = !hasSecondBest || scoreGap >= effectiveGapFloor;
+
+    if (!meetsTriggerLiveFrames || !meetsTriggerGapFloor) {
+        queueAudioDiagEvent('matching_blocked_low_separation', {
+            bestCardId,
+            bestScore: Number(best.score.toFixed(4)),
+            scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null,
+            liveFrameCount,
+            requiredLiveFrames: AUDIO_MATCH_TRIGGER_MIN_LIVE_FRAMES,
+            requiredGap: effectiveGapFloor,
+            highConfidenceContinuation,
+            hasSecondBest
+        });
+        markAudioSearchDifficulty('low_separation', {
+            bestCardId,
+            bestScore: Number(best.score.toFixed(4)),
+            scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null,
+            requiredGap: effectiveGapFloor,
+            highConfidenceContinuation
+        });
+        return;
+    }
+
     const isStrictTrigger = (best.score >= strictnessProfile.strictMinScore && scoreGap >= strictnessProfile.strictMinGap);
     const isRelaxedStableTrigger = (
         best.score >= strictnessProfile.relaxedMinScore &&
@@ -1471,10 +1634,8 @@ async function evaluateAudioMatching() {
         voteLead >= strictnessProfile.relaxedMinVoteLead
     );
     if (!isStrictTrigger && !isRelaxedStableTrigger) {
-        // Voting-History leeren damit der nächste Anlauf sauber beginnt
-        audioHitHistory = [];
         queueAudioDiagEvent('matching_blocked_low_confidence', {
-            bestCardId: String(best.idx),
+            bestCardId,
             bestScore: Number(best.score.toFixed(4)),
             scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null,
             votes: votesForBest,
@@ -1487,6 +1648,13 @@ async function evaluateAudioMatching() {
             relaxedMinHits: strictnessProfile.relaxedMinHits,
             relaxedMinVoteLead: strictnessProfile.relaxedMinVoteLead
         });
+        markAudioSearchDifficulty('low_confidence', {
+            bestCardId,
+            bestScore: Number(best.score.toFixed(4)),
+            scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null,
+            votes: votesForBest,
+            voteLead
+        });
         return;
     }
 
@@ -1495,7 +1663,7 @@ async function evaluateAudioMatching() {
     const canExecuteDrop = typeof executeSearchDrop === 'function';
     if (!match || !canExecuteDrop || hasOpenPdfNow) {
         queueAudioDiagEvent('matching_drop_blocked', {
-            bestCardId: String(best.idx),
+            bestCardId,
             bestScore: Number(best.score.toFixed(4)),
             votes: votesForBest,
             hasMatchObject: !!match,
@@ -1506,12 +1674,16 @@ async function evaluateAudioMatching() {
     }
 
     audioHitHistory = [];
+    audioLastBestCardId = null;
+    audioBestCardStreak = 0;
+    resetAudioSearchDifficultyState();
     queueAudioDiagEvent('matching_triggered_drop', {
-        matchedCardId: String(best.idx),
+        matchedCardId: bestCardId,
         matchedScore: Number(best.score.toFixed(4)),
         votes: votesForBest,
         scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null,
-        triggerPath: isStrictTrigger ? 'strict' : 'relaxed-stable'
+        liveFrameCount,
+        triggerPath: isEarlyTrigger ? 'fast' : (isStrictTrigger ? 'strict' : 'relaxed-stable')
     });
     audioWaitAfterMatchUntil = Date.now() + getAudioWaitAfterMatchMs();
     // Stream für Beat Finder weiterverwenden statt schließen
@@ -1524,7 +1696,8 @@ async function evaluateAudioMatching() {
     audioHitHistory = [];
     queueAudioDiagEvent('matching_stopped', { mode: audioAssistMode });
     updateAudioAssistUi();
-    if (beatFinderEnabled) { startBeatFinder(bfAnalyser, bfAudioCtx, bfStream); }
+    stopMediaStream(bfStream);
+    bfAudioCtx?.close().catch(() => {});
     executeSearchDrop(match);
     flushAudioDiagQueue();
 }
@@ -1627,6 +1800,9 @@ async function audioAssistTick() {
         showAudioToast('Audio-Automatik konnte nicht gestartet werden. Bitte Mikrofonfreigabe prüfen.');
         disableAudioAssistMode();
     } finally {
+        if (audioAssistMode) {
+            updateAudioRecordProgress();
+        }
         audioAssistBusy = false;
     }
 }
@@ -1640,13 +1816,16 @@ function disableAudioAssistMode() {
     audioWaitAfterMatchBlinkUntil = 0;
     audioReadyToSaveState = null;
     audioSaveWasConfirmed = false;
+    audioHitHistory = [];
+    audioLastBestCardId = null;
+    audioBestCardStreak = 0;
+    resetAudioMatchCandidateProgress();
     clearPendingAudioRecordStart();
     if (audioAssistMonitorTimer) {
         clearInterval(audioAssistMonitorTimer);
         audioAssistMonitorTimer = null;
     }
     stopAudioMatching();
-    stopBeatFinder();
     stopAudioRecording(false).catch(() => {});
     queueAudioDiagEvent('audio_mode_changed', {
         fromMode: previousMode,
@@ -1654,6 +1833,7 @@ function disableAudioAssistMode() {
         direction: audioAssistDirection
     });
     updateAudioAssistUi();
+
 }
 
 function installAudioAssistButtonPressHandler() {
@@ -1691,9 +1871,15 @@ function toggleAudioAssistMode(event) {
         nextMode = 1;
         audioAssistDirection = 1;
     } else if (audioAssistMode === 2) {
-        // In Aufnahme: jeder Druck → Aus. Kein versehentliches Feststecken mehr.
-        nextMode = 0;
-        audioAssistDirection = -1;
+        // In Aufnahme: nur Langdruck wechselt zurück auf Grün (Ton An).
+        // Kurzdruck bleibt "Aus" als schneller Not-Aus.
+        if (isLongPress) {
+            nextMode = 1;
+            audioAssistDirection = -1;
+        } else {
+            nextMode = 0;
+            audioAssistDirection = -1;
+        }
     } else {
         // mode === 1 (Ton An): Langdruck → Aufnahme, Kurzdruck → Aus.
         if (isLongPress) {
@@ -1716,6 +1902,12 @@ function toggleAudioAssistMode(event) {
     }
 
     const previousMode = audioAssistMode;
+
+    if (previousMode === 2 && nextMode === 1) {
+        clearPendingAudioRecordStart();
+        stopAudioRecording(false).catch(() => {});
+    }
+
     audioAssistMode = nextMode;
 
     // Weiße Bereitschaftssignale nur im Aufnahme-Modus anzeigen.
@@ -1733,7 +1925,7 @@ function toggleAudioAssistMode(event) {
 
     if (!audioAssistMonitorTimer) {
         audioAssistTick();
-        audioAssistMonitorTimer = setInterval(audioAssistTick, 1200);
+        audioAssistMonitorTimer = setInterval(audioAssistTick, AUDIO_MATCH_EVAL_INTERVAL_MS);
     }
 }
 

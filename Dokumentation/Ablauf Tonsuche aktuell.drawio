@@ -1,0 +1,64 @@
+<mxfile host="app.diagrams.net" modified="2026-04-14T12:00:00.000Z" agent="GitHub Copilot" version="28.2.5">
+  <diagram id="audio-flow-current" name="Ablauf Tonsuche aktuell">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="start" value="BTN1 aus&#xa;blau" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="110" width="170" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="listen" value="BTN1 an&#xa;gruen&#xa;Tonsuche laeuft" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="110" width="190" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="candidate" value="Kandidat gefunden&#xa;BTN bleibt gruen&#xa;Dots starten ab 1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f3e3;strokeColor=#82b366;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="580" y="100" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="difficult" value="Suche bleibt unklar&#xa;keine Meldung&#xa;Dots werden braun" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8e6d3;strokeColor=#a5673f;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="880" y="100" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="restart" value="Auto-Neustart&#xa;Counter zuruecksetzen&#xa;neue Kandidatensuche" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="880" y="250" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="match" value="Treffer&#xa;Blatt wird gelegt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="580" y="260" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="record" value="Langdruck auf BTN1&#xa;Aufnahme-Modus&#xa;orange" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="300" y="290" width="190" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="save" value="BTN2 Speichern&#xa;MusicPrint sichern" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="580" y="400" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="note1" value="UI-Hinweis&#xa;Dots liegen unter dem Center&#xa;absolut positioniert wie der Notentitel" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="880" y="400" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="Klick" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="start" target="listen">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="erster brauchbarer Kandidat" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="listen" target="candidate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="weiter unsicher" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="candidate" target="difficult">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="Schwelle erreicht" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="difficult" target="restart">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="Restart" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="restart" target="listen">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="genug Votes + Abstand" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="candidate" target="match">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="Langdruck" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="listen" target="record">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="fertige Aufnahme" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="record" target="save">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="Langdruck zurueck" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="record" target="listen">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

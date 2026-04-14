@@ -33,12 +33,86 @@
 		return getCardNodes()[index] || null;
 	}
 
+	function buildCardInfoById(cardId) {
+		const idx = parseInt(cardId, 10);
+		if (!Number.isFinite(idx)) return null;
+		const node = getCardNodeById(idx);
+		if (!node) return null;
+
+		const titel = node.querySelector('Titel')?.textContent || 'Unbekannt';
+		const speicherort = node.querySelector('Speicherort')?.textContent || '';
+		const storageKey = normalizeStorageKey(speicherort);
+		const hasOwnAudioReference = cardHasAudioReference(node);
+		const ownAudioBadgeTone = getCardAudioBadgeTone(node);
+
+		let hasAudioReference = hasOwnAudioReference;
+		let audioBadgeTone = ownAudioBadgeTone;
+		if (!hasAudioReference) {
+			const allNodes = getCardNodes();
+			for (let i = 0; i < allNodes.length; i++) {
+				const candidate = allNodes[i];
+				if (!cardHasAudioReference(candidate)) continue;
+				const cTitel = candidate.querySelector('Titel')?.textContent || '';
+				const cStorage = candidate.querySelector('Speicherort')?.textContent || '';
+				const cStorageKey = normalizeStorageKey(cStorage);
+				if (cTitel === titel || (storageKey && cStorageKey === storageKey)) {
+					hasAudioReference = true;
+					audioBadgeTone = getCardAudioBadgeTone(candidate) || 'weak';
+					break;
+				}
+			}
+		}
+
+		return {
+			idx,
+			titel,
+			speicherort,
+			hasAudioReference,
+			audioBadgeTone: audioBadgeTone || (hasAudioReference ? 'weak' : null),
+			showAudioBadge: isAudioBadgeEnabled()
+		};
+	}
+
+	function ensureCardElementById(cardId) {
+		const idStr = String(cardId);
+		const existing = document.querySelector('.card-container[data-cardid="' + idStr + '"]');
+		if (existing) return existing;
+		const cardInfo = buildCardInfoById(idStr);
+		if (!cardInfo) return null;
+		return getOrCreateCardElement(cardInfo);
+	}
+
 	function cardHasAudioReference(cardNode) {
 		if (!cardNode) return false;
 		const refNode = cardNode.querySelector('AudioReferenz');
 		if (!refNode) return false;
 		const filePath = refNode.querySelector('Datei')?.textContent || '';
 		return String(filePath).trim().length > 0;
+	}
+
+	function getAudioBadgeToneFromAudioNodes(audioNodes) {
+		if (!Array.isArray(audioNodes) || !audioNodes.length) return null;
+
+		let bestQuality = 0;
+		for (const audioNode of audioNodes) {
+			const filePath = audioNode.querySelector('Datei')?.textContent || '';
+			if (!String(filePath).trim()) continue;
+			const frameCount = Number(audioNode.querySelector('FrameCount')?.textContent || 0) || 0;
+			const targetFrameCount = Number(audioNode.querySelector('TargetFrameCount')?.textContent || 0) || 0;
+			let quality = 1.0;
+			if (frameCount > 0) {
+				const normalizedTarget = Math.max(targetFrameCount || frameCount, 6);
+				quality = Math.min(1, Math.max(0.55, frameCount / normalizedTarget));
+			}
+			if (quality > bestQuality) bestQuality = quality;
+		}
+
+		if (bestQuality <= 0) return null;
+		return bestQuality >= 0.85 ? 'good' : 'weak';
+	}
+
+	function getCardAudioBadgeTone(cardNode) {
+		return getAudioBadgeToneFromAudioNodes(Array.from(cardNode?.querySelectorAll('AudioReferenz') || []));
 	}
 
 	function normalizeStorageKey(rawPath) {
@@ -58,6 +132,34 @@
 		} catch (err) {
 			return true;
 		}
+	}
+
+	function getCardVisualTuning() {
+		const fallback = { sharpness: 'normal' };
+		if (typeof loadUserConfig !== 'function') return fallback;
+		try {
+			const cfg = loadUserConfig() || {};
+			const sharpnessInput = String(cfg.cardSharpness || 'normal').toLowerCase();
+			const sharpness = (sharpnessInput === 'scharf1' || sharpnessInput === 'scharf2') ? sharpnessInput : 'normal';
+			return { sharpness };
+		} catch (err) {
+			return fallback;
+		}
+	}
+
+	function buildCardFilterStyle() {
+		const tuning = getCardVisualTuning();
+		const parts = [];
+		if (tuning.sharpness === 'scharf1') {
+			parts.push('saturate(1.60)');
+			parts.push('drop-shadow(0 0 1.60px rgba(0,0,0,0.80))');
+		}
+		if (tuning.sharpness === 'scharf2') {
+			parts.push('saturate(1.66)');
+			parts.push('brightness(1.06)');
+			parts.push('drop-shadow(0 0 2.40px rgba(0,0,0,0.90))');
+		}
+		return parts.join(' ');
 	}
 
 	function resetQuadrantOffsets() {
@@ -95,13 +197,15 @@
 		img.style.backgroundSize = 'cover';
 		img.style.backgroundPosition = 'top';
 		img.style.backgroundColor = '#ccc';
+		img.style.filter = buildCardFilterStyle();
 
 		loadCardImage(img, cardInfo.titel, cardInfo.speicherort);
 
 		if (cardInfo.showAudioBadge && cardInfo.hasAudioReference) {
 			const badge = document.createElement('span');
-			badge.className = 'card-audio-badge';
-			badge.title = 'Spielton vorhanden';
+			const badgeTone = cardInfo.audioBadgeTone === 'good' ? 'good' : 'weak';
+			badge.className = 'card-audio-badge ' + badgeTone;
+			badge.title = badgeTone === 'good' ? 'Tonprint gut' : 'Tonprint prüfen';
 			div.appendChild(badge);
 		}
 
@@ -119,10 +223,13 @@
 	}
 
 	function getCardCacheSignature(cardInfo) {
+		const visual = getCardVisualTuning();
 		return String(cardInfo.titel || '')
 			+ '|' + String(cardInfo.speicherort || '')
 			+ '|' + (cardInfo.hasAudioReference ? 'a1' : 'a0')
-			+ '|' + (cardInfo.showAudioBadge ? 'b1' : 'b0');
+			+ '|' + String(cardInfo.audioBadgeTone || 'none')
+			+ '|' + (cardInfo.showAudioBadge ? 'b1' : 'b0')
+			+ '|' + visual.sharpness;
 	}
 
 	function getOrCreateCardElement(cardInfo) {
@@ -149,15 +256,19 @@
 
 			const cardNode = getCardNodeById(cardId);
 			const hasAudioReference = cardHasAudioReference(cardNode);
+			const audioBadgeTone = getCardAudioBadgeTone(cardNode) || (hasAudioReference ? 'weak' : null);
 			const shouldShow = showAudioBadge && hasAudioReference;
 			const existingBadge = cardElement.querySelector('.card-audio-badge');
 
 			if (shouldShow) {
 				if (!existingBadge) {
 					const badge = document.createElement('span');
-					badge.className = 'card-audio-badge';
-					badge.title = 'Spielton vorhanden';
+					badge.className = 'card-audio-badge ' + audioBadgeTone;
+					badge.title = audioBadgeTone === 'good' ? 'Tonprint gut' : 'Tonprint prüfen';
 					cardElement.appendChild(badge);
+				} else {
+					existingBadge.className = 'card-audio-badge ' + audioBadgeTone;
+					existingBadge.title = audioBadgeTone === 'good' ? 'Tonprint gut' : 'Tonprint prüfen';
 				}
 			} else if (existingBadge) {
 				existingBadge.remove();
@@ -389,29 +500,34 @@
 			const speicherort = cardEl.querySelector('Speicherort')?.textContent || '';
 			const status = cardEl.querySelector('Arbeitsstatus')?.textContent || 'zurueckgestellt';
 			const hasOwnAudioReference = cardHasAudioReference(cardEl);
-			return { idx, titel, speicherort, status, hasOwnAudioReference, storageKey: normalizeStorageKey(speicherort) };
+			const audioBadgeTone = getCardAudioBadgeTone(cardEl);
+			return { idx, titel, speicherort, status, hasOwnAudioReference, audioBadgeTone, storageKey: normalizeStorageKey(speicherort) };
 		});
 
 		const hasAudioByTitle = new Map();
 		const hasAudioByStorage = new Map();
 		cardMeta.forEach((entry) => {
 			if (!entry.hasOwnAudioReference) return;
-			hasAudioByTitle.set(String(entry.titel || ''), true);
-			if (entry.storageKey) hasAudioByStorage.set(entry.storageKey, true);
+			hasAudioByTitle.set(String(entry.titel || ''), entry.audioBadgeTone || 'weak');
+			if (entry.storageKey) hasAudioByStorage.set(entry.storageKey, entry.audioBadgeTone || 'weak');
 		});
 
 		cardMeta.forEach((entry) => {
-			const { idx, titel, speicherort, status, hasOwnAudioReference, storageKey } = entry;
+			const { idx, titel, speicherort, status, hasOwnAudioReference, storageKey, audioBadgeTone: ownAudioBadgeTone } = entry;
 			const hasAudioReference = hasOwnAudioReference
-				|| hasAudioByTitle.get(String(titel || '')) === true
-				|| (!!storageKey && hasAudioByStorage.get(storageKey) === true);
+				|| hasAudioByTitle.has(String(titel || ''))
+				|| (!!storageKey && hasAudioByStorage.has(storageKey));
+			const audioBadgeTone = ownAudioBadgeTone
+				|| hasAudioByTitle.get(String(titel || ''))
+				|| (storageKey ? hasAudioByStorage.get(storageKey) : null)
+				|| (hasAudioReference ? 'weak' : null);
 
 			let quadrantId = 'Q1';
 			if (status.includes('wiederholen')) quadrantId = 'Q2';
 			if (status.includes('geübt')) quadrantId = 'Q3';
 			if (status.includes('gelernt')) quadrantId = 'Q4';
 
-			grouped[quadrantId].push({ idx, titel, speicherort, hasAudioReference, showAudioBadge });
+			grouped[quadrantId].push({ idx, titel, speicherort, hasAudioReference, audioBadgeTone, showAudioBadge });
 		});
 
 		QUADRANT_IDS.forEach((quadrantId) => {
@@ -456,6 +572,12 @@
 				.replace(/ /g, '_')
 				.replace(/_+$/, '')
 				+ '.png';
+	}
+
+	function stripDiacritics(text) {
+		return String(text || '')
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '');
 	}
 
 	function getPdfPathCandidates(pdfPath, titel = '') {
@@ -582,6 +704,7 @@
 			sanitizeTitle(titel),
 			'card_' + titel.trim().replace(/[,\.]$/g, '').replace(/ /g, '_') + '.png',
 			'card_' + titel.toLowerCase().trim().replace(/[,\.]/g, '').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ü/g, 'ue').replace(/ /g, '_').replace(/_+$/, '') + '.png',
+			'card_' + stripDiacritics(titel).toLowerCase().trim().replace(/[,\.]/g, '').replace(/ /g, '_').replace(/_+$/, '') + '.png',
 		];
 
 		const uniqueVariations = [...new Set(variations.filter(Boolean))];
@@ -617,6 +740,7 @@
 		syncVisibleCardAudioBadges,
 		getCardNodes,
 		getCardNodeById,
+		ensureCardElementById,
 		resetQuadrantOffsets,
 		getQuadrantOffsets,
 		setQuadrantOffsets,

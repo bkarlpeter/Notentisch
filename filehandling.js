@@ -722,8 +722,14 @@ function moveCardToQuadrant(cardIdx, targetQuadId) {
     let cardEl = document.querySelector('.card-container[data-cardid="' + String(cardIdx) + '"]');
 
     if (!cardEl) {
-        // Karte nicht im DOM: erstelle nur diese eine Karte (nicht renderBoard)
+        // Schneller Pfad: Einzelkarte aus Render-Cache erzeugen/holen.
         cardEl = getRenderApi()?.ensureCardElementById?.(cardIdx) || null;
+    }
+
+    if (!cardEl) {
+        // Nur wenn auch der Cache-Pfad fehlschlägt: kompletten DOM-Stand aufbauen.
+        getRenderApi()?.renderBoard?.();
+        cardEl = document.querySelector('.card-container[data-cardid="' + String(cardIdx) + '"]');
         if (!cardEl) return null;
     }
 
@@ -770,6 +776,13 @@ function executeSearchDrop(match) {
         // Layout aktualisieren (wie bei Drop)
         getRenderApi()?.updateStackLayout();
 
+        // Nur ins Center legen wenn die Karte eine PDF-Adresse hat —
+        // sonst bleibt activeCenterCardId = null und die Karte wird nicht gesperrt.
+        if (!cardEl.dataset.pdf) {
+            console.warn('executeSearchDrop: Karte hat keine PDF-Adresse, Center-Drop übersprungen.', cardEl.dataset.cardid);
+            return;
+        }
+
         // Center vorbereiten (wie bei Drop)
         const userConfig = getUserConfigForDropBehavior();
         const shouldApplyStoredCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
@@ -783,15 +796,14 @@ function executeSearchDrop(match) {
         if (shouldApplyStoredCenterView) {
             applyCenterSettingsFromXml(cardEl.dataset.cardid);
         }
-        if (cardEl.dataset.pdf && typeof showPdfPages === 'function') {
+        if (typeof showPdfPages === 'function') {
             showPdfPages(cardEl.dataset.pdf);
         }
         setSaveDateState(false, getModeHintText());
-        if (typeof notifyCardEnteredCenter === 'function') notifyCardEnteredCenter(cardEl.dataset.cardid);
     } catch (err) {
         recoverBoardUiStateAfterError('executeSearchDrop', {
             error: err,
-            centerCardId: activeCenterCardId ?? match?.idx ?? null
+            centerCardId: activeCenterCardId !== null ? String(activeCenterCardId) : null
         });
     }
 }
@@ -896,6 +908,9 @@ function clearCenterAfterCardExit() {
     const centerContainer = document.getElementById('center-content');
     if (centerContainer) {
         centerContainer.innerHTML = '';
+    }
+    if (typeof updateCenterFilenameLabel === 'function') {
+        updateCenterFilenameLabel('');
     }
     if (typeof updatePageInfo === 'function') {
         updatePageInfo([]);
@@ -1204,7 +1219,6 @@ function drop(event) {
             showPdfPages(card.dataset.pdf);
             // Reset Button wenn neue Karte ins CENTER kommt
             setSaveDateState(false, getModeHintText());
-            if (typeof notifyCardEnteredCenter === 'function') notifyCardEnteredCenter(card.dataset.cardid);
             console.log('Moved to center, lastCardIdFromCenter = ' + lastCardIdFromCenter);
         }
     } else if (isQuadrant) {
@@ -1221,7 +1235,6 @@ function drop(event) {
         if (cameFromCenter) {
             activeCenterCardId = null;
             clearCenterAfterCardExit();
-            if (typeof notifyCardLeftCenter === 'function') notifyCardLeftCenter();
         }
         saveDateToXml(card.dataset.cardid, targetId);
         if (isPlayMode) {
@@ -1428,7 +1441,6 @@ function moveCardFromCenterTo(quadrantId) {
         applyDropGlow(card, userConfig.dropGlowDurationMs);
         activeCenterCardId = null;
         clearCenterAfterCardExit();
-        if (typeof notifyCardLeftCenter === 'function') notifyCardLeftCenter();
         lastCardIdFromCenter = card.dataset.cardid;
         saveDateToXml(card.dataset.cardid, quadrantId);
         if (isPlayMode) {
@@ -1441,9 +1453,7 @@ function moveCardFromCenterTo(quadrantId) {
 }
 
 function moveCardToQ2(event) {
-    if (!event) return;
-    const card = event.target.closest('.card-container');
-    if (card) moveCardFromCenterTo('Q2');
+    moveCardFromCenterTo('Q2');
 }
 
 function scrollQuadrant(id, direction) {

@@ -133,8 +133,9 @@ Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. te
   - Q2: wiederholen
   - Q3: geuebt
   - Q4: gelernt
-- Kartenstapel pro Quadrant mit einstellbarer Staffelzahl (`1` bis `10`); Einstellung in Config unter `Staffelung`
-- Staffelung teilt die Quadranthöhe gleichmäßig auf die sichtbaren Karten auf; jede Karte zeigt einen proportionalen Abschnitt
+- Kartenstapel pro Quadrant mit einstellbarer Staffelzahl (`1` bis `12`); Einstellung in Config unter `Staffelung`
+- `Staffelung` definiert die Fenstergröße des Stapels (sichtbarer Bereich): wie viele Karten pro Quadrant gleichzeitig sichtbar sind
+- Die Quadranthöhe wird gleichmäßig auf diese sichtbaren Karten aufgeteilt; jede Karte zeigt einen proportionalen Abschnitt
 - Quadranten-`▲▼` zum Blättern, wenn mehr Karten vorhanden sind als sichtbar
 - CENTER-Bereich zeigt PDF (2 Seiten), inkl. `/`-Scroll und Zoom
 - Drag & Drop zwischen Quadranten und CENTER
@@ -279,9 +280,9 @@ Das Skript nutzt automatisch:
   - ohne Blatt im CENTER: Live-Matching gegen gespeicherte Audio-Fingerprints; bei stabilem Treffer wird das Blatt automatisch ins CENTER geladen
 - Karten mit vorhandener Audio-Referenz zeigen optional einen gelben Marker oben rechts (Config: `Spielton-Marker`)
 - Config-Vorschau: nutzt zuerst lokalen PNG-Cache, dann XML/PDF-Fund (Ausschnitt) und sonst Bild-Fallback
-- `Staffelung` (Config): Anzahl der sichtbaren Karten pro Quadrant (`1` bis `10`); die Quadranthöhe wird gleichmäßig auf diese Anzahl aufgeteilt
-- `Stapel-Überlappung je Batch` (Advanced): bestimmt die Überlappung beim Blättern im Quadrantenstapel
-- Quadranten-`▲▼`: Schrittweite = `Stapelgröße - Stapel-Überlappung` (mindestens `1`)
+- `Staffelung` (Config): Fenstergröße des Stapels, also Anzahl der sichtbaren Karten pro Quadrant (`1` bis `12`)
+- `Stapel-Überlappung je Batch` (Advanced): gemeinsamer Anteil zwischen altem und neuem Fenster beim Blättern
+- Quadranten-`▲▼`: Schrittweite = `Fenstergröße - Überlappung` (mindestens `1`)
 - `Ende`: beendet den lokalen Server und schliesst die Ansicht
 - Karte ins CENTER ziehen: PDF anzeigen
 - Karte aus CENTER in Quadrant verschieben (Drop oder Klick auf Q1-Q4): `Arbeitsstatus` aktualisieren

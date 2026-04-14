@@ -735,6 +735,7 @@ function showPdfPages(pdfPath, options = {}) {
             totalPages = pdf.numPages;
             currentPageOffset = Math.min(currentPageOffset, Math.max(0, totalPages - 1));
             renderPdfPages();
+            updateCenterFilenameLabel(currentPdfPath);
         }).catch(() => {
             console.log('Fehler bei ' + serverPath);
             pathIndex++;
@@ -932,6 +933,17 @@ function nextPage() {
             renderPdfPages();
         }
     });
+}
+
+function updateCenterFilenameLabel(path) {
+    const el = document.getElementById('center-filename-label');
+    if (!el) return;
+    if (path) {
+        const raw = path.split('/').pop() || path;
+        try { el.textContent = decodeURIComponent(raw); } catch { el.textContent = raw; }
+    } else {
+        el.textContent = '';
+    }
 }
 
 function initializeCenterView() {

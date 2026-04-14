@@ -52,6 +52,12 @@
         return fallback;
     }
 
+    function normalizeCardSharpness(value, fallback) {
+        const input = String(value || '').trim().toLowerCase();
+        if (input === 'normal' || input === 'scharf1' || input === 'scharf2') return input;
+        return fallback;
+    }
+
     function normalizeBoolean(value, fallback) {
         if (typeof value === 'boolean') return value;
         if (value === 'true' || value === '1' || value === 1 || value === 'show') return true;
@@ -153,6 +159,9 @@
         // Erkennungs-Strenge der Tonzuordnung: locker/normal/streng.
         audioMatchStrictness: 'normal',
 
+        // Sondermodi (locker/streng) nur bei Bedarf freigeben.
+        audioMatchExceptionalModesEnabled: false,
+
         // Dauer (ms) des weißen Aufleuchten an BTN2 wenn die Wartezeit abgelaufen ist.
         audioReadyBlinkMs: 1000,
 
@@ -161,6 +170,9 @@
 
         // Marker in der Karten-Ecke anzeigen, wenn eine Audio-Referenz existiert.
         showAudioBadge: true,
+
+        // Darstellungsmodus der Kartenkachel: normal, scharf1, scharf2.
+        cardSharpness: 'normal',
 
         // Grundfarbe der Steuerleisten-Buttons im Ausgangszustand (Hex).
         btnBaseColor: '#3498db',
@@ -210,9 +222,11 @@
             audioRecordStartDelayMs: clampNumber(parsed.audioRecordStartDelayMs, 0, 3000, defaults.audioRecordStartDelayMs),
             audioWaitAfterMatchMs: clampNumber(parsed.audioWaitAfterMatchMs, 4000, 8000, defaults.audioWaitAfterMatchMs),
             audioMatchStrictness: normalizeAudioMatchStrictness(parsed.audioMatchStrictness, defaults.audioMatchStrictness),
+            audioMatchExceptionalModesEnabled: normalizeBoolean(parsed.audioMatchExceptionalModesEnabled, defaults.audioMatchExceptionalModesEnabled),
             audioReadyBlinkMs: clampNumber(parsed.audioReadyBlinkMs, 200, 3000, defaults.audioReadyBlinkMs),
             replaceAudioByTitle: normalizeBoolean(parsed.replaceAudioByTitle, defaults.replaceAudioByTitle),
             showAudioBadge: normalizeBoolean(parsed.showAudioBadge, defaults.showAudioBadge),
+            cardSharpness: normalizeCardSharpness(parsed.cardSharpness, defaults.cardSharpness),
             btnBaseColor: normalizeHexColor(parsed.btnBaseColor, defaults.btnBaseColor),
             btnToggleColor1: normalizeHexColor(parsed.btnToggleColor1, defaults.btnToggleColor1),
             btnToggleColor2: normalizeHexColor(parsed.btnToggleColor2, defaults.btnToggleColor2)

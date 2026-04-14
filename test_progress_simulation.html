@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Progress Bar Simulation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 40px 20px;
+            margin: 0;
+        }
+
+        .sim-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 18px;
+            margin: 0 0 20px 0;
+            color: #333;
+        }
+
+        .sim-center {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(135deg, #f9f9f9, #f0f0f0);
+            border: 2px dashed #ddd;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            color: #999;
+            font-size: 14px;
+        }
+
+        /* Progress Bar Styles aus board.html */
+        #audio-record-progress {
+            display: none;
+            text-align: center;
+            padding: 8px 0;
+            margin: 0;
+            font-size: 12px;
+            color: #999;
+            position: relative;
+            z-index: 10;
+            margin-top: -4px;
+            margin-bottom: 8px;
+        }
+
+        #audio-record-progress.active {
+            display: block;
+        }
+
+        #audio-progress-label {
+            margin-right: 8px;
+            font-weight: 500;
+        }
+
+        #audio-progress-dots {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        #audio-progress-dots span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #ccc;
+            transition: background-color 0.15s ease;
+        }
+
+        #audio-progress-dots span.filled {
+            background-color: #27ae60;
+        }
+
+        #audio-record-progress-end {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: linear-gradient(135deg, #27ae60, #3498db);
+            border-radius: 50%;
+            margin-left: 6px;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background: #229954;
+        }
+
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .stats {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .stats-item {
+            margin: 5px 0;
+        }
+
+        .label {
+            font-weight: 500;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="sim-container">
+        <h1>🎵 Audio Progress Bar Simulation</h1>
+
+        <div class="sim-center">
+            <div style="text-align: center;">
+                <div id="audio-record-progress">
+                    <span id="audio-progress-label">Searching</span>
+                    <span id="audio-progress-dots"></span>
+                </div>
+                <p>PDF / Notenblatt anzeigen</p>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="simulateNormalRecording()">Normal (7s)</button>
+            <button onclick="simulateRepeatedRecording()">Wiederholung (10.5s)</button>
+            <button onclick="resetSimulation()">Zurücksetzen</button>
+        </div>
+
+        <div class="stats">
+            <div class="stats-item">
+                <span class="label">Status:</span> <span id="status">Bereit</span>
+            </div>
+            <div class="stats-item">
+                <span class="label">Frames:</span> <span id="frames">0 / 0</span>
+            </div>
+            <div class="stats-item">
+                <span class="label">Zeit:</span> <span id="time">0s / 0s</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const AUDIO_FRAME_SAMPLE_MS = 180;  // Aus audio-assist.js
+
+        let simulationState = null;
+        let simulationInterval = null;
+
+        function createSimulationState(targetFrames) {
+            return {
+                targetFrameCount: targetFrames,
+                currentFrameCount: 0,
+                running: true,
+                startTime: Date.now()
+            };
+        }
+
+        function updateProgress() {
+            if (!simulationState || !simulationState.running) return;
+
+            const progressEl = document.getElementById('audio-record-progress');
+            const targetFrames = simulationState.targetFrameCount;
+            const currentFrames = simulationState.currentFrameCount;
+            const targetSecs = Math.ceil((targetFrames * AUDIO_FRAME_SAMPLE_MS) / 1000);
+            const currentSecs = Math.ceil((currentFrames * AUDIO_FRAME_SAMPLE_MS) / 1000);
+
+            // Update dots
+            const dotsContainer = document.getElementById('audio-progress-dots');
+            let html = '';
+            for (let i = 1; i <= targetSecs; i++) {
+                const cls = i <= currentSecs ? ' class="filled"' : '';
+                html += `<span${cls}></span>`;
+            }
+            html += '<span id="audio-record-progress-end"></span>';
+            dotsContainer.innerHTML = html;
+
+            // Update stats
+            document.getElementById('status').textContent = 'Aufnahme läuft...';
+            document.getElementById('frames').textContent = `${currentFrames} / ${targetFrames}`;
+            document.getElementById('time').textContent = `${currentSecs}s / ${targetSecs}s`;
+
+            // Show progress bar
+            progressEl.classList.add('active');
+
+            // Check if done
+            if (currentFrames >= targetFrames) {
+                finishSimulation();
+            }
+        }
+
+        function simulateProgress(targetFrames) {
+            resetSimulation();
+            simulationState = createSimulationState(targetFrames);
+
+            const targetSecs = Math.ceil((targetFrames * AUDIO_FRAME_SAMPLE_MS) / 1000);
+            const stepsPerSecond = 1000 / AUDIO_FRAME_SAMPLE_MS;
+
+            simulationInterval = setInterval(() => {
+                if (!simulationState.running) return;
+
+                simulationState.currentFrameCount += 1;
+                updateProgress();
+            }, AUDIO_FRAME_SAMPLE_MS);
+        }
+
+        function finishSimulation() {
+            simulationState.running = false;
+            clearInterval(simulationInterval);
+            document.getElementById('status').textContent = 'Aufnahme abgeschlossen!';
+            setTimeout(() => {
+                if (simulationState && !simulationState.running) {
+                    document.getElementById('audio-record-progress').classList.remove('active');
+                    simulationState = null;
+                    document.getElementById('status').textContent = 'Bereit';
+                }
+            }, 1500);
+        }
+
+        function resetSimulation() {
+            if (simulationInterval) clearInterval(simulationInterval);
+            simulationState = null;
+            document.getElementById('audio-record-progress').classList.remove('active');
+            document.getElementById('status').textContent = 'Bereit';
+            document.getElementById('frames').textContent = '0 / 0';
+            document.getElementById('time').textContent = '0s / 0s';
+            document.getElementById('audio-progress-dots').innerHTML = '';
+        }
+
+        function simulateNormalRecording() {
+            const frameCount = Math.ceil(7000 / AUDIO_FRAME_SAMPLE_MS);  // 7s
+            console.log('Normal: 7s =', frameCount, 'frames');
+            simulateProgress(frameCount);
+        }
+
+        function simulateRepeatedRecording() {
+            const frameCount = Math.ceil(10500 / AUDIO_FRAME_SAMPLE_MS);  // 7s × 1.5
+            console.log('Wiederholung: 10.5s =', frameCount, 'frames');
+            simulateProgress(frameCount);
+        }
+
+        // Auto-start demo on load
+        window.addEventListener('load', () => {
+            console.log('Simulation ready. Click buttons to start.');
+        });
+    </script>
+</body>
+</html>
