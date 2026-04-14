@@ -542,7 +542,9 @@ die Blätter werden auf vier Felder rund um das Center verteilt ("Quadranten") e
 - `functions.js` - PDF-Anzeige, Zoom, Seiten-/Scroll-Navigation, Pfadaufloesung
 - `render.js` - Karten-Rendering, Stack-/Offset-Logik, Vorschau-Bildaufbau, Render-API (`window.NotentischRender`)
 - `filehandling.js` - XML I/O, Drag & Drop, Suche, Statusspeicherung, Board-/Center-Workflow
-- `audio-assist.js` - Audio Auto (Mikrofonaufnahme, Fingerprint-Bildung, Matching, XML-Felder `AudioReferenz`)
+- `audio_core.js` - Audio Auto: Zustand, UI, Timing, Button-/Toast-Logik
+- `audio_data.js` - Audio Auto: XML-Felder `AudioReferenz`, Fingerprint-Helfer, Kandidatenaufbau
+- `audio_runtime.js` - Audio Auto: Aufnahme, Matching, Tick-Loop, Mode-Steuerung
 - `scripts/extract_cards.ps1` - Card-Bilder aus PDFs generieren (Poppler)
 - `Notentisch.bat` - Batch-Launcher fuer Windows (startet `python/local_server.py` + Browser; setzt waehrend der Session Energiespar-Timeouts auf `Nie` und restauriert danach)
 - `notentisch.vbs` - VB-Wrapper fuer unsichtbaren Start

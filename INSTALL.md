@@ -19,7 +19,9 @@ Kompletten Ordner "Notentisch" kopieren. Wichtig sind u.a.:
 - functions.js
 - render.js
 - filehandling.js
-- audio-assist.js
+- audio_core.js
+- audio_data.js
+- audio_runtime.js
 - local_server.py
 - Notentisch.bat
 - extract_cards.ps1
@@ -124,7 +126,7 @@ Du kannst das Skript jederzeit erneut ausführen, falls du die Ordnerstruktur od
 
 **Problem:** Nach Update verhält sich Audio/Rendering noch wie vorher
 - Lokalen Server neu starten
-- Browserseite einmal hart neu laden, damit `render.js`, `filehandling.js` und `audio-assist.js` frisch geladen werden
+- Browserseite einmal hart neu laden, damit `render.js`, `filehandling.js`, `audio_core.js`, `audio_data.js` und `audio_runtime.js` frisch geladen werden
 
 ---
 
