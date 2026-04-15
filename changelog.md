@@ -1,5 +1,23 @@
 # Changelog - Notentisch
 
+## [v2026.04.15] - 15. April 2026
+
+### Verbessert
+- **Audio-Suchfortschritt in allen Phasen sichtbar**: `Sammeln` (grau), `Warten` (gruen), `Schwierig` (braun) werden im Punktebalken klar getrennt dargestellt.
+- **Robuster Neuansatz nach Verspieler-Pause**: Der Suchlauf setzt nach kurzer Stille den Kandidaten-/Vote-Zustand sauber zurueck, damit neue Ansaetze nicht am Altzustand haengen.
+- **Trefferpfad bei knappen Kandidaten stabilisiert**: Trigger-/Dominanzregeln im Matching wurden feinjustiert, damit legitime Treffer nicht unnötig blockieren.
+- **Rueckkehr aus Config/Advanced deutlich schneller**: Bei History-/DOM-Restore wird der vorhandene Stack-Zustand weiterverwendet; unnoetiger Cache-Reset und kompletter Neuaufbau entfallen.
+
+### Neu
+- **Advanced-Option fuer Verspieler-Pause**: `Neuansatz-Pause bei Verspieler (ms)` mit festen Werten `800`, `1000`, `1500`.
+- **Optionaler Python-Paket-Guard fuer lokale Tests**: `test/assert_no_extra_python_packages.ps1` prueft gegen `test/allowed-python-packages.txt`.
+
+### Technisch
+- `audio_core.js`, `audio_runtime.js`, `board.html`: Phasenanzeige, sichtbarer Fortschrittsbalken, konfigurierbarer Silence-Reset und Matching-Tuning.
+- `advanced_config.html`, `center-config.js`: Vollstaendige Konfigurationsverdrahtung fuer `audioResetOnSilenceMs` (inkl. Normalisierung).
+- `filehandling.js`: DOM-Reuse beim Config-Restore verhindert unnoetigen Render-Cache-Reset.
+- `INSTALL.md`: Doku fuer den Paket-Guard vor Tests ergänzt.
+
 ## [v2026.04.07] - 7. April 2026
 
 ### Verbessert
