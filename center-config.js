@@ -52,6 +52,14 @@
         return fallback;
     }
 
+    function normalizeAudioResetOnSilenceMs(value, fallback) {
+        const parsed = Number(value);
+        if (parsed === 800 || parsed === 1000 || parsed === 1500) return parsed;
+        const fallbackNum = Number(fallback);
+        if (fallbackNum === 800 || fallbackNum === 1000 || fallbackNum === 1500) return fallbackNum;
+        return 1000;
+    }
+
     function normalizeCardSharpness(value, fallback) {
         const input = String(value || '').trim().toLowerCase();
         if (input === 'normal' || input === 'scharf1' || input === 'scharf2') return input;
@@ -156,6 +164,10 @@
         // Wartezeit (ms) nach einem erfolgreichen Tontreffer, bevor erneut gematcht wird.
         audioWaitAfterMatchMs: 4000,
 
+        // Signalpause (ms), nach der Tonsuche bei Verspielern fuer Neuansatz resetet.
+        // Zulaessige Werte: 800, 1000, 1500.
+        audioResetOnSilenceMs: 1000,
+
         // Erkennungs-Strenge der Tonzuordnung: locker/normal/streng.
         audioMatchStrictness: 'normal',
 
@@ -221,6 +233,7 @@
             audioReferenceTargetMs: clampNumber(parsed.audioReferenceTargetMs, 1500, 12000, defaults.audioReferenceTargetMs),
             audioRecordStartDelayMs: clampNumber(parsed.audioRecordStartDelayMs, 0, 3000, defaults.audioRecordStartDelayMs),
             audioWaitAfterMatchMs: clampNumber(parsed.audioWaitAfterMatchMs, 4000, 8000, defaults.audioWaitAfterMatchMs),
+            audioResetOnSilenceMs: normalizeAudioResetOnSilenceMs(parsed.audioResetOnSilenceMs, defaults.audioResetOnSilenceMs),
             audioMatchStrictness: normalizeAudioMatchStrictness(parsed.audioMatchStrictness, defaults.audioMatchStrictness),
             audioMatchExceptionalModesEnabled: normalizeBoolean(parsed.audioMatchExceptionalModesEnabled, defaults.audioMatchExceptionalModesEnabled),
             audioReadyBlinkMs: clampNumber(parsed.audioReadyBlinkMs, 200, 3000, defaults.audioReadyBlinkMs),

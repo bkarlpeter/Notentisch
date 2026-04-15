@@ -341,11 +341,13 @@ async function startAudioMatching() {
         analyser,
         bandSums: createEmptyBandVector(),
         frameCount: 0,
+        lastAcceptedAt: 0,
         samplerTimer: setInterval(() => {
             if (!matchState.running) return;
             const accepted = sampleAnalyserIntoBandVector(analyser, matchState.bandSums, isMusicLikeFrame);
             if (accepted) {
                 matchState.frameCount += 1;
+                matchState.lastAcceptedAt = Date.now();
             }
         }, 180)
     };
@@ -382,6 +384,29 @@ function stopAudioMatching() {
 async function evaluateAudioMatching() {
     if (!audioMatchState || !audioMatchState.running || !xmlData) return;
     if (typeof currentPdfDoc !== 'undefined' && currentPdfDoc) return;
+    const nowTs = Date.now();
+
+    // Nach kurzer Spielpause (z. B. Verspieler) Suchlauf weich zuruecksetzen,
+    // damit ein neuer Ansatz nicht an alten Votes haengen bleibt.
+    const silenceGapMs = audioMatchState.lastAcceptedAt > 0
+        ? (nowTs - audioMatchState.lastAcceptedAt)
+        : 0;
+    if (
+        silenceGapMs >= getAudioResetOnSilenceMs() &&
+        (audioHitHistory.length > 0 || audioMatchCandidateStartedAt > 0)
+    ) {
+        audioHitHistory = [];
+        audioLastBestCardId = null;
+        audioBestCardStreak = 0;
+        resetAudioMatchCandidateProgress();
+        resetAudioSearchDifficultyState();
+        audioMatchStartedAt = nowTs;
+        queueAudioDiagEvent('matching_reset_silence_gap', {
+            silenceGapMs: Math.round(silenceGapMs)
+        });
+        updateAudioAssistUi();
+    }
+
     if (audioMatchState.frameCount < AUDIO_MATCH_MIN_LIVE_FRAMES) return;
 
     const liveFrameCount = audioMatchState.frameCount;
@@ -452,8 +477,8 @@ async function evaluateAudioMatching() {
     if (audioLastBestCardId !== bestCardId) {
         const decisiveSwitch = (
             audioLastBestCardId !== null &&
-            best.score >= Math.max(strictnessProfile.relaxedMinScore, 0.955) &&
-            scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.01)
+            best.score >= Math.max(strictnessProfile.relaxedMinScore, 0.975) &&
+            scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.02)
         );
         if (decisiveSwitch) {
             audioHitHistory = [];
@@ -477,9 +502,9 @@ async function evaluateAudioMatching() {
     // Wenn ein neuer Kandidat kurz nacheinander stabil vorne liegt,
     // alten Suchlauf aktiv abbrechen (nur neue Kandidaten-Stimmen behalten).
     if (
-        audioBestCardStreak >= 2 &&
+        audioBestCardStreak >= 3 &&
         best.score >= Math.max(strictnessProfile.relaxedMinScore - 0.01, 0.93) &&
-        scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.004)
+        scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.008)
     ) {
         const beforeLen = audioHitHistory.length;
         audioHitHistory = audioHitHistory.filter((id) => id === bestCardId);
@@ -513,9 +538,10 @@ async function evaluateAudioMatching() {
         ? 4
         : (strictnessProfile.strictness === 'locker' ? 2 : 3);
     const allowVotesDominantPath = (
-        votesForBest >= (requiredHits + 1) &&
+        votesForBest >= requiredHits &&
+        voteLead >= 2 &&
         best.score >= strictnessProfile.relaxedMinScore &&
-        scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.003)
+        scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.002)
     );
 
     queueAudioDiagEvent('matching_scored', {
@@ -589,9 +615,9 @@ async function evaluateAudioMatching() {
     const hasSecondBest = !!secondBest;
     const meetsTriggerLiveFrames = liveFrameCount >= AUDIO_MATCH_TRIGGER_MIN_LIVE_FRAMES;
     const highConfidenceContinuation = (
-        votesForBest >= (requiredHits + 1) &&
+        votesForBest >= requiredHits &&
         audioBestCardStreak >= requiredStreak &&
-        best.score >= Math.max(strictnessProfile.strictMinScore, 0.97)
+        best.score >= Math.max(strictnessProfile.strictMinScore, 0.965)
     );
     const effectiveGapFloor = highConfidenceContinuation
         ? Math.min(AUDIO_MATCH_TRIGGER_FLOOR_MIN_GAP, 0.003)

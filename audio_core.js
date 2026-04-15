@@ -33,6 +33,7 @@ const AUDIO_MATCH_REQUIRED_HITS = 5;      // Min-Votes im Fenster zum AuslÃ¶se
 const AUDIO_MATCH_VOTE_WINDOW = 10;       // + stabil: 15 â†’ 10 (â‰ˆ 1.8s Fenster)
 const AUDIO_MATCH_EVAL_INTERVAL_MS = 450;
 const AUDIO_MATCH_MIN_LIVE_FRAMES = 5;
+const AUDIO_MATCH_RESET_ON_SILENCE_DEFAULT_MS = 1000;
 const AUDIO_MATCH_ENABLE_FAST_TRIGGER = true;
 const AUDIO_MATCH_TRIGGER_MIN_LIVE_FRAMES = 5;
 const AUDIO_MATCH_TRIGGER_FLOOR_MIN_GAP = 0.006;
@@ -225,6 +226,23 @@ function getAudioWaitAfterMatchMs() {
     return Math.min(8000, Math.max(4000, waitMs));
 }
 
+function getAudioResetOnSilenceMs() {
+    const fallback = (window.NOTENTISCH_USER_CONFIG_DEFAULTS && window.NOTENTISCH_USER_CONFIG_DEFAULTS.audioResetOnSilenceMs)
+        || AUDIO_MATCH_RESET_ON_SILENCE_DEFAULT_MS;
+    try {
+        if (typeof loadUserConfig === 'function') {
+            const config = loadUserConfig();
+            const value = Number(config?.audioResetOnSilenceMs);
+            if (value === 800 || value === 1000 || value === 1500) {
+                return value;
+            }
+        }
+    } catch {}
+    return (fallback === 800 || fallback === 1000 || fallback === 1500)
+        ? fallback
+        : AUDIO_MATCH_RESET_ON_SILENCE_DEFAULT_MS;
+}
+
 function getAudioReadyBlinkMs() {
     const fallback = (window.NOTENTISCH_USER_CONFIG_DEFAULTS && window.NOTENTISCH_USER_CONFIG_DEFAULTS.audioReadyBlinkMs) || 1000;
     try {
@@ -400,6 +418,7 @@ function updateAudioRecordProgress() {
     if (!dotsContainer) return;
 
     progressEl.classList.remove('search-difficult');
+    progressEl.classList.remove('search-collecting');
 
     // Aufnahme-Modus: Fortschritt bis Ziel-FrameCount.
     if (audioAssistMode === 2 && audioRecordState) {
@@ -421,13 +440,17 @@ function updateAudioRecordProgress() {
         return;
     }
 
-    // Such-Modus: Wartepunkte bis Auto-Restart-Schwelle.
-    if (audioAssistMode === 1 && audioMatchState && audioMatchCandidateStartedAt > 0) {
+    // Such-Modus: Sammeln (grau) bis erster Kandidat erkannt, danach Warten (gruen).
+    if (audioAssistMode === 1 && audioMatchState && audioMatchStartedAt > 0) {
         progressEl.style.display = 'block';
-        if (labelEl) labelEl.textContent = 'Warten';
+        const hasCandidate = audioMatchCandidateStartedAt > 0;
+        if (labelEl) {
+            labelEl.textContent = hasCandidate ? 'Warten' : 'Sammeln';
+        }
 
         const targetSecs = Math.ceil(AUDIO_MATCH_AUTO_RESTART_MS / 1000);
-        const elapsedMs = Math.max(0, Date.now() - audioMatchCandidateStartedAt);
+        const progressStartTs = hasCandidate ? audioMatchCandidateStartedAt : audioMatchStartedAt;
+        const elapsedMs = Math.max(0, Date.now() - progressStartTs);
         const elapsedSecs = Math.ceil(elapsedMs / 1000);
         const currentSecs = Math.min(targetSecs, Math.max(1, elapsedSecs));
         const difficultSearch = (
@@ -435,6 +458,9 @@ function updateAudioRecordProgress() {
             audioSearchDifficultSince > 0 &&
             (Date.now() - audioSearchDifficultSince) >= 12000
         );
+        if (!hasCandidate && !difficultSearch) {
+            progressEl.classList.add('search-collecting');
+        }
         if (difficultSearch) {
             progressEl.classList.add('search-difficult');
         }

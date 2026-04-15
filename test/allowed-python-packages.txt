@@ -1,0 +1,7 @@
+# Erlaubte Python-Pakete für lokale Tests (Kleinbuchstaben)
+cffi
+miniaudio
+pip
+pycparser
+setuptools
+wheel

@@ -72,6 +72,20 @@ Wenn dieser Pfad nicht existiert, wird pdfimages.exe aus PATH verwendet.
 
 ---
 
+## Optional: Paket-Guard vor Tests
+Wenn bei Tests keine zusaetzlichen Python-Pakete erlaubt sind, pruefe vorab:
+
+```powershell
+.\test\assert_no_extra_python_packages.ps1
+```
+
+Die erlaubten Pakete stehen in:
+- `test/allowed-python-packages.txt`
+
+Bei nicht erlaubten Zusatzpaketen bricht das Skript mit Exit-Code 2 ab.
+
+---
+
 ## Start auf einem anderen Windows-System
 
 So geht's:

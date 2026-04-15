@@ -81,6 +81,13 @@ Aktueller Stand (04.04.2026):
 - Tonsuche-Button: Kurzdruck `Ton An -> Aus`, Langdruck in `Ton An -> Aufnahme`, in `Aufnahme -> Aus`.
 - Bekannte Einschränkung: Bei einigen Browser-/Fullscreen-Kombinationen kann der Fullscreen beim Wechsel `Board -> Config -> Zurück` trotzdem verlassen werden.
 
+Aktueller Stand (15.04.2026):
+- Tonsuche-Fortschritt ist in allen Suchphasen sichtbar: `Sammeln` (grau), `Warten` (gruen), `Schwierig` (braun).
+- In `Advanced` ist die Neuansatz-Pause bei Verspielern als feste Auswahl verfügbar (`800`, `1000`, `1500` ms).
+- Suchlauf-Reset nach kurzer Spielpause wurde robuster gemacht, damit neue Ansaetze nicht an alten Votes haengen.
+- Rueckkehr aus `Config/Advanced` nutzt beim DOM-/History-Restore den vorhandenen Zustand und vermeidet unnoetigen Stack-Neuaufbau (spuerbar schneller).
+- Optionaler Paket-Guard fuer lokale Tests dokumentiert (`test/assert_no_extra_python_packages.ps1` mit Allowlist in `test/allowed-python-packages.txt`).
+
 Details siehe [CHANGELOG.md](CHANGELOG.md).
 
 ## Sicherheitscheck (Stand: 16.03.2026)

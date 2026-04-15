@@ -1107,15 +1107,24 @@ function applyCardLayoutSnapshotFromConfig(snapshot, options = {}) {
 function restoreBoardSnapshotFromConfig(snapshot, options = {}) {
     if (!snapshot || !snapshot.xmlText) return false;
 
-    try {
-        const parsedXml = new DOMParser().parseFromString(snapshot.xmlText, 'text/xml');
-        xmlData = parsedXml;
-        getRenderApi()?.resetCardRenderCache();
-        if (snapshot.xmlFileName) {
-            xmlFileName = snapshot.xmlFileName;
+    const renderApi = getRenderApi();
+    const preferDomRestore = !!options.preferDomRestore;
+    const hasVisibleCards = document.querySelectorAll('.card-container[data-cardid]').length > 0;
+    const canReuseDomState = preferDomRestore && hasVisibleCards && !!xmlData;
+
+    if (!canReuseDomState) {
+        try {
+            const parsedXml = new DOMParser().parseFromString(snapshot.xmlText, 'text/xml');
+            xmlData = parsedXml;
+            renderApi?.resetCardRenderCache();
+            if (snapshot.xmlFileName) {
+                xmlFileName = snapshot.xmlFileName;
+            }
+        } catch {
+            return false;
         }
-    } catch {
-        return false;
+    } else if (snapshot.xmlFileName) {
+        xmlFileName = snapshot.xmlFileName;
     }
 
     if (snapshot.quadrantOffsets && typeof snapshot.quadrantOffsets === 'object') {
@@ -1130,9 +1139,6 @@ function restoreBoardSnapshotFromConfig(snapshot, options = {}) {
     lastCardIdFromCenter = snapshot.lastCardIdFromCenter ?? null;
     activeCenterCardId = snapshot.activeCenterCardId ?? null;
 
-    const renderApi = getRenderApi();
-    const preferDomRestore = !!options.preferDomRestore;
-    const hasVisibleCards = document.querySelectorAll('.card-container[data-cardid]').length > 0;
     if (!preferDomRestore || !hasVisibleCards) {
         // Fallback: kompletter Neuaufbau nur wenn kein brauchbares DOM vorhanden ist.
         renderApi?.renderBoard();
