@@ -1,62 +1,79 @@
-<mxfile host="app.diagrams.net" modified="2026-04-14T12:00:00.000Z" agent="GitHub Copilot" version="28.2.5">
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.5 Chrome/138.0.7204.251 Electron/37.6.1 Safari/537.36" version="28.2.5">
   <diagram id="audio-flow-current" name="Ablauf Tonsuche aktuell">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="1301" dy="815" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="start" value="BTN1 aus&#xa;blau" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="60" y="110" width="170" height="70" as="geometry" />
+        <mxCell id="start" value="Tonsuche aus&lt;br&gt;blau" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="310" width="170" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="listen" value="BTN1 an&#xa;gruen&#xa;Tonsuche laeuft" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="listen" value="Tonsuche an&lt;br&gt;gruen&lt;div&gt;Phase: Sammeln (grau) / Warten&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" parent="1" vertex="1">
           <mxGeometry x="300" y="110" width="190" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="candidate" value="Kandidat gefunden&#xa;BTN bleibt gruen&#xa;Dots starten ab 1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f3e3;strokeColor=#82b366;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="580" y="100" width="220" height="90" as="geometry" />
+        <mxCell id="candidate" value="Kandidat stabilisiert&lt;br&gt;Dots gruen" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#003900;strokeColor=#005700;fontSize=14;fontColor=#ffffff;" parent="1" vertex="1">
+          <mxGeometry x="670" y="100" width="100" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="difficult" value="Suche bleibt unklar&#xa;keine Meldung&#xa;Dots werden braun" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8e6d3;strokeColor=#a5673f;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="880" y="100" width="220" height="90" as="geometry" />
+        <mxCell id="difficult" value="Suche bleibt unklar&lt;br&gt;Schwierig-Hinweis" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a20025;strokeColor=#6F0000;fontSize=14;fontColor=#ffffff;" parent="1" vertex="1">
+          <mxGeometry x="935" y="100" width="110" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="restart" value="Auto-Neustart&#xa;Counter zuruecksetzen&#xa;neue Kandidatensuche" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="880" y="250" width="220" height="90" as="geometry" />
+        <mxCell id="restart" value="Auto-Neustart&lt;br&gt;Reset bei Stille / Unklar" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="935" y="360" width="110" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="match" value="Treffer&#xa;Blatt wird gelegt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="580" y="260" width="220" height="80" as="geometry" />
+        <mxCell id="match" value="Treffer&lt;br&gt;Blatt im center&lt;div&gt;Dots aus&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="670" y="270" width="100" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="record" value="Langdruck auf BTN1&#xa;Aufnahme-Modus&#xa;orange" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="300" y="290" width="190" height="90" as="geometry" />
+        <mxCell id="record" value="Aufnahme-Modus&lt;br&gt;orange" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="300" y="369" width="190" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="save" value="BTN2 Speichern&#xa;MusicPrint sichern" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="580" y="400" width="220" height="80" as="geometry" />
+        <mxCell id="save" value="Label2= Speichern&lt;br&gt;MusicPrint sichern" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="285" y="670" width="220" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="note1" value="UI-Hinweis&#xa;Dots liegen unter dem Center&#xa;absolut positioniert wie der Notentitel" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="1">
-          <mxGeometry x="880" y="400" width="220" height="110" as="geometry" />
+        <mxCell id="note1" value="Aktueller Stand&#xa;- Trigger: strict + relaxed-stable&#xa;- Silence-Reset: konfigurierbar&#xa;  (800/1000/1500 ms)&#xa;- Dots/Progress im Center sichtbar" style="shape=note;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;fontColor=#333333;" parent="1" vertex="1">
+          <mxGeometry x="890" y="520" width="220" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="e1" value="Klick" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="start" target="listen">
+        <mxCell id="e1" value="Kurzdruck" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="start" target="listen" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e2" value="erster brauchbarer Kandidat" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="listen" target="candidate">
+        <mxCell id="e2" value="erster brauchbarer Kandidat" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="listen" target="candidate" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e3" value="weiter unsicher" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="candidate" target="difficult">
+        <mxCell id="e3" value="zu wenig Trennung / wechselnd" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="candidate" target="difficult" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e4" value="Schwelle erreicht" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="difficult" target="restart">
+        <mxCell id="e4" value="Schwelle erreicht" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="difficult" target="restart" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e5" value="Restart" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="restart" target="listen">
+        <mxCell id="e5" value="Restart" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.799;entryY=1.008;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="restart" target="listen" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="935" y="410" />
+              <mxPoint x="510" y="410" />
+              <mxPoint x="510" y="240" />
+              <mxPoint x="452" y="240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6" value="genug Votes + Abstand&lt;br&gt;(strict oder relaxed-stable)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="candidate" target="match" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e6" value="genug Votes + Abstand" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="candidate" target="match">
+        <mxCell id="e10" value="Stille-Gap &gt; Reset-Zeit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.2;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="candidate" target="restart" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="840" y="145" />
+              <mxPoint x="960" y="145" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e7" value="Langdruck" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="listen" target="record" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e7" value="Langdruck" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="listen" target="record">
+        <mxCell id="e8" value="fertige Aufnahme" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="record" target="save" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e8" value="fertige Aufnahme" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="record" target="save">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e9" value="Langdruck zurueck" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="record" target="listen">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e9" value="Langdruck" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="record" target="listen" edge="1">
+          <mxGeometry x="0.0056" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>
