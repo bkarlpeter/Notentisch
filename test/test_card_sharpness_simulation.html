@@ -252,10 +252,10 @@
     async function loadZwieselalmImage() {
       const statusEl = $('previewStatus');
       const candidates = [
-        './Cards_Export/card_Auf_der_Zwieselalm.png',
-        './Cards_Export/card_Auf_der_Zwieselalm1.png',
-        './Cards_Export/card_auf_der_zwieselalm.png',
-        './Cards_Export/card_auf_der_zwieselalm1.png'
+        '../Cards_Export/card_Auf_der_Zwieselalm.png',
+        '../Cards_Export/card_Auf_der_Zwieselalm1.png',
+        '../Cards_Export/card_auf_der_zwieselalm.png',
+        '../Cards_Export/card_auf_der_zwieselalm1.png'
       ];
       for (const c of candidates) {
         if (await tryImage(c)) {
@@ -267,10 +267,10 @@
       }
 
       const pdfCandidates = [
-        './Blätter/Auf der Zwieselalm.pdf',
-        './Bl%C3%A4tter/Auf%20der%20Zwieselalm.pdf',
-        './Blätter/Auf der Zwieselalm1.pdf',
-        './Bl%C3%A4tter/Auf%20der%20Zwieselalm1.pdf'
+        '../Blätter/Auf der Zwieselalm.pdf',
+        '../Bl%C3%A4tter/Auf%20der%20Zwieselalm.pdf',
+        '../Blätter/Auf der Zwieselalm1.pdf',
+        '../Bl%C3%A4tter/Auf%20der%20Zwieselalm1.pdf'
       ];
 
       for (const pdfPath of pdfCandidates) {

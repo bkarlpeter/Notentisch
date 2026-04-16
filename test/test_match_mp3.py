@@ -265,7 +265,8 @@ def main():
         print("Verwendung: py test_match_mp3.py <Pfad zur MP3>")
         sys.exit(1)
 
-    xml_path = Path(__file__).parent / "Noten" / "Notentisch.xml"
+    repo_root = Path(__file__).resolve().parent.parent
+    xml_path = repo_root / "Noten" / "Notentisch.xml"
     if not xml_path.exists():
         print(f"XML nicht gefunden: {xml_path}")
         sys.exit(1)
