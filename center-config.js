@@ -66,6 +66,12 @@
         return fallback;
     }
 
+    function normalizePdfBaseDir(value, fallback) {
+        const input = String(value || '').trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+        if (input === 'Blätter' || input === 'Noten/Blätter' || input === 'Noten') return input;
+        return fallback;
+    }
+
     function normalizeBoolean(value, fallback) {
         if (typeof value === 'boolean') return value;
         if (value === 'true' || value === '1' || value === 1 || value === 'show') return true;
@@ -183,6 +189,9 @@
         // Marker in der Karten-Ecke anzeigen, wenn eine Audio-Referenz existiert.
         showAudioBadge: true,
 
+        // Basisordner fuer PDF-Aufloesung.
+        pdfBaseDir: 'Blätter',
+
         // Darstellungsmodus der Kartenkachel: normal, scharf1, scharf2.
         cardSharpness: 'normal',
 
@@ -239,6 +248,7 @@
             audioReadyBlinkMs: clampNumber(parsed.audioReadyBlinkMs, 200, 3000, defaults.audioReadyBlinkMs),
             replaceAudioByTitle: normalizeBoolean(parsed.replaceAudioByTitle, defaults.replaceAudioByTitle),
             showAudioBadge: normalizeBoolean(parsed.showAudioBadge, defaults.showAudioBadge),
+            pdfBaseDir: normalizePdfBaseDir(parsed.pdfBaseDir, defaults.pdfBaseDir),
             cardSharpness: normalizeCardSharpness(parsed.cardSharpness, defaults.cardSharpness),
             btnBaseColor: normalizeHexColor(parsed.btnBaseColor, defaults.btnBaseColor),
             btnToggleColor1: normalizeHexColor(parsed.btnToggleColor1, defaults.btnToggleColor1),

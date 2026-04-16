@@ -1,0 +1,16 @@
+Hinweis zu Inhalten im Ordner Noten
+
+Dieser Ordner darf im oeffentlichen Projekt nur Material enthalten,
+für das eine Weitergabe rechtlich erlaubt ist.
+
+Erlaubte Inhalte:
+- Eigene Werke
+- Gemeinfreie Werke
+- Material mit ausdruecklicher Weitergabegenehmigung
+
+Nicht enthalten sein duerfen:
+- Urheberrechtlich geschuetzte Noten ohne Freigabe
+- Lizenzpflichtige Sammlungen ohne Weitergaberecht
+
+Empfehlung:
+Pflege sensible oder lizenzpflichtige Inhalte in einem separaten privaten Paket.

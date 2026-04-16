@@ -3,6 +3,19 @@
 
 function normalizePdfServerPathV2(pdfPath) {
     if (!pdfPath) return '';
+    const fallbackBaseDir = 'Blätter';
+    let pdfBaseDir = fallbackBaseDir;
+    try {
+        if (typeof loadUserConfig === 'function') {
+            const cfg = loadUserConfig() || {};
+            const candidate = String(cfg.pdfBaseDir || '').trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+            if (candidate === 'Blätter' || candidate === 'Noten/Blätter' || candidate === 'Noten') {
+                pdfBaseDir = candidate;
+            }
+        }
+    } catch (_) {
+        pdfBaseDir = fallbackBaseDir;
+    }
     let path = pdfPath.trim();
     // Ersetze Backslashes durch Slashes
     path = path.replace(/\\/g, '/');
@@ -12,10 +25,10 @@ function normalizePdfServerPathV2(pdfPath) {
     path = path.replace(/^([a-zA-Z]:)?\/?/, '');
     // Entferne führende und doppelte Slashes
     path = path.replace(/^\/+/, '').replace(/\/+/, '/');
-    // Robust: Suche nach beliebigem Blätter/ oder Noten/ im Pfad und mappe immer auf Blätter/Dateiname.pdf
+    // Robust: Suche nach beliebigem Blätter/ oder Noten/ im Pfad und mappe auf konfigurierten Basisordner.
     const pdfNameMatch = path.match(/(?:Blätter|Noten)[\/]+([^\/]+\.pdf)$/i);
     if (pdfNameMatch) {
-        return 'Blätter/' + pdfNameMatch[1].trim();
+        return pdfBaseDir + '/' + pdfNameMatch[1].trim();
     }
     // Optional: Nur erlaubte Ordner
     const allowedRoots = ['Noten', 'Blätter', 'board_files', 'Cards_Export', 'History'];
@@ -24,8 +37,8 @@ function normalizePdfServerPathV2(pdfPath) {
         // Entferne führende/nachfolgende Leerzeichen aus allen Teilen
         return parts.map(p => p.trim()).join('/');
     }
-    // Fallback: Immer Blätter/ vor den Dateinamen setzen, Dateiname getrimmt
-    return 'Blätter/' + parts[parts.length - 1].trim();
+    // Fallback: Immer Basisordner vor den Dateinamen setzen, Dateiname getrimmt
+    return pdfBaseDir + '/' + parts[parts.length - 1].trim();
 }
 
 // Anwendung: showPdfPages() oder PDF-Ladefunktionen können diese Version nutzen

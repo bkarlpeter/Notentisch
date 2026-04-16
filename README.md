@@ -1,6 +1,4 @@
 
-> Hinweis: Das Haupt-README liegt jetzt im Projekt-Root unter [README.md](../README.md). Diese Datei ist vorerst die bisherige Kopie in [Dokumentation](.).
-
 ## Installation & Schnellstart
 
 👉 Lies die ausführliche Installationsanleitung in [INSTALL.md](INSTALL.md) (inkl. Problemlösung und Setup-Hinweisen).
@@ -174,11 +172,15 @@ Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. te
 
 ### 1) Projekt kopieren
 
-Ganzes Repository auf den Zielrechner kopieren (inkl. `Cards_Export/`, `Blaetter/`, `Noten/`, `myMusic/`, `poppler-25.12.0/` falls vorhanden).
+Ganzes Repository auf den Zielrechner kopieren (inkl. `Cards_Export/` und `poppler-25.12.0/` falls vorhanden).
+
+Hinweis zur Veroeffentlichung:
+- Der PDF-Bestand unter `Noten/` wird aus urheberrechtlichen Gruenden nicht mitgeliefert.
+- `Blätter/` ist im Regelfall nur eine Junction auf deinen lokalen PDF-Ordner.
 
 ### 2) `Blaetter`-Ordner pruefen
 
-Die App sucht PDFs bevorzugt unter `Blaetter/`.
+Die App sucht PDFs bevorzugt unter `Blaetter/` (typisch als Junction auf einen externen lokalen Ordner).
 
 - Wenn `Blaetter/` bereits ein echter Ordner mit PDFs ist: nichts tun.
 - Wenn `Blaetter/` eine Junction/Symlink war und auf dem neuen Rechner leer/ungueltig ist:
@@ -186,6 +188,12 @@ Die App sucht PDFs bevorzugt unter `Blaetter/`.
 ```powershell
 cmd /c mklink /J "Blätter" "D:\Pfad\zu\deinen\PDFs"
 ```
+
+Optional: Der Basisordner fuer PDF-Aufloesung kann in der User-Config auf
+- `Blätter`
+- `Noten/Blätter`
+- `Noten`
+gesetzt werden.
 
 ### 3) App starten
 

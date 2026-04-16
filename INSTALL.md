@@ -27,10 +27,13 @@ Kompletten Ordner "Notentisch" kopieren. Wichtig sind u.a.:
 - extract_cards.ps1
 - create_xml_from_pdfs.ps1
 - Cards_Export/
-- Blätter/
+
+Hinweis zur Auslieferung:
+- Der Notenbestand wird typischerweise nicht mit dem Projekt veroeffentlicht.
+- `Blätter/` ist im Normalfall eine Junction auf einen externen lokalen PDF-Ordner.
 
 ### 3. PDF-Ordner prüfen
-Die App erwartet PDFs unter `Blätter/`.
+Die App erwartet PDFs unter `Blätter/` (oder per Konfiguration unter `Noten/Blätter` bzw. `Noten`).
 
 Falls "Blätter" auf dem Zielrechner nicht funktioniert (z.B. alte Junction):
 1. PowerShell als Administrator öffnen
@@ -39,6 +42,9 @@ Falls "Blätter" auf dem Zielrechner nicht funktioniert (z.B. alte Junction):
    ```
    cmd /c mklink /J "Blätter" "D:\Pfad\zu\deinen\PDFs"
    ```
+
+Optionaler Konfigwert (Advanced/User-Config): `pdfBaseDir`
+- Erlaubte Werte: `Blätter`, `Noten/Blätter`, `Noten`
 
 ### 4. App starten
 **Variante A (empfohlen):**
@@ -69,6 +75,17 @@ Das Skript nutzt bevorzugt:
 - `.\poppler-25.12.0\Library\bin\pdfimages.exe`
 
 Wenn dieser Pfad nicht existiert, wird pdfimages.exe aus PATH verwendet.
+
+---
+
+## Optional: Veroeffentlichungs-Paket bauen
+Fuer ein oeffentliches Paket ohne lokale Notenbestaende/Access-Daten:
+
+```powershell
+.\build_release_package.ps1 -Version "v2026.04.16"
+```
+
+Das Skript erstellt ein ZIP unter `release/` und schliesst u.a. `Noten/`, `Blätter/`, `myMusic/` und lokale Audio-/Cache-Daten aus.
 
 ---
 

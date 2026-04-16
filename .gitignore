@@ -57,3 +57,6 @@ mysounds/*.webm
 # Local diagnostics
 mysounds/musicprint_diagnostics.jsonl
 mysounds/musicprint_diag_report.txt
+
+# Local release packages
+release/
