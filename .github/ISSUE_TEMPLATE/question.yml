@@ -1,0 +1,23 @@
+name: Question
+description: Stelle eine Frage zur Nutzung oder Entwicklung
+labels: [question]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Frage
+      placeholder: Was ist unklar?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Kontext
+      placeholder: Was hast du bereits versucht?
+
+  - type: input
+    id: environment
+    attributes:
+      label: Umgebung
+      placeholder: z. B. Windows 11, Browser, Projektversion

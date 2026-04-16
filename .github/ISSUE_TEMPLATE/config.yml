@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Fragen zur Nutzung
+    url: https://github.com/bkarlpeter/Notentisch/discussions
+    about: Bitte nutze fuer offene Fragen bevorzugt Discussions oder das Question-Template.
