@@ -192,14 +192,19 @@ try {
     $desktop = [Environment]::GetFolderPath('Desktop')
     $shortcutPath = Join-Path $desktop 'Notentisch.lnk'
     $targetPath = Join-Path $PSScriptRoot 'Notentisch.vbs'
-    $iconPath = Join-Path $PSScriptRoot 'History\zither2.ico'
+    $iconCandidates = @(
+        (Join-Path $PSScriptRoot 'History\Zither2.ico'),
+        (Join-Path $PSScriptRoot 'History\Notentisch.ico'),
+        (Join-Path $PSScriptRoot 'History\zither2.ico')
+    )
+    $iconPath = $iconCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
     if (Test-Path $targetPath) {
         $wsh = New-Object -ComObject WScript.Shell
         $shortcut = $wsh.CreateShortcut($shortcutPath)
         $shortcut.TargetPath = $targetPath
         $shortcut.WorkingDirectory = $PSScriptRoot
-        if (Test-Path $iconPath) {
+        if ($iconPath) {
             $shortcut.IconLocation = $iconPath
         }
         $shortcut.Save()
