@@ -1,4 +1,4 @@
-# ⭐ Ablauf: Zusammenarbeit zwischen Access und dem HTML-Board
+# ⭐ Ablauf: Zusammenarbeit zwischen Access und dem Notentisch
 
 **Aenderungsstand:** 09.03.2026
 
