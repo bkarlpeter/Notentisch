@@ -5,31 +5,31 @@
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
         <mxCell id="start" value="Tonsuche aus&lt;br&gt;blau" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="310" width="170" height="70" as="geometry" />
+          <mxGeometry x="115" y="20" width="170" height="70" as="geometry" />
         </mxCell>
         <mxCell id="listen" value="Tonsuche an&lt;br&gt;gruen&lt;div&gt;Phase: Sammeln (grau) / Warten&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="300" y="110" width="190" height="80" as="geometry" />
+          <mxGeometry x="105" y="171" width="190" height="80" as="geometry" />
         </mxCell>
         <mxCell id="candidate" value="Kandidat stabilisiert&lt;br&gt;Dots gruen" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#003900;strokeColor=#005700;fontSize=14;fontColor=#ffffff;" parent="1" vertex="1">
-          <mxGeometry x="670" y="100" width="100" height="90" as="geometry" />
+          <mxGeometry x="475" y="166" width="100" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="difficult" value="Suche bleibt unklar&lt;br&gt;Schwierig-Hinweis" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a20025;strokeColor=#6F0000;fontSize=14;fontColor=#ffffff;" parent="1" vertex="1">
-          <mxGeometry x="935" y="100" width="110" height="90" as="geometry" />
+        <mxCell id="difficult" value="Suche bleibt unklar&lt;br&gt;Dots braun" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#a20025;strokeColor=#6F0000;fontSize=14;fontColor=#ffffff;" parent="1" vertex="1">
+          <mxGeometry x="888" y="166" width="110" height="90" as="geometry" />
         </mxCell>
         <mxCell id="restart" value="Auto-Neustart&lt;br&gt;Reset bei Stille / Unklar" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" parent="1" vertex="1">
-          <mxGeometry x="935" y="360" width="110" height="90" as="geometry" />
+          <mxGeometry x="800" y="427" width="190" height="90" as="geometry" />
         </mxCell>
         <mxCell id="match" value="Treffer&lt;br&gt;Blatt im center&lt;div&gt;Dots aus&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="670" y="270" width="100" height="80" as="geometry" />
+          <mxGeometry x="475" y="331" width="100" height="80" as="geometry" />
         </mxCell>
         <mxCell id="record" value="Aufnahme-Modus&lt;br&gt;orange" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" parent="1" vertex="1">
-          <mxGeometry x="300" y="369" width="190" height="90" as="geometry" />
+          <mxGeometry x="105" y="430" width="190" height="90" as="geometry" />
         </mxCell>
         <mxCell id="save" value="Label2= Speichern&lt;br&gt;MusicPrint sichern" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" parent="1" vertex="1">
-          <mxGeometry x="285" y="670" width="220" height="80" as="geometry" />
+          <mxGeometry x="90" y="670" width="190" height="80" as="geometry" />
         </mxCell>
         <mxCell id="note1" value="Aktueller Stand&#xa;- Trigger: strict + relaxed-stable&#xa;- Silence-Reset: konfigurierbar&#xa;  (800/1000/1500 ms)&#xa;- Dots/Progress im Center sichtbar" style="shape=note;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;fontColor=#333333;" parent="1" vertex="1">
-          <mxGeometry x="890" y="520" width="220" height="110" as="geometry" />
+          <mxGeometry x="700" y="580" width="220" height="110" as="geometry" />
         </mxCell>
         <mxCell id="e1" value="Kurzdruck" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="start" target="listen" edge="1">
           <mxGeometry relative="1" as="geometry" />
@@ -37,31 +37,55 @@
         <mxCell id="e2" value="erster brauchbarer Kandidat" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="listen" target="candidate" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e3" value="zu wenig Trennung / wechselnd" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="candidate" target="difficult" edge="1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e3" value="zu wenig Trennung / wechselnd" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="candidate" target="difficult" edge="1">
+          <mxGeometry x="-0.2856" relative="1" as="geometry">
+            <mxPoint x="865" y="206" as="targetPoint" />
+            <Array as="points" />
+            <mxPoint as="offset" />
+          </mxGeometry>
         </mxCell>
-        <mxCell id="e4" value="Schwelle erreicht" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="difficult" target="restart" edge="1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e11" value="doch eindeutiger Treffer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.191;exitY=1.033;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitPerimeter=0;" parent="1" source="difficult" target="match" edge="1">
+          <mxGeometry x="0.2958" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="910" y="259" />
+              <mxPoint x="910" y="370" />
+              <mxPoint x="575" y="370" />
+            </Array>
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4" value="Schwelle erreicht" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" parent="1" source="difficult" target="restart" edge="1">
+          <mxGeometry x="0.5433" y="11" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="943" y="410" />
+              <mxPoint x="943" y="410" />
+            </Array>
+            <mxPoint x="950" y="380" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="e5" value="Restart" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.799;entryY=1.008;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="restart" target="listen" edge="1">
-          <mxGeometry relative="1" as="geometry">
+          <mxGeometry x="-0.2244" relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="935" y="410" />
-              <mxPoint x="510" y="410" />
-              <mxPoint x="510" y="240" />
-              <mxPoint x="452" y="240" />
+              <mxPoint x="740" y="471" />
+              <mxPoint x="360" y="471" />
+              <mxPoint x="360" y="301" />
+              <mxPoint x="257" y="301" />
             </Array>
+            <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
         <mxCell id="e6" value="genug Votes + Abstand&lt;br&gt;(strict oder relaxed-stable)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="candidate" target="match" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e10" value="Stille-Gap &gt; Reset-Zeit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.2;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="candidate" target="restart" edge="1">
-          <mxGeometry relative="1" as="geometry">
+        <mxCell id="e10" value="Stille-Gap &gt; Reset-Zeit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.25;entryY=0;entryDx=0;entryDy=0;exitX=1.009;exitY=0.741;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="candidate" target="restart" edge="1">
+          <mxGeometry x="0.4445" y="2" relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="840" y="145" />
-              <mxPoint x="960" y="145" />
+              <mxPoint x="848" y="233" />
+              <mxPoint x="848" y="430" />
             </Array>
+            <mxPoint x="575" y="221" as="sourcePoint" />
+            <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
         <mxCell id="e7" value="Langdruck" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="listen" target="record" edge="1">

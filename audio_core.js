@@ -441,6 +441,7 @@ function updateAudioRecordProgress() {
     }
 
     // Such-Modus: Sammeln (grau) bis erster Kandidat erkannt, danach Warten (gruen).
+    // Der Fortschritt laeuft dabei durchgaengig ab Suchstart weiter (kein Reset beim Phasenwechsel).
     if (audioAssistMode === 1 && audioMatchState && audioMatchStartedAt > 0) {
         progressEl.style.display = 'block';
         const hasCandidate = audioMatchCandidateStartedAt > 0;
@@ -449,7 +450,7 @@ function updateAudioRecordProgress() {
         }
 
         const targetSecs = Math.ceil(AUDIO_MATCH_AUTO_RESTART_MS / 1000);
-        const progressStartTs = hasCandidate ? audioMatchCandidateStartedAt : audioMatchStartedAt;
+        const progressStartTs = audioMatchStartedAt;
         const elapsedMs = Math.max(0, Date.now() - progressStartTs);
         const elapsedSecs = Math.ceil(elapsedMs / 1000);
         const currentSecs = Math.min(targetSecs, Math.max(1, elapsedSecs));

@@ -586,13 +586,34 @@ function setupDropListeners() {
 // ---------------------------------------------------------------------------
 let pendingSearchMatch = null;
 
+function showSearchKeyboard(inputEl) {
+    if (!inputEl) return;
+    // Fokus + explizite Keyboard-Anforderung (wenn Browser/API es zulässt).
+    inputEl.focus({ preventScroll: true });
+    try {
+        inputEl.click();
+    } catch {}
+    try {
+        const len = (inputEl.value || '').length;
+        inputEl.setSelectionRange(len, len);
+    } catch {}
+    try {
+        if (navigator.virtualKeyboard && typeof navigator.virtualKeyboard.show === 'function') {
+            navigator.virtualKeyboard.show();
+        }
+    } catch {}
+}
+
 function openSearchOverlay() {
     const overlay = document.getElementById('search-overlay');
     const input   = document.getElementById('search-input');
     if (!overlay) return;
     pendingSearchMatch = null;
     overlay.classList.add('visible');
-    if (input) { input.value = ''; input.focus(); }
+    if (input) {
+        input.value = '';
+        showSearchKeyboard(input);
+    }
     renderSearchResults([]);
     setSearchMessage('');
     const fertigBtn = document.querySelector('#search-panel .search-btn-row .btn');
@@ -727,11 +748,12 @@ function moveCardToQuadrant(cardIdx, targetQuadId) {
     }
 
     if (!cardEl) {
-        // Nur wenn auch der Cache-Pfad fehlschlägt: kompletten DOM-Stand aufbauen.
-        getRenderApi()?.renderBoard?.();
-        cardEl = document.querySelector('.card-container[data-cardid="' + String(cardIdx) + '"]');
-        if (!cardEl) return null;
+        // Falls ein veralteter Cache-Eintrag die Karte blockiert: Cache erneuern und einmal neu versuchen.
+        getRenderApi()?.resetCardRenderCache?.();
+        cardEl = getRenderApi()?.ensureCardElementById?.(cardIdx) || null;
     }
+
+    if (!cardEl) return null;
 
     // Bestimme aktuellen Quadrant der Karte
     const currentParent = cardEl.parentElement;

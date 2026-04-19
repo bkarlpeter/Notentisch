@@ -21,7 +21,21 @@
 	function getCardNodes() {
 		if (!xmlData) return [];
 		if (!cardNodeCache) {
-			cardNodeCache = Array.from(xmlData.querySelectorAll('NotenTisch, Notentisch'));
+			const rawNodes = Array.from(xmlData.querySelectorAll('NotenTisch, Notentisch'));
+			const filteredNodes = rawNodes.filter((node) => {
+				const directChildren = Array.from(node?.children || []);
+				if (!directChildren.length) return false;
+				// Nur echte Karten-Eintraege behalten (direkte Felder), Containerknoten ausfiltern.
+				return directChildren.some((child) => {
+					const tag = String(child.tagName || '').toLowerCase();
+					return tag === 'titel' || tag === 'speicherort' || tag === 'arbeitsstatus';
+				});
+			});
+			cardNodeCache = filteredNodes;
+			const filteredOutCount = rawNodes.length - filteredNodes.length;
+			if (filteredOutCount > 0) {
+				console.warn('Render: ' + filteredOutCount + ' Nicht-Kartenknoten aus XML-Cache gefiltert.');
+			}
 		}
 		return cardNodeCache;
 	}
@@ -369,7 +383,7 @@
 			event.stopPropagation();
 			if (quadrantOffsets[quadrantId] > 0) {
 				quadrantOffsets[quadrantId] = Math.max(0, quadrantOffsets[quadrantId] - offsetStep);
-				renderBoard();
+				renderQuadrantOnly(quadrantId);
 			}
 		});
 
@@ -383,7 +397,7 @@
 			event.stopPropagation();
 			if (quadrantOffsets[quadrantId] < maxOffset) {
 				quadrantOffsets[quadrantId] = Math.min(maxOffset, quadrantOffsets[quadrantId] + offsetStep);
-				renderBoard();
+				renderQuadrantOnly(quadrantId);
 			}
 		});
 
@@ -472,28 +486,9 @@
 		input.dataset.bound = 'true';
 	}
 
-	function renderBoard() {
-		if (!xmlData) return;
-
-		document.body.classList.add('board-rendering');
-
+	function buildGroupedCardData(showAudioBadge) {
 		const grouped = { Q1: [], Q2: [], Q3: [], Q4: [] };
-
-		QUADRANT_IDS.forEach((quadrantId) => {
-			const el = document.getElementById(quadrantId);
-			if (el) el.innerHTML = '';
-		});
-
 		const cards = getCardNodes();
-		const showAudioBadge = isAudioBadgeEnabled();
-
-		if (lastRenderedShowAudioBadge !== null && lastRenderedShowAudioBadge !== showAudioBadge) {
-			cardElementCache.clear();
-		}
-		lastRenderedShowAudioBadge = showAudioBadge;
-
-		const limit = getStackCount();
-		const overlapCount = getConfiguredBatchOverlap(limit);
 
 		const cardMeta = cards.map((cardEl, idx) => {
 			const titel = cardEl.querySelector('Titel')?.textContent || 'Unbekannt';
@@ -530,28 +525,90 @@
 			grouped[quadrantId].push({ idx, titel, speicherort, hasAudioReference, audioBadgeTone, showAudioBadge });
 		});
 
-		QUADRANT_IDS.forEach((quadrantId) => {
-			const target = document.getElementById(quadrantId);
-			if (!target) return;
+		return grouped;
+	}
 
-			const total = grouped[quadrantId].length;
-			const maxOffset = Math.max(0, total - limit);
-			const safeOffset = Math.max(0, Math.min(quadrantOffsets[quadrantId] || 0, maxOffset));
-			quadrantOffsets[quadrantId] = safeOffset;
+	function renderQuadrantFromGrouped(quadrantId, grouped, limit, overlapCount) {
+		const target = document.getElementById(quadrantId);
+		if (!target) return;
 
-			const visibleCards = grouped[quadrantId].slice(safeOffset, safeOffset + limit);
-			visibleCards.forEach((cardInfo) => {
-				target.appendChild(getOrCreateCardElement(cardInfo));
-			});
+		target.innerHTML = '';
+		const total = (grouped[quadrantId] || []).length;
+		const maxOffset = Math.max(0, total - limit);
+		const safeOffset = Math.max(0, Math.min(quadrantOffsets[quadrantId] || 0, maxOffset));
+		quadrantOffsets[quadrantId] = safeOffset;
 
-			createQuadrantStackControls(quadrantId, limit, total, overlapCount);
+		const visibleCards = grouped[quadrantId].slice(safeOffset, safeOffset + limit);
+		visibleCards.forEach((cardInfo) => {
+			target.appendChild(getOrCreateCardElement(cardInfo));
 		});
 
-		scheduleCardPrefetch(grouped, limit, overlapCount);
-		setupDropListeners();
-		updateStackLayout();
+		createQuadrantStackControls(quadrantId, limit, total, overlapCount);
+	}
 
-		requestAnimationFrame(() => document.body.classList.remove('board-rendering'));
+	function renderQuadrantOnly(quadrantId) {
+		if (!xmlData || !QUADRANT_IDS.includes(quadrantId)) return;
+
+		try {
+			const showAudioBadge = isAudioBadgeEnabled();
+			if (lastRenderedShowAudioBadge !== null && lastRenderedShowAudioBadge !== showAudioBadge) {
+				cardElementCache.clear();
+			}
+			lastRenderedShowAudioBadge = showAudioBadge;
+
+			const grouped = buildGroupedCardData(showAudioBadge);
+			const limit = getStackCount();
+			const overlapCount = getConfiguredBatchOverlap(limit);
+			renderQuadrantFromGrouped(quadrantId, grouped, limit, overlapCount);
+
+			scheduleCardPrefetch(grouped, limit, overlapCount);
+			setupDropListeners();
+			updateStackLayout();
+		} catch (err) {
+			console.error('renderQuadrantOnly fehlgeschlagen:', err);
+		}
+	}
+
+	function renderBoard() {
+		if (!xmlData) return;
+
+		document.body.classList.add('board-rendering');
+
+		try {
+			const grouped = { Q1: [], Q2: [], Q3: [], Q4: [] };
+
+			QUADRANT_IDS.forEach((quadrantId) => {
+				const el = document.getElementById(quadrantId);
+				if (el) el.innerHTML = '';
+			});
+
+			const showAudioBadge = isAudioBadgeEnabled();
+
+			if (lastRenderedShowAudioBadge !== null && lastRenderedShowAudioBadge !== showAudioBadge) {
+				cardElementCache.clear();
+			}
+			lastRenderedShowAudioBadge = showAudioBadge;
+
+			const limit = getStackCount();
+			const overlapCount = getConfiguredBatchOverlap(limit);
+			const groupedBuilt = buildGroupedCardData(showAudioBadge);
+			grouped.Q1 = groupedBuilt.Q1;
+			grouped.Q2 = groupedBuilt.Q2;
+			grouped.Q3 = groupedBuilt.Q3;
+			grouped.Q4 = groupedBuilt.Q4;
+
+			QUADRANT_IDS.forEach((quadrantId) => {
+				renderQuadrantFromGrouped(quadrantId, grouped, limit, overlapCount);
+			});
+
+			scheduleCardPrefetch(grouped, limit, overlapCount);
+			setupDropListeners();
+			updateStackLayout();
+		} catch (err) {
+			console.error('renderBoard fehlgeschlagen:', err);
+		} finally {
+			requestAnimationFrame(() => document.body.classList.remove('board-rendering'));
+		}
 	}
 
 	function sanitizeTitle(titel) {
@@ -668,7 +725,19 @@
 
 			const serverPath = encodePath(paths[pathIndex]);
 
-			if (pdfPathAttemptCache.get(serverPath) === false) {
+			const cachedAttempt = pdfPathAttemptCache.get(serverPath);
+			if (cachedAttempt === false) {
+				pathIndex++;
+				tryNextPdf();
+				return;
+			}
+			if (
+				cachedAttempt &&
+				typeof cachedAttempt === 'object' &&
+				cachedAttempt.ok === false &&
+				Number.isFinite(cachedAttempt.failedAt) &&
+				(Date.now() - cachedAttempt.failedAt) < 15000
+			) {
 				pathIndex++;
 				tryNextPdf();
 				return;
@@ -677,7 +746,7 @@
 			pdfjsLib.getDocument(serverPath).promise
 				.then(pdf => pdf.getPage(1))
 				.then(page => {
-					pdfPathAttemptCache.set(serverPath, true);
+					pdfPathAttemptCache.set(serverPath, { ok: true, ts: Date.now() });
 					const viewport = page.getViewport({ scale: 0.35 });
 					const canvas = document.createElement('canvas');
 					const context = canvas.getContext('2d');
@@ -690,7 +759,7 @@
 					});
 				})
 				.catch(() => {
-					pdfPathAttemptCache.set(serverPath, false);
+					pdfPathAttemptCache.set(serverPath, { ok: false, failedAt: Date.now() });
 					pathIndex++;
 					tryNextPdf();
 				});
