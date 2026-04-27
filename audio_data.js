@@ -65,10 +65,17 @@ function syncRenderedAudioBadge(cardId) {
     if (!cardElement) return;
 
     const cardNode = getRenderApi()?.getCardNodeById(cardId) || null;
+    const audioNodes = Array.from(cardNode?.querySelectorAll('AudioReferenz') || []);
     const audioList = readAudioMetadataListFromCardNode(cardNode);
-    const hasAudioReference = audioList.length > 0;
+    const hasAudioReference = audioNodes.some((audioNode) => {
+        const path = (audioNode.querySelector('Datei')?.textContent || '').trim();
+        return path.length > 0;
+    });
     const bestQuality = audioList.reduce((best, audio) => Math.max(best, getAudioReferenceQuality(audio)), 0);
-    const badgeTone = bestQuality >= 0.85 ? 'good' : 'weak';
+    const hasUnclearReference = hasAudioReference && audioList.length === 0;
+    const badgeTone = (!hasAudioReference || hasUnclearReference)
+        ? 'weak'
+        : (bestQuality >= 0.85 ? 'good' : 'weak');
     const shouldShowBadge = hasAudioReference && isAudioBadgeVisibleInUi();
     const existingBadge = cardElement.querySelector('.card-audio-badge');
 
@@ -76,7 +83,7 @@ function syncRenderedAudioBadge(cardId) {
         if (!existingBadge) {
             const badge = document.createElement('span');
             badge.className = 'card-audio-badge ' + badgeTone;
-            badge.title = badgeTone === 'good' ? 'Tonprint gut' : 'Tonprint prÃ¼fen';
+            badge.title = badgeTone === 'good' ? 'Tonprint gut' : 'Tonprint pruefen';
             const titleNode = cardElement.querySelector('.card-title');
             if (titleNode) {
                 cardElement.insertBefore(badge, titleNode);
@@ -85,7 +92,7 @@ function syncRenderedAudioBadge(cardId) {
             }
         } else {
             existingBadge.className = 'card-audio-badge ' + badgeTone;
-            existingBadge.title = badgeTone === 'good' ? 'Tonprint gut' : 'Tonprint prÃ¼fen';
+            existingBadge.title = badgeTone === 'good' ? 'Tonprint gut' : 'Tonprint pruefen';
         }
     } else if (existingBadge) {
         existingBadge.remove();
@@ -220,6 +227,11 @@ function invalidateAudioReferenceCandidateCache() {
 function getAudioReferenceQuality(audio) {
     const frameCount = Number(audio?.frameCount) || 0;
     const targetFrameCount = Number(audio?.targetFrameCount) || 0;
+    const fingerprint = String(audio?.fingerprint || '').trim();
+
+    if (!fingerprint) {
+        return 0.55;
+    }
 
     if (frameCount <= 0) {
         return 1.0;

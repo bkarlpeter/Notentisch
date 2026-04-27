@@ -20,6 +20,11 @@ let audioSearchLastHintAt = 0;
 let audioMatchStartedAt = 0;
 let audioMatchCandidateStartedAt = 0;
 let audioMatchCandidateCardId = null;
+let audioLastMatchedCardId = null;
+let audioLastMatchedAt = 0;
+let audioLastMatchedScore = 0;
+let audioLastMatchedGap = 0;
+let audioLastMatchedVoteLead = 0;
 let audioReadyToSaveState = null;
 let audioSaveWasConfirmed = false;
 let audioDiagQueue = [];
@@ -33,10 +38,10 @@ const AUDIO_MATCH_REQUIRED_HITS = 5;      // Min-Votes im Fenster zum AuslÃ¶se
 const AUDIO_MATCH_VOTE_WINDOW = 10;       // + stabil: 15 â†’ 10 (â‰ˆ 1.8s Fenster)
 const AUDIO_MATCH_EVAL_INTERVAL_MS = 450;
 const AUDIO_MATCH_MIN_LIVE_FRAMES = 5;
-const AUDIO_MATCH_RESET_ON_SILENCE_DEFAULT_MS = 1000;
-const AUDIO_MATCH_ENABLE_FAST_TRIGGER = true;
+const AUDIO_MATCH_RESET_ON_SILENCE_DEFAULT_MS = 1500;
+const AUDIO_MATCH_ENABLE_FAST_TRIGGER = false;
 const AUDIO_MATCH_TRIGGER_MIN_LIVE_FRAMES = 5;
-const AUDIO_MATCH_TRIGGER_FLOOR_MIN_GAP = 0.006;
+const AUDIO_MATCH_TRIGGER_FLOOR_MIN_GAP = 0.010;
 const AUDIO_MATCH_EARLY_HITS = 3;
 const AUDIO_MATCH_EARLY_MIN_SCORE = 0.992;
 const AUDIO_MATCH_EARLY_MIN_GAP = 0.028;
@@ -45,9 +50,9 @@ const AUDIO_REFERENCE_MIN_FRAMES = 6;
 // Trigger-Grenzen nach Mel+Delta-Umstellung: vorherige Werte (0.994/0.993)
 // waren fÃ¼r reale Aufnahmen zu streng und blockierten valide Treffer.
 const AUDIO_MATCH_TRIGGER_MIN_SCORE = 0.975;
-const AUDIO_MATCH_TRIGGER_MIN_GAP = 0.008;
+const AUDIO_MATCH_TRIGGER_MIN_GAP = 0.010;
 const AUDIO_MATCH_TRIGGER_RELAXED_MIN_SCORE = 0.955;
-const AUDIO_MATCH_TRIGGER_RELAXED_MIN_GAP = 0.003;
+const AUDIO_MATCH_TRIGGER_RELAXED_MIN_GAP = 0.008;
 const AUDIO_MATCH_TRIGGER_RELAXED_MIN_HITS = 5;
 const AUDIO_MATCH_TRIGGER_RELAXED_MIN_VOTE_LEAD = 2;
 const AUDIO_MATCH_FINGERPRINT_GAMMA = 1.35;
@@ -65,6 +70,14 @@ const AUDIO_DIAG_MAX_QUEUE = 80;
 const AUDIO_ASSIST_LONG_PRESS_MS = 650;
 const AUDIO_MATCH_AUTO_RESTART_MS = 22000;
 const AUDIO_MATCH_AUTO_RESTART_MIN_CYCLES = 20;
+const AUDIO_MATCH_REPEAT_REACQUIRE_WINDOW_MS = 90000;
+const AUDIO_MATCH_REPEAT_REACQUIRE_MIN_SCORE = 0.95;
+const AUDIO_MATCH_REPEAT_REACQUIRE_MIN_GAP = 0.010;
+const AUDIO_MATCH_REPEAT_REACQUIRE_HITS_REDUCTION = 2;
+const AUDIO_MATCH_REPEAT_REACQUIRE_STREAK_REDUCTION = 1;
+const AUDIO_MATCH_REPEAT_BASELINE_MIN_SCORE = 0.97;
+const AUDIO_MATCH_REPEAT_BASELINE_MIN_GAP = 0.010;
+const AUDIO_MATCH_REPEAT_BASELINE_MIN_VOTE_LEAD = 2;
 
 // â”€â”€ Beat Finder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function getAudioMatchStrictnessProfile() {
@@ -91,7 +104,7 @@ function getAudioMatchStrictnessProfile() {
             strictMinScore: 0.95,
             strictMinGap: 0.005,
             relaxedMinScore: 0.93,
-            relaxedMinGap: 0.001,
+            relaxedMinGap: 0.008,
             relaxedMinHits: 4,
             relaxedMinVoteLead: 1,
             requiredHits: 4
@@ -103,7 +116,7 @@ function getAudioMatchStrictnessProfile() {
             strictMinScore: 0.98,
             strictMinGap: 0.010,
             relaxedMinScore: 0.96,
-            relaxedMinGap: 0.004,
+            relaxedMinGap: 0.010,
             relaxedMinHits: 5,
             relaxedMinVoteLead: 2,
             requiredHits: 6
@@ -115,7 +128,7 @@ function getAudioMatchStrictnessProfile() {
         strictMinScore: 0.96,
         strictMinGap: 0.006,
         relaxedMinScore: 0.94,
-        relaxedMinGap: 0.002,
+        relaxedMinGap: 0.008,
         relaxedMinHits: 5,
         relaxedMinVoteLead: 1,
         requiredHits: 5

@@ -478,7 +478,7 @@ async function evaluateAudioMatching() {
         const decisiveSwitch = (
             audioLastBestCardId !== null &&
             best.score >= Math.max(strictnessProfile.relaxedMinScore, 0.975) &&
-            scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.02)
+            scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.025)
         );
         if (decisiveSwitch) {
             audioHitHistory = [];
@@ -504,7 +504,7 @@ async function evaluateAudioMatching() {
     if (
         audioBestCardStreak >= 3 &&
         best.score >= Math.max(strictnessProfile.relaxedMinScore - 0.01, 0.93) &&
-        scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.008)
+        scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.010)
     ) {
         const beforeLen = audioHitHistory.length;
         audioHitHistory = audioHitHistory.filter((id) => id === bestCardId);
@@ -537,11 +537,31 @@ async function evaluateAudioMatching() {
     const requiredStreak = strictnessProfile.strictness === 'streng'
         ? 4
         : (strictnessProfile.strictness === 'locker' ? 2 : 3);
+    const hasStrongRepeatBaseline = (
+        audioLastMatchedScore >= AUDIO_MATCH_REPEAT_BASELINE_MIN_SCORE &&
+        audioLastMatchedGap >= AUDIO_MATCH_REPEAT_BASELINE_MIN_GAP &&
+        audioLastMatchedVoteLead >= AUDIO_MATCH_REPEAT_BASELINE_MIN_VOTE_LEAD
+    );
+    const repeatReacquireActive = (
+        !!audioLastMatchedCardId &&
+        bestCardId === String(audioLastMatchedCardId) &&
+        audioLastMatchedAt > 0 &&
+        (Date.now() - audioLastMatchedAt) <= AUDIO_MATCH_REPEAT_REACQUIRE_WINDOW_MS &&
+        hasStrongRepeatBaseline &&
+        best.score >= Math.max(strictnessProfile.relaxedMinScore, AUDIO_MATCH_REPEAT_REACQUIRE_MIN_SCORE) &&
+        scoreGap >= Math.max(strictnessProfile.relaxedMinGap, AUDIO_MATCH_REPEAT_REACQUIRE_MIN_GAP)
+    );
+    const effectiveRequiredHits = repeatReacquireActive
+        ? Math.max(2, requiredHits - AUDIO_MATCH_REPEAT_REACQUIRE_HITS_REDUCTION)
+        : requiredHits;
+    const effectiveRequiredStreak = repeatReacquireActive
+        ? Math.max(2, requiredStreak - AUDIO_MATCH_REPEAT_REACQUIRE_STREAK_REDUCTION)
+        : requiredStreak;
     const allowVotesDominantPath = (
-        votesForBest >= requiredHits &&
+        votesForBest >= effectiveRequiredHits &&
         voteLead >= 2 &&
         best.score >= strictnessProfile.relaxedMinScore &&
-        scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.002)
+        scoreGap >= Math.max(strictnessProfile.relaxedMinGap, 0.008)
     );
 
     queueAudioDiagEvent('matching_scored', {
@@ -560,7 +580,16 @@ async function evaluateAudioMatching() {
         window: audioHitHistory.length,
         threshold: AUDIO_MATCH_THRESHOLD,
         requiredHits,
-        requiredStreak
+        requiredStreak,
+        effectiveRequiredHits,
+        effectiveRequiredStreak,
+        repeatReacquireActive,
+        hasStrongRepeatBaseline,
+        lastMatchedCardId: audioLastMatchedCardId,
+        lastMatchedAgeMs: audioLastMatchedAt > 0 ? Math.max(0, Date.now() - audioLastMatchedAt) : null,
+        lastMatchedScore: Number.isFinite(audioLastMatchedScore) ? Number(audioLastMatchedScore.toFixed(4)) : null,
+        lastMatchedGap: Number.isFinite(audioLastMatchedGap) ? Number(audioLastMatchedGap.toFixed(4)) : null,
+        lastMatchedVoteLead: Number.isFinite(audioLastMatchedVoteLead) ? audioLastMatchedVoteLead : null
     });
 
     const earlyQualityPenalty = Math.max(0, 0.85 - (best.referenceQuality || 0)) * 0.05;
@@ -588,13 +617,16 @@ async function evaluateAudioMatching() {
         });
     }
 
-    if (!isEarlyTrigger && (votesForBest < requiredHits || (audioBestCardStreak < requiredStreak && !allowVotesDominantPath))) {
+    if (!isEarlyTrigger && (votesForBest < effectiveRequiredHits || (audioBestCardStreak < effectiveRequiredStreak && !allowVotesDominantPath))) {
         queueAudioDiagEvent('matching_pending_votes', {
             bestCardId,
             votes: votesForBest,
-            required: requiredHits,
+            required: effectiveRequiredHits,
             bestStreak: audioBestCardStreak,
-            requiredStreak,
+            requiredStreak: effectiveRequiredStreak,
+            baseRequiredHits: requiredHits,
+            baseRequiredStreak: requiredStreak,
+            repeatReacquireActive,
             allowVotesDominantPath,
             window: audioHitHistory.length,
             scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null
@@ -602,9 +634,10 @@ async function evaluateAudioMatching() {
         markAudioSearchDifficulty('pending_votes', {
             bestCardId,
             votes: votesForBest,
-            requiredHits,
+            requiredHits: effectiveRequiredHits,
             bestStreak: audioBestCardStreak,
-            requiredStreak,
+            requiredStreak: effectiveRequiredStreak,
+            repeatReacquireActive,
             scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null
         });
         return;
@@ -615,12 +648,12 @@ async function evaluateAudioMatching() {
     const hasSecondBest = !!secondBest;
     const meetsTriggerLiveFrames = liveFrameCount >= AUDIO_MATCH_TRIGGER_MIN_LIVE_FRAMES;
     const highConfidenceContinuation = (
-        votesForBest >= requiredHits &&
-        audioBestCardStreak >= requiredStreak &&
+        votesForBest >= effectiveRequiredHits &&
+        audioBestCardStreak >= effectiveRequiredStreak &&
         best.score >= Math.max(strictnessProfile.strictMinScore, 0.965)
     );
     const effectiveGapFloor = highConfidenceContinuation
-        ? Math.min(AUDIO_MATCH_TRIGGER_FLOOR_MIN_GAP, 0.003)
+        ? Math.min(AUDIO_MATCH_TRIGGER_FLOOR_MIN_GAP, 0.006)
         : AUDIO_MATCH_TRIGGER_FLOOR_MIN_GAP;
     const meetsTriggerGapFloor = !hasSecondBest || scoreGap >= effectiveGapFloor;
 
@@ -702,8 +735,28 @@ async function evaluateAudioMatching() {
         votes: votesForBest,
         scoreGap: Number.isFinite(scoreGap) ? Number(scoreGap.toFixed(4)) : null,
         liveFrameCount,
-        triggerPath: isEarlyTrigger ? 'fast' : (isStrictTrigger ? 'strict' : 'relaxed-stable')
+        triggerPath: isEarlyTrigger ? 'fast' : (isStrictTrigger ? 'strict' : 'relaxed-stable'),
+        repeatReacquireActive
     });
+    const matchQualityStrongForRepeat = (
+        best.score >= AUDIO_MATCH_REPEAT_BASELINE_MIN_SCORE &&
+        scoreGap >= AUDIO_MATCH_REPEAT_BASELINE_MIN_GAP &&
+        voteLead >= AUDIO_MATCH_REPEAT_BASELINE_MIN_VOTE_LEAD
+    );
+    if (matchQualityStrongForRepeat) {
+        audioLastMatchedCardId = bestCardId;
+        audioLastMatchedAt = Date.now();
+        audioLastMatchedScore = Number(best.score) || 0;
+        audioLastMatchedGap = Number.isFinite(scoreGap) ? Number(scoreGap) : 0;
+        audioLastMatchedVoteLead = Number(voteLead) || 0;
+    } else {
+        // Schwache Treffer duerfen keinen Repeat-Bonus fuer Folgedetektion freischalten.
+        audioLastMatchedCardId = null;
+        audioLastMatchedAt = 0;
+        audioLastMatchedScore = 0;
+        audioLastMatchedGap = 0;
+        audioLastMatchedVoteLead = 0;
+    }
     audioWaitAfterMatchUntil = Date.now() + getAudioWaitAfterMatchMs();
     // Stream fÃ¼r Beat Finder weiterverwenden statt schlieÃŸen
     const bfAnalyser    = audioMatchState.analyser;
@@ -835,6 +888,11 @@ function disableAudioAssistMode() {
     audioWaitAfterMatchBlinkUntil = 0;
     audioReadyToSaveState = null;
     audioSaveWasConfirmed = false;
+    audioLastMatchedCardId = null;
+    audioLastMatchedAt = 0;
+    audioLastMatchedScore = 0;
+    audioLastMatchedGap = 0;
+    audioLastMatchedVoteLead = 0;
     audioHitHistory = [];
     audioLastBestCardId = null;
     audioBestCardStreak = 0;
