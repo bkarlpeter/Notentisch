@@ -111,13 +111,15 @@
 		for (const audioNode of audioNodes) {
 			const filePath = audioNode.querySelector('Datei')?.textContent || '';
 			if (!String(filePath).trim()) continue;
+			const fingerprint = (audioNode.querySelector('Fingerprint')?.textContent || '').trim();
 			const frameCount = Number(audioNode.querySelector('FrameCount')?.textContent || 0) || 0;
 			const targetFrameCount = Number(audioNode.querySelector('TargetFrameCount')?.textContent || 0) || 0;
-			let quality = 1.0;
+			let quality = fingerprint ? 1.0 : 0.55;
 			if (frameCount > 0) {
 				const normalizedTarget = Math.max(targetFrameCount || frameCount, 6);
 				quality = Math.min(1, Math.max(0.55, frameCount / normalizedTarget));
 			}
+			if (!fingerprint) quality = Math.min(quality, 0.55);
 			if (quality > bestQuality) bestQuality = quality;
 		}
 

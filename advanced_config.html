@@ -147,7 +147,7 @@
             if (parsed === 800 || parsed === 1000 || parsed === 1500) return parsed;
             const fallback = Number(DEFAULTS.audioResetOnSilenceMs);
             if (fallback === 800 || fallback === 1000 || fallback === 1500) return fallback;
-            return 1000;
+            return 1500;
         }
 
         function normalizeCardSharpness(value) {

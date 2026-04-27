@@ -57,7 +57,7 @@
         if (parsed === 800 || parsed === 1000 || parsed === 1500) return parsed;
         const fallbackNum = Number(fallback);
         if (fallbackNum === 800 || fallbackNum === 1000 || fallbackNum === 1500) return fallbackNum;
-        return 1000;
+        return 1500;
     }
 
     function normalizeCardSharpness(value, fallback) {
@@ -172,7 +172,7 @@
 
         // Signalpause (ms), nach der Tonsuche bei Verspielern fuer Neuansatz resetet.
         // Zulaessige Werte: 800, 1000, 1500.
-        audioResetOnSilenceMs: 1000,
+        audioResetOnSilenceMs: 1500,
 
         // Erkennungs-Strenge der Tonzuordnung: locker/normal/streng.
         audioMatchStrictness: 'normal',

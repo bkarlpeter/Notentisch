@@ -744,13 +744,15 @@ function moveCardToQuadrant(cardIdx, targetQuadId) {
 
     if (!cardEl) {
         // Schneller Pfad: Einzelkarte aus Render-Cache erzeugen/holen.
-        cardEl = getRenderApi()?.ensureCardElementById?.(cardIdx) || null;
-    }
-
-    if (!cardEl) {
-        // Falls ein veralteter Cache-Eintrag die Karte blockiert: Cache erneuern und einmal neu versuchen.
-        getRenderApi()?.resetCardRenderCache?.();
-        cardEl = getRenderApi()?.ensureCardElementById?.(cardIdx) || null;
+        // WICHTIG: resetCardRenderCache() hier NICHT aufrufen! Das würde alle Stapel neu aufbauen.
+        // Stattdessen: ensureCardElementById reicht, um eine Karte on-demand zu erstellen.
+        try {
+            cardEl = getRenderApi()?.ensureCardElementById?.(cardIdx) || null;
+        } catch (err) {
+            // Falls ensureCardElementById fehlschlägt: Karte kann nicht erstellt werden
+            console.warn('moveCardToQuadrant: Karte ' + cardIdx + ' konnte nicht erstellt werden:', err);
+            return null;
+        }
     }
 
     if (!cardEl) return null;

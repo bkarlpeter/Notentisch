@@ -465,6 +465,8 @@ Zusätzlich:
   - Lösung: `Advanced > Erkennungs-Strenge` testweise auf `Locker` stellen.
 - Problem: Falsches Blatt wird erkannt.
   - Lösung: Referenz in ruhiger Umgebung neu aufnehmen, näher am Mikrofon spielen/summen, ähnliche Titel separat neu referenzieren.
+  - Praxis-Regel: Zuerst das eigentlich gemeinte Blatt im `Ton Rec`-Modus neu aufnehmen. `Ton An` verbessert keine Prints, sondern sucht nur.
+  - Praxis-Regel: Wenn immer wieder dasselbe falsche Blatt erscheint, beide Titel neu aufnehmen (zuerst das richtige, dann das falsch getroffene Blatt).
   - Lösung: `Advanced > Erkennungs-Strenge` auf `Streng` stellen.
 - Problem: Treffer erscheint im Log, aber kein Blatt wird geladen.
   - Lösung: Prüfen, ob im Diagnose-Log `matching_blocked_low_confidence` steht; dann Strenge reduzieren (`Normal`/`Locker`) oder Referenz neu aufnehmen.
