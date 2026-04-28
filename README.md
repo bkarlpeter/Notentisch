@@ -292,6 +292,7 @@ Das Skript nutzt automatisch:
   - Treffer anklicken → Bestätigungsmeldung erscheint
   - `Fertig` → Blatt wird in den CENTER geladen (wie Drag & Drop)
   - `Abbrechen` / Escape → Overlay schließt sich ohne Aktion
+  - `Enter` bei leerem Suchfeld → alle Blätter alphabetisch anzeigen
 - `Tonsuche`: Mikrofon-gestützte Automatik für Suche und Aufnahme
   - Kurzdruck aus `Tonsuche` (aus) schaltet auf `Ton An` → nur hören/suchen; Button ist grün
   - weiterer Kurzdruck schaltet auf `Ton Rec` → Aufnahme-Modus; Button ist orange

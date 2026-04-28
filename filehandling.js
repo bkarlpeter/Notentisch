@@ -860,6 +860,14 @@ function searchKeyDown(event) {
         pendingSearchMatch = null;
         const overlay = document.getElementById('search-overlay');
         if (overlay) overlay.classList.remove('visible');
+        return;
+    }
+    if (event.key === 'Enter') {
+        const input = document.getElementById('search-input');
+        const rawValue = input ? input.value.trim() : '';
+        if (rawValue.length === 0) {
+            showAllCardsAlphabetical();
+        }
     }
 }
 
@@ -908,6 +916,27 @@ function renderSearchResults(matches) {
         li.addEventListener('click', () => pickSearchResult(m));
         list.appendChild(li);
     });
+}
+
+function showAllCardsAlphabetical() {
+    setSearchMessage('');
+    if (!xmlData) { renderSearchResults([]); return; }
+    const nodes = getRenderApi()?.getCardNodes() || [];
+    const all = [];
+    nodes.forEach((node, idx) => {
+        const titel = node.querySelector('Titel')?.textContent || '';
+        const status = node.querySelector('Arbeitsstatus')?.textContent || '';
+        const speicherort = node.querySelector('Speicherort')?.textContent || '';
+        all.push({ idx, titel, status, speicherort });
+    });
+    const collator = new Intl.Collator('de', { sensitivity: 'base', numeric: true });
+    all.sort((a, b) => collator.compare(String(a.titel || ''), String(b.titel || '')));
+    renderSearchResults(all);
+    if (all.length === 0) {
+        setSearchMessage('Keine Blätter geladen.');
+    } else {
+        setSearchMessage('Alle ' + all.length + ' Blätter – alphabetisch.');
+    }
 }
 
 function searchCards() {
