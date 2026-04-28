@@ -60,8 +60,8 @@ Interaktive Notenverwaltung mit 4 Quadranten, Drag & Drop, PDF-Viewer und XML-Im
 
 ## Aktuelle stabile Version
 
-- **Release-Tag:** `v2026.03.08`
-- **Datum:** 08.03.2026
+- **Release-Tag:** `v2026.04.15`
+- **Datum:** 15.04.2026
 - **Branch:** `main`
 
 Highlights dieser stabilen Version:
@@ -87,6 +87,13 @@ Aktueller Stand (15.04.2026):
 - Suchlauf-Reset nach kurzer Spielpause wurde robuster gemacht, damit neue Ansaetze nicht an alten Votes haengen.
 - Rueckkehr aus `Config/Advanced` nutzt beim DOM-/History-Restore den vorhandenen Zustand und vermeidet unnoetigen Stack-Neuaufbau (spuerbar schneller).
 - Optionaler Paket-Guard fuer lokale Tests dokumentiert (`test/assert_no_extra_python_packages.ps1` mit Allowlist in `test/allowed-python-packages.txt`).
+
+Aktueller Stand (28.04.2026):
+- Neuer Modus `Uebersicht`: 4-spaltige Gesamtansicht aller Quadranten ohne CENTER.
+- In `Uebersicht` werden Karten je Quadrant alphabetisch sortiert, Scrollen bleibt pro Quadrant moeglich.
+- Doppelklick auf eine Karte in `Uebersicht` oeffnet die Karte im CENTER, ohne den Modus automatisch zu verlassen.
+- Rueckkehr aus `Config` behaelt den `Uebersicht`-Status bei (Session-Snapshot inkl. Restore).
+- Beim Verlassen von `Uebersicht` wird die zuletzt aktive CENTER-Karte wiederhergestellt (inkl. Runtime-View-Fallback).
 
 Details siehe [CHANGELOG.md](CHANGELOG.md).
 
@@ -300,6 +307,11 @@ Das Skript nutzt automatisch:
 - `Staffelung` (Config): Fenstergröße des Stapels, also Anzahl der sichtbaren Karten pro Quadrant (`1` bis `12`)
 - `Stapel-Überlappung je Batch` (Advanced): gemeinsamer Anteil zwischen altem und neuem Fenster beim Blättern
 - Quadranten-`▲▼`: Schrittweite = `Fenstergröße - Überlappung` (mindestens `1`)
+- `Uebersicht`: blendet den CENTER-Bereich aus und zeigt alle 4 Quadranten nebeneinander
+  - Karten werden je Quadrant alphabetisch angezeigt
+  - Stapel-`▲▼` sind in diesem Modus ausgeblendet
+  - Doppelklick auf Karte: Karte im CENTER oeffnen, Modus bleibt aktiv
+  - Klick auf Q1-Q4 mit aktiver CENTER-Karte: Karte wird in den gewaehlten Quadranten zurueckgelegt
 - `Ende`: beendet den lokalen Server und schliesst die Ansicht
 - Karte ins CENTER ziehen: PDF anzeigen
 - Karte aus CENTER in Quadrant verschieben (Drop oder Klick auf Q1-Q4): `Arbeitsstatus` aktualisieren

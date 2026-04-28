@@ -173,6 +173,77 @@
             bottom: 15px;
         }
 
+        /* --- OVERVIEW MODE: 4 SPALTEN, OHNE CENTER --- */
+        body.overview-mode #CENTER {
+            display: none !important;
+        }
+
+        body.overview-mode #layout-2x2 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-rows: 1fr;
+        }
+
+        body.overview-mode #Q1 { grid-column: 1; grid-row: 1; }
+        body.overview-mode #Q2 { grid-column: 2; grid-row: 1; }
+        body.overview-mode #Q3 { grid-column: 3; grid-row: 1; }
+        body.overview-mode #Q4 { grid-column: 4; grid-row: 1; }
+
+        body.overview-mode #Q3::before,
+        body.overview-mode #Q4::before {
+            top: 0;
+            bottom: auto;
+        }
+
+        body.overview-mode .quadrant::before {
+            position: sticky;
+            top: 0;
+            left: 0 !important;
+            right: auto !important;
+            pointer-events: none;
+            z-index: 30;
+            display: inline-block;
+            padding: 2px 8px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            background: rgba(18, 18, 18, 0.78);
+            -webkit-backdrop-filter: blur(1px);
+            backdrop-filter: blur(1px);
+        }
+
+        body.overview-mode .quadrant-links,
+        body.overview-mode .quadrant-rechts {
+            align-items: flex-start;
+            direction: ltr;
+        }
+
+        body.overview-mode .quadrant {
+            display: block;
+            overflow-x: hidden;
+            overflow-y: auto;
+            padding-top: 10px;
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+
+        body.overview-mode .card-container {
+            width: calc(100% - 2px);
+            max-width: none;
+            margin-bottom: 10px !important;
+        }
+
+        body.overview-mode .card-container.in-center {
+            display: block;
+            border: 3px solid #3498db;
+            border-radius: 8px;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25);
+            padding: 2px;
+            box-sizing: border-box;
+        }
+
+        body.overview-mode .card-container:hover {
+            transform: none !important;
+        }
+
         /* --- CENTER-HOLE --- */
         .center-hole {
             position: absolute;
@@ -915,6 +986,7 @@
         <button class="btn" onclick="handleLoadButton()">LADEN</button>
         <span class="separator">|</span>
         <button class="btn" id="modeToggleBtn" onclick="togglePlayMode()">Spielen</button>
+        <button class="btn" id="overviewBtn" onclick="toggleOverviewMode()">Übersicht</button>
         <button class="btn btn-small btn-zoom" id="zoomOutBtn" onclick="zoomOut()">ZOOM -</button>
         <button class="btn btn-small btn-zoom" id="zoomInBtn" onclick="zoomIn()">ZOOM +</button>
         <button class="btn btn-small btn-zoom" onclick="fitPdfWidth()">Breite</button>
@@ -944,10 +1016,10 @@
 
     <!-- SCRIPTS -->
     <script src="center-config.js?v=20260412n"></script>
-    <script src="render.js?v=20260420a"></script>
-    <script src="filehandling.js?v=20260427a"></script>
-    <script src="board-session-state.js?v=20260427a"></script>
-    <script src="functions.js?v=20260317c"></script>
+    <script src="render.js?v=20260427g"></script>
+    <script src="filehandling.js?v=20260427x"></script>
+    <script src="board-session-state.js?v=20260427b"></script>
+    <script src="functions.js?v=20260427a"></script>
     <script src="center-view.js?v=20260411f"></script>
     <script src="audio_core.js?v=20260427a"></script>
     <script src="audio_data.js?v=20260427a"></script>

@@ -389,6 +389,7 @@ function openConfigPage() {
                 stackCount: Number.isFinite(Number(state.boardSnapshot.stackCount)) ? Number(state.boardSnapshot.stackCount) : 8,
                 lastCardIdFromCenter: state.boardSnapshot.lastCardIdFromCenter ?? null,
                 activeCenterCardId: state.boardSnapshot.activeCenterCardId ?? null,
+                overviewModeActive: !!state.boardSnapshot.overviewModeActive,
                 centerVisual: null
             },
             center: state.center || null

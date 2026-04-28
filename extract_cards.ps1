@@ -40,6 +40,22 @@ function Resolve-PdfImagesPath {
     return $null
 }
 
+function Resolve-PdfToPpmPath {
+    $projectRoot = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
+    $localCandidate = Join-Path $projectRoot "poppler-25.12.0\Library\bin\pdftoppm.exe"
+
+    if (Test-Path $localCandidate) {
+        return $localCandidate
+    }
+
+    $inPath = Get-Command pdftoppm.exe -ErrorAction SilentlyContinue
+    if ($inPath) {
+        return $inPath.Source
+    }
+
+    return $null
+}
+
 function Sanitize-Title {
     param([string]$Title)
 
@@ -67,6 +83,8 @@ if (-not $pdfImagesExe) {
     exit 1
 }
 
+$pdfToPpmExe = Resolve-PdfToPpmPath
+
 $resolvedPdfFolder = Resolve-PdfFolder -RequestedFolder $PdfFolder
 
 if (-not (Test-Path $resolvedPdfFolder)) {
@@ -82,6 +100,11 @@ if (-not (Test-Path $OutputFolder)) {
 
 Write-Host "Verwende PDF-Ordner: $resolvedPdfFolder" -ForegroundColor Cyan
 Write-Host "Verwende pdfimages: $pdfImagesExe" -ForegroundColor Cyan
+if ($pdfToPpmExe) {
+    Write-Host "Verwende pdftoppm-Fallback: $pdfToPpmExe" -ForegroundColor Cyan
+} else {
+    Write-Host "Hinweis: pdftoppm nicht gefunden, Fallback fuer bildlose PDFs deaktiviert." -ForegroundColor Yellow
+}
 
 $pdfs = Get-ChildItem -Path $resolvedPdfFolder -Filter "*.pdf" -ErrorAction SilentlyContinue
 $count = 0
@@ -106,6 +129,11 @@ foreach ($pdf in $pdfs) {
         & $pdfImagesExe -png -f 1 -l 1 $pdf.FullName $tempBase 2>$null
 
         $generatedFile = Get-ChildItem -Path $OutputFolder -Filter "$(Split-Path $tempBase -Leaf)-*.png" | Select-Object -First 1
+
+        if (-not $generatedFile -and $pdfToPpmExe) {
+            & $pdfToPpmExe -png -f 1 -singlefile $pdf.FullName $tempBase 2>$null
+            $generatedFile = Get-ChildItem -Path $OutputFolder -Filter "$(Split-Path $tempBase -Leaf).png" | Select-Object -First 1
+        }
 
         if ($generatedFile) {
             Rename-Item -Path $generatedFile.FullName -NewName (Split-Path $outputFile -Leaf) -Force

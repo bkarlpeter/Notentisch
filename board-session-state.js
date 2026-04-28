@@ -84,7 +84,8 @@ function getBoardSnapshotForConfig() {
         stackCount: getRenderApi()?.getStackCount() || 8,
         lastCardIdFromCenter,
         activeCenterCardId,
-        isPlayMode: isPlayMode
+        isPlayMode: isPlayMode,
+        overviewModeActive: !!overviewModeActive
     };
 }
 
@@ -205,6 +206,11 @@ function restoreBoardSnapshotFromConfig(snapshot, options = {}) {
         isPlayMode = snapshot.isPlayMode;
         persistPlayModeState();
         applyModeButtonState();
+    }
+    if (typeof snapshot.overviewModeActive === 'boolean') {
+        overviewModeActive = snapshot.overviewModeActive;
+        persistOverviewModeState?.();
+        applyOverviewModeState?.();
     }
 
     const renderApi = getRenderApi();

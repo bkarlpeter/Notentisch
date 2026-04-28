@@ -8,6 +8,35 @@
 	let quadrantOffsets = { Q1: 0, Q2: 0, Q3: 0, Q4: 0 };
 	let lastRenderedShowAudioBadge = null;
 	const pdfPathAttemptCache = new Map();
+	const CARD_PREVIEW_MAX_CONCURRENT = 4;
+	const cardPreviewQueue = [];
+	let activeCardPreviewLoads = 0;
+
+	function enqueueCardPreviewLoad(task) {
+		if (typeof task !== 'function') return;
+		cardPreviewQueue.push(task);
+		drainCardPreviewQueue();
+	}
+
+	function drainCardPreviewQueue() {
+		while (activeCardPreviewLoads < CARD_PREVIEW_MAX_CONCURRENT && cardPreviewQueue.length > 0) {
+			const nextTask = cardPreviewQueue.shift();
+			if (typeof nextTask !== 'function') continue;
+			activeCardPreviewLoads++;
+			let finished = false;
+			const done = () => {
+				if (finished) return;
+				finished = true;
+				activeCardPreviewLoads = Math.max(0, activeCardPreviewLoads - 1);
+				drainCardPreviewQueue();
+			};
+			try {
+				nextTask(done);
+			} catch (err) {
+				done();
+			}
+		}
+	}
 
 	function resetCardRenderCache() {
 		cardElementCache.clear();
@@ -16,6 +45,8 @@
 			clearTimeout(prefetchTimer);
 			prefetchTimer = null;
 		}
+		cardPreviewQueue.length = 0;
+		activeCardPreviewLoads = 0;
 	}
 
 	function getCardNodes() {
@@ -215,7 +246,9 @@
 		img.style.backgroundColor = '#ccc';
 		img.style.filter = buildCardFilterStyle();
 
-		loadCardImage(img, cardInfo.titel, cardInfo.speicherort);
+		enqueueCardPreviewLoad((done) => {
+			loadCardImage(img, cardInfo.titel, cardInfo.speicherort, done);
+		});
 
 		if (cardInfo.showAudioBadge && cardInfo.hasAudioReference) {
 			const badge = document.createElement('span');
@@ -233,7 +266,7 @@
 		div.appendChild(titleDiv);
 
 		div.addEventListener('dragstart', drag);
-		div.addEventListener('dblclick', moveCardToQ2);
+		div.addEventListener('dblclick', handleCardDoubleClick);
 
 		return div;
 	}
@@ -311,6 +344,7 @@
 	}
 
 	function scheduleCardPrefetch(groupedByQuadrant, limit, overlapCount) {
+		if (document.body?.classList.contains('overview-mode')) return;
 		if (prefetchTimer) clearTimeout(prefetchTimer);
 
 		prefetchTimer = setTimeout(() => {
@@ -362,6 +396,7 @@
 	function createQuadrantStackControls(quadrantId, limit, totalCount, overlapCount) {
 		const quadrant = document.getElementById(quadrantId);
 		if (!quadrant) return;
+		if (document.body?.classList.contains('overview-mode')) return;
 
 		const maxOffset = Math.max(0, totalCount - limit);
 		const currentOffset = Math.max(0, Math.min(quadrantOffsets[quadrantId] || 0, maxOffset));
@@ -491,6 +526,7 @@
 	function buildGroupedCardData(showAudioBadge) {
 		const grouped = { Q1: [], Q2: [], Q3: [], Q4: [] };
 		const cards = getCardNodes();
+		const isOverviewMode = !!document.body?.classList.contains('overview-mode');
 
 		const cardMeta = cards.map((cardEl, idx) => {
 			const titel = cardEl.querySelector('Titel')?.textContent || 'Unbekannt';
@@ -527,25 +563,36 @@
 			grouped[quadrantId].push({ idx, titel, speicherort, hasAudioReference, audioBadgeTone, showAudioBadge });
 		});
 
+		if (isOverviewMode) {
+			const collator = new Intl.Collator('de', { sensitivity: 'base', numeric: true });
+			QUADRANT_IDS.forEach((quadrantId) => {
+				grouped[quadrantId].sort((a, b) => collator.compare(String(a.titel || ''), String(b.titel || '')));
+			});
+		}
+
 		return grouped;
 	}
 
 	function renderQuadrantFromGrouped(quadrantId, grouped, limit, overlapCount) {
 		const target = document.getElementById(quadrantId);
 		if (!target) return;
+		const isOverviewMode = !!document.body?.classList.contains('overview-mode');
 
 		target.innerHTML = '';
 		const total = (grouped[quadrantId] || []).length;
-		const maxOffset = Math.max(0, total - limit);
-		const safeOffset = Math.max(0, Math.min(quadrantOffsets[quadrantId] || 0, maxOffset));
+		const effectiveLimit = isOverviewMode ? Math.max(1, total) : limit;
+		const maxOffset = Math.max(0, total - effectiveLimit);
+		const safeOffset = isOverviewMode
+			? 0
+			: Math.max(0, Math.min(quadrantOffsets[quadrantId] || 0, maxOffset));
 		quadrantOffsets[quadrantId] = safeOffset;
 
-		const visibleCards = grouped[quadrantId].slice(safeOffset, safeOffset + limit);
+		const visibleCards = grouped[quadrantId].slice(safeOffset, safeOffset + effectiveLimit);
 		visibleCards.forEach((cardInfo) => {
 			target.appendChild(getOrCreateCardElement(cardInfo));
 		});
 
-		createQuadrantStackControls(quadrantId, limit, total, overlapCount);
+		createQuadrantStackControls(quadrantId, effectiveLimit, total, overlapCount);
 	}
 
 	function renderQuadrantOnly(quadrantId) {
@@ -563,7 +610,9 @@
 			const overlapCount = getConfiguredBatchOverlap(limit);
 			renderQuadrantFromGrouped(quadrantId, grouped, limit, overlapCount);
 
-			scheduleCardPrefetch(grouped, limit, overlapCount);
+			if (!document.body?.classList.contains('overview-mode')) {
+				scheduleCardPrefetch(grouped, limit, overlapCount);
+			}
 			setupDropListeners();
 			updateStackLayout();
 		} catch (err) {
@@ -603,7 +652,9 @@
 				renderQuadrantFromGrouped(quadrantId, grouped, limit, overlapCount);
 			});
 
-			scheduleCardPrefetch(grouped, limit, overlapCount);
+			if (!document.body?.classList.contains('overview-mode')) {
+				scheduleCardPrefetch(grouped, limit, overlapCount);
+			}
 			setupDropListeners();
 			updateStackLayout();
 		} catch (err) {
@@ -691,10 +742,18 @@
 		].filter(Boolean);
 	}
 
-	function loadCardImageFromPdf(imgElement, pdfPath, titel = '') {
+	function loadCardImageFromPdf(imgElement, pdfPath, titel = '', onComplete = null) {
+		let completed = false;
+		const finish = () => {
+			if (completed) return;
+			completed = true;
+			if (typeof onComplete === 'function') onComplete();
+		};
+
 		if (!pdfPath || typeof pdfjsLib === 'undefined') {
 			if (typeof pdfjsLib === 'undefined') {
 				imgElement.style.backgroundColor = '#aaa';
+				finish();
 				return;
 			}
 		}
@@ -722,6 +781,7 @@
 		function tryNextPdf() {
 			if (pathIndex >= paths.length) {
 				imgElement.style.backgroundColor = '#aaa';
+				finish();
 				return;
 			}
 
@@ -758,6 +818,7 @@
 					return page.render({ canvasContext: context, viewport }).promise.then(() => {
 						imgElement.style.backgroundImage = 'url("' + canvas.toDataURL('image/png') + '")';
 						imgElement.style.backgroundColor = '#fff';
+						finish();
 					});
 				})
 				.catch(() => {
@@ -770,7 +831,14 @@
 		tryNextPdf();
 	}
 
-	function loadCardImage(imgElement, titel, pdfPath) {
+	function loadCardImage(imgElement, titel, pdfPath, onComplete = null) {
+		let completed = false;
+		const finish = () => {
+			if (completed) return;
+			completed = true;
+			if (typeof onComplete === 'function') onComplete();
+		};
+
 		const variations = [
 			sanitizeTitle(titel),
 			'card_' + titel.trim().replace(/[,\.]$/g, '').replace(/ /g, '_') + '.png',
@@ -783,7 +851,7 @@
 
 		function tryNextImage() {
 			if (currentIdx >= uniqueVariations.length) {
-				loadCardImageFromPdf(imgElement, pdfPath, titel);
+				loadCardImageFromPdf(imgElement, pdfPath, titel, finish);
 				return;
 			}
 
@@ -792,6 +860,7 @@
 
 			img.onload = () => {
 				imgElement.style.backgroundImage = 'url("./Cards_Export/' + filename + '")';
+				finish();
 			};
 
 			img.onerror = () => {

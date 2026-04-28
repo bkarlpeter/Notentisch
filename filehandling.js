@@ -9,6 +9,9 @@ let saveWarnBlinkTimer = null;
 let hasUnsavedChanges = false;
 let isPlayMode = true;
 let saveCenterSettingsModeActive = false;
+let overviewModeActive = false;
+let overviewCenterRuntimeState = null;
+const OVERVIEW_MODE_STATE_KEY = 'notentischOverviewModeState';
 
 function getRenderApi() {
     return window.NotentischRender || null;
@@ -87,6 +90,207 @@ function applyModeButtonState() {
 function togglePlayMode() {
     isPlayMode = !isPlayMode;
     applyModeButtonState();
+}
+
+function getQuadrantIdFromStatus(statusText) {
+    const status = String(statusText || '').toLowerCase();
+    if (status.includes('wiederholen')) return 'Q2';
+    if (status.includes('geübt') || status.includes('geubt')) return 'Q3';
+    if (status.includes('gelernt')) return 'Q4';
+    return 'Q1';
+}
+
+function getQuadrantIdForCardId(cardId) {
+    const cardNode = getRenderApi()?.getCardNodeById?.(cardId) || null;
+    if (!cardNode) return 'Q1';
+    return getQuadrantIdFromStatus(cardNode.querySelector('Arbeitsstatus')?.textContent || '');
+}
+
+
+function persistOverviewModeState() {
+    try {
+        localStorage.setItem(OVERVIEW_MODE_STATE_KEY, overviewModeActive ? '1' : '0');
+    } catch (e) {}
+}
+
+function applyOverviewModeState() {
+    const body = document.body;
+    if (!body) return;
+
+    body.classList.toggle('overview-mode', overviewModeActive);
+
+    const btn = document.getElementById('overviewBtn');
+    if (btn) {
+        btn.textContent = 'Übersicht';
+        btn.style.background = overviewModeActive ? '#27ae60' : '#3498db';
+        btn.style.color = '#fff';
+        btn.style.fontWeight = 'bold';
+        btn.style.border = 'none';
+    }
+
+    const centerModeControls = ['wideBtn', 'alignBtn', 'saveCenterSettingsBtn'];
+    centerModeControls.forEach((id) => {
+        const control = document.getElementById(id);
+        if (control) {
+            control.disabled = overviewModeActive;
+            control.style.opacity = overviewModeActive ? '0.55' : '1';
+        }
+    });
+}
+
+function restoreOverviewModeState() {
+    try {
+        const stored = localStorage.getItem(OVERVIEW_MODE_STATE_KEY);
+        overviewModeActive = (stored === '1');
+    } catch (e) {
+        overviewModeActive = false;
+    }
+    applyOverviewModeState();
+}
+
+function moveCenterCardBackToStatusStack() {
+    let card = null;
+    if (activeCenterCardId !== null && activeCenterCardId !== undefined) {
+        card = document.querySelector('.card-container[data-cardid="' + activeCenterCardId + '"]');
+    }
+    if (!card) {
+        card = document.querySelector('.card-container.in-center[data-cardid]');
+    }
+    if (!card) return;
+
+    const cardId = String(card.dataset.cardid || '').trim();
+    if (!cardId) return;
+
+    const targetQuadrantId = getQuadrantIdForCardId(cardId);
+    const movedCard = moveCardToQuadrant(cardId, targetQuadrantId);
+    if (!movedCard) return;
+
+    movedCard.classList.remove('in-center');
+    activeCenterCardId = null;
+    lastCardIdFromCenter = cardId;
+    clearCenterAfterCardExit();
+}
+
+function toggleOverviewMode() {
+    const wasOverviewMode = overviewModeActive;
+    const enteringOverview = !overviewModeActive;
+    const selectedCenterCardId = wasOverviewMode
+        ? (
+            (activeCenterCardId !== null && activeCenterCardId !== undefined && String(activeCenterCardId).trim())
+            || (document.querySelector('.card-container.in-center[data-cardid]')?.dataset?.cardid || '').trim()
+        )
+        : '';
+
+    if (enteringOverview) {
+        try {
+            overviewCenterRuntimeState = (typeof getCurrentCenterRuntimeState === 'function')
+                ? getCurrentCenterRuntimeState()
+                : null;
+        } catch (e) {
+            overviewCenterRuntimeState = null;
+        }
+    }
+
+    overviewModeActive = !overviewModeActive;
+    persistOverviewModeState();
+    applyOverviewModeState();
+
+    const renderApi = getRenderApi();
+    renderApi?.resetQuadrantOffsets?.();
+    renderApi?.renderBoard?.();
+
+    // Beim Beenden der Übersicht die aktive Center-Karte explizit wiederherstellen.
+    if (wasOverviewMode && selectedCenterCardId) {
+        showCardInCenterById(selectedCenterCardId);
+
+        // Falls dieselbe Karte bereits vor der Übersicht im Center war,
+        // stelle die vorherige Position/Vergrößerung exakt wieder her.
+        try {
+            const savedState = overviewCenterRuntimeState;
+            if (
+                savedState &&
+                String(savedState?.pdfPath || '').trim() &&
+                String(selectedCenterCardId).trim() === String(lastCardIdFromCenter || '').trim() &&
+                typeof restoreCenterRuntimeState === 'function'
+            ) {
+                restoreCenterRuntimeState(savedState, { preserveConfiguredFocus: true });
+            }
+        } catch (e) {
+            // Fallback bleibt die normale Center-Öffnung mit gespeicherten XML-Werten.
+        }
+    }
+
+    if (wasOverviewMode) {
+        overviewCenterRuntimeState = null;
+    }
+
+    renderApi?.updateStackLayout?.();
+
+    if (overviewModeActive) {
+        ['Q1', 'Q2', 'Q3', 'Q4'].forEach((quadrantId) => {
+            const quadrant = document.getElementById(quadrantId);
+            if (!quadrant) return;
+            quadrant.scrollTop = 0;
+        });
+    }
+}
+
+function showCardInCenterById(cardId) {
+    const cardIdStr = String(cardId || '').trim();
+    if (!cardIdStr) return;
+
+    let cardEl = document.querySelector('.card-container[data-cardid="' + cardIdStr + '"]');
+    if (!cardEl) {
+        cardEl = getRenderApi()?.ensureCardElementById?.(cardIdStr) || null;
+    }
+    if (!cardEl) return;
+
+    if (!cardEl.dataset.pdf) {
+        setStatusText('Für dieses Blatt ist keine PDF hinterlegt.');
+        return;
+    }
+
+    const userConfig = getUserConfigForDropBehavior();
+    const shouldApplyStoredCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+
+    if (typeof discardCenterPendingScrollState === 'function') {
+        discardCenterPendingScrollState();
+    }
+
+    document.querySelectorAll('.card-container.in-center').forEach((el) => el.classList.remove('in-center'));
+    cardEl.classList.add('in-center');
+    lastCardIdFromCenter = cardIdStr;
+    activeCenterCardId = cardIdStr;
+
+    if (shouldApplyStoredCenterView) {
+        applyCenterSettingsFromXml(cardIdStr);
+    }
+
+    if (typeof showPdfPages === 'function') {
+        showPdfPages(cardEl.dataset.pdf);
+    }
+
+    setSaveDateState(false, getModeHintText());
+    getRenderApi()?.updateStackLayout?.();
+}
+
+function handleCardDoubleClick(event) {
+    const cardEl = event?.currentTarget || null;
+    const cardId = cardEl?.dataset?.cardid;
+    if (!cardId) {
+        moveCardToQ2(event);
+        return;
+    }
+
+    if (!overviewModeActive) {
+        moveCardToQ2(event);
+        return;
+    }
+
+    // In der Übersicht den Modus NICHT automatisch verlassen.
+    // Karte geht trotzdem ins Center und kann später per Klick auf einen Stapel
+    // wieder zurückgelegt werden (moveCardFromCenterTo via Quadrant-Click).
+    showCardInCenterById(cardId);
 }
 
 function restoreSafetyBackupIfAvailable() {
@@ -578,6 +782,28 @@ function setupDropListeners() {
             }
             el.dataset.dropBound = 'true';
         }
+
+        // Rücklegen robust absichern: EIN zentraler Klickpfad pro Quadrant (Capture-Phase).
+        if (el && ['Q1', 'Q2', 'Q3', 'Q4'].includes(id) && !el.dataset.centerClickBound) {
+            el.addEventListener('click', (event) => {
+                const hasCenterSelection = (
+                    (activeCenterCardId !== null && activeCenterCardId !== undefined)
+                    || !!document.querySelector('.card-container.in-center[data-cardid]')
+                );
+                if (!hasCenterSelection) return;
+
+                // Scroll-/Stack-Buttons dürfen keinen Rücklauf triggern.
+                const target = event?.target;
+                if (target && (target.closest?.('.quadrant-stack-controls') || target.closest?.('.quadrant-stack-btn'))) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                moveCardFromCenterTo(id);
+            }, true);
+            el.dataset.centerClickBound = 'true';
+        }
     });
 }
 
@@ -800,6 +1026,12 @@ function executeSearchDrop(match) {
         // Layout aktualisieren (wie bei Drop)
         getRenderApi()?.updateStackLayout();
 
+        // Im Übersichtsmodus kein Center-Drop: nur Stapelbewegung sichtbar halten.
+        if (overviewModeActive) {
+            setSaveDateState(false, getModeHintText());
+            return;
+        }
+
         // Nur ins Center legen wenn die Karte eine PDF-Adresse hat —
         // sonst bleibt activeCenterCardId = null und die Karte wird nicht gesperrt.
         if (!cardEl.dataset.pdf) {
@@ -919,6 +1151,12 @@ function applyDropGlow(cardElement, durationMs) {
     setTimeout(() => {
         cardElement.classList.remove('drop-glow');
     }, duration);
+}
+
+function normalizeCardStackStyle(cardElement) {
+    if (!cardElement) return;
+    cardElement.classList.remove('in-center');
+    cardElement.classList.remove('drop-glow');
 }
 
 function clearCenterAfterCardExit() {
@@ -1259,8 +1497,10 @@ function drop(event) {
             writeCenterSettingsToCardNode(card.dataset.cardid);
         }
         placeCardAtTopOfQuadrant(event.currentTarget, card);
-        card.classList.remove('in-center');
-        applyDropGlow(card, userConfig.dropGlowDurationMs);
+        normalizeCardStackStyle(card);
+        if (!overviewModeActive) {
+            applyDropGlow(card, userConfig.dropGlowDurationMs);
+        }
         lastCardIdFromCenter = card.dataset.cardid;  // Merke für saveDate auch nach ablegen
         if (cameFromCenter) {
             activeCenterCardId = null;
@@ -1450,33 +1690,75 @@ async function loadSavedFolder() {
 
 function moveCardFromCenterTo(quadrantId) {
     let card = null;
+    const markedCenterCard = document.querySelector('.card-container.in-center[data-cardid]');
+    let fallbackCardId = null;
+
     if (activeCenterCardId !== null && activeCenterCardId !== undefined) {
         card = document.querySelector('.card-container[data-cardid="' + activeCenterCardId + '"]');
+        fallbackCardId = String(activeCenterCardId || '').trim();
     }
+
+    // Schutzprüfung: Wenn aktive ID fehlt/veraltet ist, nutze die tatsächlich markierte Center-Karte.
+    if (!card && markedCenterCard) {
+        card = markedCenterCard;
+        activeCenterCardId = String(markedCenterCard.dataset.cardid || '');
+    }
+
     if (!card) {
         card = document.querySelector('.card-container.in-center');
     }
+
+    // Falls aktive ID und Markierung auseinanderlaufen, hat die sichtbare Markierung Vorrang.
+    if (card && markedCenterCard && card !== markedCenterCard) {
+        card = markedCenterCard;
+        activeCenterCardId = String(markedCenterCard.dataset.cardid || '');
+    }
+
     if (!card && lastCardIdFromCenter !== null && lastCardIdFromCenter !== undefined) {
         card = document.querySelector('.card-container[data-cardid="' + lastCardIdFromCenter + '"]');
+        fallbackCardId = fallbackCardId || String(lastCardIdFromCenter || '').trim();
     }
+
+    // Wenn die Karte nur als Center-PDF sichtbar ist, aber kein DOM-Element mehr existiert,
+    // Karte aus Status ableiten und on-demand in einen Quadranten einhängen.
+    if (!card && fallbackCardId) {
+        const statusQuadrantId = getQuadrantIdForCardId(fallbackCardId);
+        card = moveCardToQuadrant(fallbackCardId, statusQuadrantId);
+        if (card) {
+            card.classList.add('in-center');
+        }
+    }
+
     const targetQuadrant = document.getElementById(quadrantId);
     if (card && targetQuadrant) {
         const userConfig = getUserConfigForDropBehavior();
         const shouldPersistCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
-        if (shouldPersistCenterView && card.classList.contains('in-center')) {
-            writeCenterSettingsToCardNode(card.dataset.cardid);
-        }
         placeCardAtTopOfQuadrant(targetQuadrant, card);
-        card.classList.remove('in-center');
-        applyDropGlow(card, userConfig.dropGlowDurationMs);
+        normalizeCardStackStyle(card);
+        if (!overviewModeActive) {
+            applyDropGlow(card, userConfig.dropGlowDurationMs);
+        }
+
+        if (shouldPersistCenterView) {
+            try {
+                writeCenterSettingsToCardNode(card.dataset.cardid);
+            } catch (err) {
+                console.warn('Center-Settings konnten beim Zurücklegen nicht gespeichert werden:', err);
+            }
+        }
+
         activeCenterCardId = null;
         clearCenterAfterCardExit();
         lastCardIdFromCenter = card.dataset.cardid;
-        saveDateToXml(card.dataset.cardid, quadrantId);
-        if (isPlayMode) {
-            savePlayedDateToXml(card.dataset.cardid);
+        try {
+            saveDateToXml(card.dataset.cardid, quadrantId);
+            if (isPlayMode) {
+                savePlayedDateToXml(card.dataset.cardid);
+            }
+            saveXml(true);
+        } catch (err) {
+            console.warn('Metadaten konnten beim Zurücklegen nicht vollständig gespeichert werden:', err);
         }
-        saveXml(true);
 
         getRenderApi()?.updateStackLayout();
     }
@@ -1576,6 +1858,7 @@ function initializeBoardFilehandling() {
     });
 
     safeRun(() => applyModeButtonState());
+    safeRun(() => restoreOverviewModeState());
     safeRun(() => restoreSafetyBackupIfAvailable());
     safeRun(() => restoreSaveCenterSettingsModeState());
     safeRun(() => window.addEventListener('resize', handleViewportResize));
