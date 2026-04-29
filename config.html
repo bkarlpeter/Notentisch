@@ -43,6 +43,54 @@
             align-items: center;
             justify-content: center;
         }
+        .preset-preview {
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #101010;
+        }
+        .preset-preview-stage {
+            position: relative;
+            height: 96px;
+            padding: 14px;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 6px;
+        }
+        .preset-preview-stage::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 42%;
+            height: 56%;
+            transform: translate(-50%, -50%);
+            border-radius: 12px;
+            background: var(--preset-center, #d4b896);
+            border: 4px solid var(--preset-accent, #8b7355);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+        }
+        .preset-preview-quadrant {
+            background: var(--preset-quadrant, #3d3428);
+            border-radius: 6px;
+            opacity: 0.92;
+        }
+        .preset-preview-meta {
+            padding: 10px 12px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .preset-preview-title {
+            font-weight: 700;
+        }
+        .preset-preview-description {
+            color: #b6b6b6;
+            font-size: 12px;
+            line-height: 1.35;
+        }
         #musicPreview { width: 4cm; height: 4cm; border-radius: 8px; border: 1px solid #3a3a3a; background: #222; display: block; }
         .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
         button { padding: 10px 14px; border-radius: 6px; border: none; cursor: pointer; font-weight: 700; background: #3498db; color: #fff; }
@@ -105,6 +153,23 @@
             </div>
 
             <div class="field">
+                <label for="boardPreset">Board-Design</label>
+                <select id="boardPreset"></select>
+                <div id="boardPresetPreview" class="preset-preview">
+                    <div id="boardPresetPreviewStage" class="preset-preview-stage">
+                        <div class="preset-preview-quadrant"></div>
+                        <div class="preset-preview-quadrant"></div>
+                        <div class="preset-preview-quadrant"></div>
+                        <div class="preset-preview-quadrant"></div>
+                    </div>
+                    <div class="preset-preview-meta">
+                        <div id="boardPresetPreviewTitle" class="preset-preview-title"></div>
+                        <div id="boardPresetPreviewDescription" class="preset-preview-description"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field">
                 <label for="centerAlignBtn">Ausrichtung im Center (bei Drop)</label>
                 <button id="centerAlignBtn" type="button" class="secondary">Links</button>
             </div>
@@ -137,6 +202,7 @@
             <button id="saveBtn" type="button">Speichern</button>
             <button id="resetBtn" type="button" class="secondary">Zurücksetzen</button>
             <button id="advancedBtn" type="button" class="secondary">Advanced</button>
+            <button id="managePresetsBtn" type="button" class="secondary">Designs ✦</button>
             <button id="backToBoardBtn" type="button" class="secondary">Zurück zum Board</button>
         </div>
         <div id="status"></div>
@@ -149,9 +215,12 @@
         }
     </script>
     <script src="center-config.js?v=20260412n"></script>
+    <script src="board-presets.js?v=20260429c"></script>
     <script>
         const USER_CONFIG_KEY = 'notentischUserConfig';
         const DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS } : {};
+        const BOARD_PRESET_OPTIONS = Array.isArray(window.NOTENTISCH_BOARD_PRESET_OPTIONS) ? window.NOTENTISCH_BOARD_PRESET_OPTIONS.slice() : [];
+        const DEFAULT_BOARD_PRESET = String(window.NOTENTISCH_BOARD_PRESET_DEFAULT || 'carved-a');
         const PREVIEW_CACHE_IMAGE_KEY = 'notentischConfigPreviewPng';
         const PREVIEW_CACHE_PDF_KEY = 'notentischConfigPreviewPdfPath';
         const PREVIEW_XML_CANDIDATES = ['Notentisch.xml', 'notentisch.xml'];
@@ -209,25 +278,106 @@
             return fallback;
         }
 
+        function normalizeBoardPresetValue(value) {
+            if (typeof window.normalizeBoardPreset === 'function') {
+                return window.normalizeBoardPreset(value);
+            }
+            const normalized = String(value || '').trim().toLowerCase();
+            const known = BOARD_PRESET_OPTIONS.map((entry) => String(entry?.id || '').trim().toLowerCase()).filter(Boolean);
+            return known.includes(normalized) ? normalized : DEFAULT_BOARD_PRESET;
+        }
+
+        function ensureBoardPresetOptions() {
+            const select = document.getElementById('boardPreset');
+            if (!select || select.options.length > 0) return;
+
+            const options = typeof window.getActiveBoardPresets === 'function'
+                ? window.getActiveBoardPresets()
+                : (BOARD_PRESET_OPTIONS.length ? BOARD_PRESET_OPTIONS : [
+                    { id: 'classic', label: 'Klassisch (ohne Rahmen)' },
+                    { id: 'carved-a', label: 'Werkstatt 1 - Holzornament' },
+                    { id: 'carved-b', label: 'Werkstatt 2 - Stein/Marmor' }
+                ]);
+
+            options.forEach((entry) => {
+                const option = document.createElement('option');
+                option.value = String(entry.id || '');
+                option.textContent = String(entry.label || entry.id || '');
+                select.appendChild(option);
+            });
+        }
+
+        function getBoardPresetOptionMeta(presetId) {
+            const normalized = normalizeBoardPresetValue(presetId);
+            const pool = typeof window.getAllBoardPresets === 'function' ? window.getAllBoardPresets() : BOARD_PRESET_OPTIONS;
+            const match = pool.find((entry) => String(entry?.id || '').trim().toLowerCase() === normalized);
+            return match || null;
+        }
+
+        function updateBoardPresetPreview(presetId) {
+            const meta = getBoardPresetOptionMeta(presetId);
+            const preview = meta?.preview || {};
+            const stage = document.getElementById('boardPresetPreviewStage');
+            const title = document.getElementById('boardPresetPreviewTitle');
+            const description = document.getElementById('boardPresetPreviewDescription');
+            if (!stage || !title || !description) return;
+
+            const patternUrl = String(preview.patternUrl || '');
+            const boardColor = String(preview.board || '#121212');
+            if (patternUrl) {
+                stage.style.background = [
+                    'linear-gradient(rgba(0,0,0,0.38), rgba(0,0,0,0.38))',
+                    'url("' + patternUrl + '") center / 220px auto repeat'
+                ].join(', ');
+            } else {
+                stage.style.background = boardColor;
+            }
+            stage.style.setProperty('--preset-quadrant', String(preview.quadrant || '#3d3428'));
+            stage.style.setProperty('--preset-center', String(preview.center || '#d4b896'));
+            stage.style.setProperty('--preset-accent', String(preview.accent || '#8b7355'));
+            title.textContent = String(meta?.label || normalizeBoardPresetValue(presetId));
+            description.textContent = String(meta?.description || '');
+        }
+
         function loadConfig() {
             try {
                 const raw = localStorage.getItem(USER_CONFIG_KEY);
                 if (!raw) return { ...DEFAULTS };
                 const parsed = JSON.parse(raw);
                 if (typeof window.notentischNormalizeUserConfig === 'function') {
-                    return window.notentischNormalizeUserConfig(parsed);
+                    const normalized = window.notentischNormalizeUserConfig(parsed);
+                    const rawPreset = typeof parsed?.boardPreset === 'string'
+                        ? parsed.boardPreset
+                        : (localStorage.getItem('notentischBoardPreset') || '');
+                    return {
+                        ...normalized,
+                        boardPreset: normalizeBoardPresetValue(rawPreset || normalized?.boardPreset)
+                    };
                 }
-                return { ...DEFAULTS, ...parsed };
+                return {
+                    ...DEFAULTS,
+                    ...parsed,
+                    boardPreset: normalizeBoardPresetValue(parsed?.boardPreset || localStorage.getItem('notentischBoardPreset') || DEFAULT_BOARD_PRESET)
+                };
             } catch {
                 return { ...DEFAULTS };
             }
         }
 
         function saveConfig(config) {
-            localStorage.setItem(USER_CONFIG_KEY, JSON.stringify(config));
+            const next = { ...config };
+            const normalizedPreset = normalizeBoardPresetValue(next.boardPreset);
+            next.boardPreset = normalizedPreset;
+            if (typeof window.setBoardPreset === 'function') {
+                window.setBoardPreset(normalizedPreset);
+            } else {
+                localStorage.setItem('notentischBoardPreset', normalizedPreset);
+            }
+            localStorage.setItem(USER_CONFIG_KEY, JSON.stringify(next));
         }
 
         function applyToForm(config) {
+            ensureBoardPresetOptions();
             document.getElementById('pdfSharpness').value = clampNumber(config.pdfSharpness, 0.8, 2.5, DEFAULTS.pdfSharpness);
             document.getElementById('paperTintPercent').value = clampNumber(config.paperTintPercent, 0, 25, DEFAULTS.paperTintPercent);
             document.getElementById('paperTintColor').value = normalizeHexColor(config.paperTintColor, DEFAULTS.paperTintColor);
@@ -237,6 +387,8 @@
             document.getElementById('scrollStep').value = normalizeScrollStep(config.scrollStep);
             document.getElementById('showFullscreenButton').value = normalizeBoolean(config.showFullscreenButton, DEFAULTS.showFullscreenButton) ? 'show' : 'hide';
             document.getElementById('showAudioBadge').value = normalizeBoolean(config.showAudioBadge, DEFAULTS.showAudioBadge) ? 'show' : 'hide';
+            document.getElementById('boardPreset').value = normalizeBoardPresetValue(config.boardPreset);
+            updateBoardPresetPreview(config.boardPreset);
             document.getElementById('useZoomSettingsOnDrop').value = normalizeBoolean(config.useZoomSettingsOnDrop, DEFAULTS.useZoomSettingsOnDrop) ? 'show' : 'hide';
             const alignBtn = document.getElementById('centerAlignBtn');
             const alignValue = normalizeCenterAlign(config.centerAlign);
@@ -258,6 +410,7 @@
                 scrollStep: normalizeScrollStep(document.getElementById('scrollStep').value),
                 showFullscreenButton: normalizeBoolean(document.getElementById('showFullscreenButton').value, DEFAULTS.showFullscreenButton),
                 showAudioBadge: normalizeBoolean(document.getElementById('showAudioBadge').value, DEFAULTS.showAudioBadge),
+                boardPreset: normalizeBoardPresetValue(document.getElementById('boardPreset').value),
                 useZoomSettingsOnDrop: normalizeBoolean(document.getElementById('useZoomSettingsOnDrop').value, DEFAULTS.useZoomSettingsOnDrop),
                 centerAlign: normalizeCenterAlign((document.getElementById('centerAlignBtn')?.dataset.value) || existing.centerAlign)
             };
@@ -630,11 +783,19 @@
             saveFromFormWithStatus('Automatisch gespeichert.');
         });
 
-        ['pdfSharpness', 'paperTintPercent', 'paperTintColor', 'tintMethod', 'tintStrength', 'zoomStep', 'scrollStep', 'showFullscreenButton', 'showAudioBadge', 'useZoomSettingsOnDrop'].forEach((id) => {
+        ['pdfSharpness', 'paperTintPercent', 'paperTintColor', 'tintMethod', 'tintStrength', 'zoomStep', 'scrollStep', 'showFullscreenButton', 'showAudioBadge', 'boardPreset', 'useZoomSettingsOnDrop'].forEach((id) => {
             const el = document.getElementById(id);
             if (!el) return;
             el.addEventListener('input', () => saveFromFormWithStatus('Automatisch gespeichert.'));
             el.addEventListener('change', () => saveFromFormWithStatus('Automatisch gespeichert.'));
+        });
+
+        document.getElementById('boardPreset').addEventListener('input', () => {
+            updateBoardPresetPreview(document.getElementById('boardPreset').value);
+        });
+
+        document.getElementById('boardPreset').addEventListener('change', () => {
+            updateBoardPresetPreview(document.getElementById('boardPreset').value);
         });
 
         document.getElementById('saveBtn').addEventListener('click', () => saveFromFormWithStatus('Gespeichert.'));
@@ -684,13 +845,10 @@
             staffelungInput.addEventListener('blur', saveStackCount);
         }
         
-        document.getElementById('advancedBtn').addEventListener('click', () => { window.location.assign('advanced_config.html'); });
+        document.getElementById('advancedBtn').addEventListener('click', () => { window.location.assign('advanced_config.html?v=20260429c'); });
+        document.getElementById('managePresetsBtn').addEventListener('click', () => { window.location.assign('presets.html?v=20260429c'); });
         function goBackToBoard() {
-            if (window.history.length > 1) {
-                window.history.back();
-                return;
-            }
-            window.location.replace('board.html');
+            window.location.replace('board.html?v=20260429c');
         }
 
         document.getElementById('backToBoardBtn').addEventListener('click', () => {

@@ -304,11 +304,7 @@
 
         document.getElementById('saveBtn').addEventListener('click', () => saveWithStatus('Gespeichert.'));
         document.getElementById('backBtn').addEventListener('click', () => {
-            if (window.history.length > 1) {
-                window.history.back();
-                return;
-            }
-            window.location.replace('config.html');
+            window.location.replace('config.html?v=20260429c');
         });
 
         applyToForm(loadConfig());

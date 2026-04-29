@@ -17,6 +17,8 @@ let audioWaitAfterMatchBlinkUntil = 0;
 let audioSearchDifficultSince = 0;
 let audioSearchDifficultCount = 0;
 let audioSearchLastHintAt = 0;
+let audioSearchLastToastAt = 0;
+let audioNoCandidatesLastHintAt = 0;
 let audioMatchStartedAt = 0;
 let audioMatchCandidateStartedAt = 0;
 let audioMatchCandidateCardId = null;
@@ -68,8 +70,11 @@ const AUDIO_DIAG_BATCH_SIZE = 12;
 const AUDIO_DIAG_FLUSH_MS = 3000;
 const AUDIO_DIAG_MAX_QUEUE = 80;
 const AUDIO_ASSIST_LONG_PRESS_MS = 650;
-const AUDIO_MATCH_AUTO_RESTART_MS = 22000;
-const AUDIO_MATCH_AUTO_RESTART_MIN_CYCLES = 20;
+const AUDIO_MATCH_AUTO_ABORT_MS = 22000;
+const AUDIO_MATCH_AUTO_ABORT_MIN_CYCLES = 20;
+const AUDIO_MATCH_NO_SIGNAL_ABORT_MS = 18000;
+const AUDIO_SEARCH_HINT_TOAST_COOLDOWN_MS = 18000;
+const AUDIO_NO_CANDIDATES_HINT_COOLDOWN_MS = 10000;
 const AUDIO_MATCH_REPEAT_REACQUIRE_WINDOW_MS = 90000;
 const AUDIO_MATCH_REPEAT_REACQUIRE_MIN_SCORE = 0.95;
 const AUDIO_MATCH_REPEAT_REACQUIRE_MIN_GAP = 0.010;
@@ -305,38 +310,45 @@ function markAudioSearchDifficulty(reason, context = {}) {
             elapsedMs,
             ...context
         });
+        const shouldToast = (now - audioSearchLastToastAt) >= AUDIO_SEARCH_HINT_TOAST_COOLDOWN_MS;
+        if (shouldToast) {
+            audioSearchLastToastAt = now;
+            if (reason === 'low_separation') {
+                showAudioToast('Tonsuche unsicher: Treffer zu aehnlich. Referenz laenger/sauberer neu aufnehmen.');
+            } else if (reason === 'low_confidence') {
+                showAudioToast('Tonsuche unsicher: Erkennung zu schwach. Strenge testweise auf Normal/Locker stellen.');
+            } else if (reason === 'pending_votes') {
+                showAudioToast('Tonsuche braucht noch stabile Treffer. Kurz weiter einspielen.');
+            }
+        }
         updateAudioAssistUi();
     }
 
-    // Nach lÃ¤ngerem Kampf (>15s, >15 blockierte Zyklen) Suche automatisch neu starten.
+    // Nach laengerem Kampf Suche automatisch beenden:
+    // Es kommt zwar weiter Ton, aber kein relevanter Treffer mehr.
     const requiredHits = Number(context?.requiredHits) || AUDIO_MATCH_REQUIRED_HITS;
     const votes = Number(context?.votes) || 0;
     const bestStreak = Number(context?.bestStreak) || 0;
     const closeToTrigger = votes >= Math.max(1, requiredHits - 1) || bestStreak >= 3;
 
-    const shouldAutoRestart = (
-        audioSearchDifficultCount >= AUDIO_MATCH_AUTO_RESTART_MIN_CYCLES &&
-        elapsedMs >= AUDIO_MATCH_AUTO_RESTART_MS &&
+    const shouldAutoAbort = (
+        audioSearchDifficultCount >= AUDIO_MATCH_AUTO_ABORT_MIN_CYCLES &&
+        elapsedMs >= AUDIO_MATCH_AUTO_ABORT_MS &&
         audioAssistMode === 1 &&
         !!audioMatchState &&
         !closeToTrigger
     );
-    if (shouldAutoRestart) {
+    if (shouldAutoAbort) {
         const difficultCountSnapshot = audioSearchDifficultCount;
-        queueAudioDiagEvent('matching_auto_restart', {
+        queueAudioDiagEvent('matching_auto_abort_difficult', {
             reason,
             difficultCount: difficultCountSnapshot,
             elapsedMs,
             ...context
         });
         resetAudioSearchDifficultyState();
-        stopAudioMatching();
-        showAudioToast('Tonsuche startet neu.');
-        setTimeout(() => {
-            if (audioAssistMode === 1 && !audioMatchState) {
-                startAudioMatching().catch(() => {});
-            }
-        }, 700);
+        showAudioToast('Tonsuche beendet: kein stabiler Treffer. Bei Bedarf erneut starten.');
+        disableAudioAssistMode();
     }
 }
 

@@ -552,16 +552,7 @@ function fitPdfHeight() {
 }
 
 function updateScrollButtons() {
-    const container = document.getElementById('center-content');
-    const scrollButtons = document.getElementById('scroll-buttons');
-
-    if (!container || !scrollButtons) return;
-
-    if (container.scrollHeight > container.clientHeight) {
-        scrollButtons.style.display = 'flex';
-    } else {
-        scrollButtons.style.display = 'none';
-    }
+    // Center scroll buttons were removed; keep this hook as a no-op for existing callers.
 }
 
 function scrollPdf(direction) {

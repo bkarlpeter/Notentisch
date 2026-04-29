@@ -322,6 +322,11 @@ async function startAudioMatching() {
         queueAudioDiagEvent('matching_start_skipped_no_candidates', {
             mode: audioAssistMode
         });
+        const nowTs = Date.now();
+        if ((nowTs - audioNoCandidatesLastHintAt) >= AUDIO_NO_CANDIDATES_HINT_COOLDOWN_MS) {
+            audioNoCandidatesLastHintAt = nowTs;
+            showAudioToast('Keine Audio-Referenzen gefunden. Bitte XML laden und mindestens eine Referenz aufnehmen.');
+        }
         updateAudioAssistUi();
         return;
     }
@@ -386,6 +391,19 @@ async function evaluateAudioMatching() {
     if (typeof currentPdfDoc !== 'undefined' && currentPdfDoc) return;
     const nowTs = Date.now();
 
+    const noSignalDurationMs = audioMatchState.lastAcceptedAt > 0
+        ? (nowTs - audioMatchState.lastAcceptedAt)
+        : (audioMatchStartedAt > 0 ? (nowTs - audioMatchStartedAt) : 0);
+    if (noSignalDurationMs >= AUDIO_MATCH_NO_SIGNAL_ABORT_MS) {
+        queueAudioDiagEvent('matching_stopped_no_signal', {
+            mode: audioAssistMode,
+            noSignalDurationMs: Math.round(noSignalDurationMs)
+        });
+        showAudioToast('Keine Tonsignale mehr erkannt. Tonsuche wurde beendet.');
+        disableAudioAssistMode();
+        return;
+    }
+
     // Nach kurzer Spielpause (z. B. Verspieler) Suchlauf weich zuruecksetzen,
     // damit ein neuer Ansatz nicht an alten Votes haengen bleibt.
     const silenceGapMs = audioMatchState.lastAcceptedAt > 0
@@ -422,6 +440,11 @@ async function evaluateAudioMatching() {
         queueAudioDiagEvent('matching_no_candidates', {
             liveFrameCount
         });
+        const nowTsNoCandidates = Date.now();
+        if ((nowTsNoCandidates - audioNoCandidatesLastHintAt) >= AUDIO_NO_CANDIDATES_HINT_COOLDOWN_MS) {
+            audioNoCandidatesLastHintAt = nowTsNoCandidates;
+            showAudioToast('Tonsuche gestoppt: Keine Audio-Referenzen verfuegbar.');
+        }
         return;
     }
     let best = null;

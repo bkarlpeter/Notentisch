@@ -204,8 +204,12 @@ function restoreBoardSnapshotFromConfig(snapshot, options = {}) {
     activeCenterCardId = snapshot.activeCenterCardId ?? null;
     if (typeof snapshot.isPlayMode === 'boolean') {
         isPlayMode = snapshot.isPlayMode;
-        persistPlayModeState();
-        applyModeButtonState();
+        if (typeof persistPlayModeState === 'function') {
+            persistPlayModeState();
+        }
+        if (typeof applyModeButtonState === 'function') {
+            applyModeButtonState();
+        }
     }
     if (typeof snapshot.overviewModeActive === 'boolean') {
         overviewModeActive = snapshot.overviewModeActive;

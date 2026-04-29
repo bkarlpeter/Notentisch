@@ -16,6 +16,7 @@
 - [XML aus PDF-Verzeichnis erstellen oder ergänzen](#xml-aus-pdf-verzeichnis-erstellen-oder-ergänzen)
 - [Card-Bilder generieren](#card-bilder-generieren)
 - [Bedienung](#bedienung)
+- [Preset-Verwaltung](#preset-verwaltung)
 - [Audio Auto (Mikrofon)](#audio-auto-mikrofon)
 - [Audio Auto Troubleshooting](#audio-auto-troubleshooting)
 - [Center-/Zoom-Parameter (Basis fuer weitere Aenderungen)](#center-zoom-parameter-basis-fuer-weitere-aenderungen)
@@ -321,6 +322,18 @@ Das Skript nutzt automatisch:
 - Modus `Spielen`: beim Ablegen wird `zuletztgespielt` gesetzt
 - Modus `Sichten`: beim Ablegen wird kein `zuletztgespielt` gesetzt
 - Beim Ablegen auf `Q1` bis `Q4` wird die XML automatisch gespeichert
+
+## Preset-Verwaltung
+
+- Board-Designs werden in `config.html` ueber `Designs ✦` verwaltet.
+- Die Verwaltungsseite `presets.html` unterscheidet zwischen `Werkstatt` und `Release`.
+- `Werkstatt-Import` zeigt Musterdateien aus `Werkstatt/`, die noch in kein Preset uebernommen wurden.
+- Ein Import erzeugt ein neues Custom-Preset und legt es zunaechst in `Werkstatt` ab.
+- Neue manuell angelegte Designs starten ebenfalls in `Werkstatt`.
+- `Release` bedeutet: Das Preset ist freigegeben und erscheint im Dropdown `Board-Design` in `config.html`.
+- `Werkstatt` bedeutet: Das Preset bleibt gespeichert, erscheint aber nicht in der normalen Design-Auswahl.
+- Eingebaute Presets koennen nicht geloescht, aber zwischen `Werkstatt` und `Release` umgeschaltet werden.
+- Eigene Presets koennen zusaetzlich geloescht werden.
 
 ## Audio Auto (Mikrofon)
 

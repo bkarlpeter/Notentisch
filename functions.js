@@ -2,6 +2,7 @@ const USER_CONFIG_KEY = 'notentischUserConfig';
 const BOARD_SESSION_STATE_KEY = 'notentischBoardSessionState';
 const BOARD_SESSION_FALLBACK_KEY = 'notentischBoardSessionStateFallback';
 const BOARD_CARD_LAYOUT_KEY = 'notentischBoardCardLayoutBuffer';
+const BOARD_DOM_SNAPSHOT_KEY = 'notentischBoardDomSnapshot';
 const BOARD_HISTORY_RETURN_KEY = 'notentischReturnToBoardViaHistory';
 const BOARD_PENDING_CONFIG_RETURN_KEY = 'notentischPendingConfigReturn';
 const BOARD_RETURN_FULLSCREEN_KEY = 'notentischReturnFullscreen';
@@ -75,6 +76,76 @@ function normalizeZoomStep(value) {
 
 function normalizeScrollStep(value) {
     return clampNumber(value, 60, 800, USER_CONFIG_DEFAULTS.scrollStep);
+}
+
+function captureBoardDomSnapshotForConfig() {
+    const quadrants = {};
+    let hasCards = false;
+
+    ['Q1', 'Q2', 'Q3', 'Q4'].forEach((quadrantId) => {
+        const quadrant = document.getElementById(quadrantId);
+        if (!quadrant) {
+            quadrants[quadrantId] = [];
+            return;
+        }
+
+        const cards = Array.from(quadrant.querySelectorAll('.card-container[data-cardid]'));
+        quadrants[quadrantId] = cards.map((card) => card.outerHTML);
+        if (cards.length > 0) {
+            hasCards = true;
+        }
+    });
+
+    if (!hasCards) {
+        return null;
+    }
+
+    return {
+        savedAt: Date.now(),
+        quadrants,
+        activeCenterCardId: (typeof activeCenterCardId !== 'undefined') ? activeCenterCardId : null,
+        lastCardIdFromCenter: (typeof lastCardIdFromCenter !== 'undefined') ? lastCardIdFromCenter : null
+    };
+}
+
+function restoreBoardDomSnapshotFromConfig(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return false;
+
+    ['Q1', 'Q2', 'Q3', 'Q4'].forEach((quadrantId) => {
+        const quadrant = document.getElementById(quadrantId);
+        if (!quadrant) return;
+
+        quadrant.querySelectorAll('.card-container[data-cardid]').forEach((card) => card.remove());
+
+        const htmlList = Array.isArray(snapshot.quadrants?.[quadrantId]) ? snapshot.quadrants[quadrantId] : [];
+        htmlList.forEach((html) => {
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = String(html || '').trim();
+            const card = wrapper.firstElementChild;
+            if (!card) return;
+            card.draggable = true;
+            card.addEventListener('dragstart', drag);
+            card.addEventListener('dblclick', handleCardDoubleClick);
+            quadrant.appendChild(card);
+        });
+    });
+
+    document.querySelectorAll('.card-container.in-center').forEach((card) => card.classList.remove('in-center'));
+
+    if (snapshot.activeCenterCardId !== null && snapshot.activeCenterCardId !== undefined && snapshot.activeCenterCardId !== '') {
+        const centerCard = document.querySelector('.card-container[data-cardid="' + String(snapshot.activeCenterCardId) + '"]');
+        if (centerCard) {
+            centerCard.classList.add('in-center');
+            activeCenterCardId = String(snapshot.activeCenterCardId);
+        }
+    }
+
+    if (typeof lastCardIdFromCenter !== 'undefined') {
+        lastCardIdFromCenter = snapshot.lastCardIdFromCenter ?? lastCardIdFromCenter;
+    }
+
+    getRenderApi()?.updateStackLayout?.();
+    return document.querySelectorAll('.card-container[data-cardid]').length > 0;
 }
 
 function normalizeCenterAlign(value) {
@@ -304,6 +375,9 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
         setCenterHorizontalAlign(userConfig.centerAlign);
     }
     applyLayoutPreset(settings.layoutPreset);
+    if (typeof window.setBoardPreset === 'function') {
+        window.setBoardPreset(userConfig.boardPreset);
+    }
     applyPageInfoTone(settings.pageInfoTone);
     applyFullscreenButtonVisibility(settings.showFullscreenButton);
     applyCenterAppearance();
@@ -336,6 +410,7 @@ function getToggleStepColor(step) {
 function openConfigPage() {
     let state = null;
     let cardLayoutSnapshot = null;
+    let domSnapshot = null;
     try {
         state = {
             savedAt: Date.now(),
@@ -353,6 +428,8 @@ function openConfigPage() {
                 state.cardLayout = cardLayoutSnapshot;
             }
         }
+
+        domSnapshot = captureBoardDomSnapshotForConfig();
     } catch (err) {
     }
 
@@ -360,6 +437,17 @@ function openConfigPage() {
         try {
             localStorage.setItem(BOARD_CARD_LAYOUT_KEY, JSON.stringify(cardLayoutSnapshot));
         } catch (err) {
+        }
+    }
+
+    if (domSnapshot) {
+        try {
+            sessionStorage.setItem(BOARD_DOM_SNAPSHOT_KEY, JSON.stringify(domSnapshot));
+        } catch (err) {
+            try {
+                localStorage.setItem(BOARD_DOM_SNAPSHOT_KEY, JSON.stringify(domSnapshot));
+            } catch (fallbackErr) {
+            }
         }
     }
 
@@ -412,13 +500,14 @@ function openConfigPage() {
     } catch (err) {
     }
 
-    window.location.assign('config.html');
+    window.location.assign('config.html?v=20260429c');
 }
 
-function restoreBoardSessionState() {
+async function restoreBoardSessionState() {
     let parsed = null;
     let source = 'session';
     let cardLayoutSnapshot = null;
+    let domSnapshot = null;
     try {
         const raw = sessionStorage.getItem(BOARD_SESSION_STATE_KEY);
         if (raw) {
@@ -455,31 +544,51 @@ function restoreBoardSessionState() {
         }
     }
 
-    if (!parsed && !cardLayoutSnapshot) {
+    try {
+        const rawDom = sessionStorage.getItem(BOARD_DOM_SNAPSHOT_KEY) || localStorage.getItem(BOARD_DOM_SNAPSHOT_KEY);
+        if (rawDom) {
+            domSnapshot = JSON.parse(rawDom);
+        }
+    } catch (err) {
+        domSnapshot = null;
+    }
+
+    if (!parsed && !cardLayoutSnapshot && !domSnapshot) {
         return;
     }
 
-    const hasBoardSnapshot = !!parsed.boardSnapshot;
-    const hasCenterState = !!parsed.center;
+    const hasBoardSnapshot = !!(parsed && parsed.boardSnapshot);
+    const hasCenterState = !!(parsed && parsed.center);
     const canRestoreBoard = !hasBoardSnapshot || typeof restoreBoardSnapshotFromConfig === 'function';
     const canRestoreCenter = !hasCenterState || typeof restoreCenterRuntimeState === 'function';
     const canRestoreCardLayout = !cardLayoutSnapshot || typeof applyCardLayoutSnapshotFromConfig === 'function';
+    const canRestoreDomSnapshot = !domSnapshot || (typeof drag === 'function' && typeof handleCardDoubleClick === 'function');
+    const needsXmlHydrationForLayout = !hasBoardSnapshot
+        && !domSnapshot
+        && !!cardLayoutSnapshot
+        && document.querySelectorAll('.card-container[data-cardid]').length === 0;
+    const canHydrateFromStoredXml = !needsXmlHydrationForLayout
+        || (typeof loadXmlDirectFileHandle === 'function' && typeof openAndLoadXmlHandle === 'function');
 
     // Wird functions.js vor filehandling.js ausgeführt, fehlen Restore-Funktionen noch.
     // Snapshot bleibt dann liegen und wird später erneut versucht.
-    if (!canRestoreBoard || !canRestoreCenter || !canRestoreCardLayout) {
+    if (!canRestoreBoard || !canRestoreCenter || !canRestoreCardLayout || !canHydrateFromStoredXml || !canRestoreDomSnapshot) {
         return;
     }
 
-    if (parsed && !parsed.center && !parsed.boardSnapshot && !cardLayoutSnapshot) {
+    if (parsed && !parsed.center && !parsed.boardSnapshot && !cardLayoutSnapshot && !domSnapshot) {
         sessionStorage.removeItem(BOARD_SESSION_STATE_KEY);
         localStorage.removeItem(BOARD_SESSION_FALLBACK_KEY);
         return;
     }
 
     try {
-        // Signal fuer filehandling.js: den automatischen XML-Autoload nach Config-Rueckkehr genau einmal ueberspringen.
-        sessionStorage.setItem('notentischSkipAutoLoadSavedFolder', '1');
+        // Nur ueberspringen, wenn wir bereits einen vollstaendigen Snapshot zum Wiederaufbau haben.
+        if (hasBoardSnapshot || hasCenterState) {
+            sessionStorage.setItem('notentischSkipAutoLoadSavedFolder', '1');
+        } else {
+            sessionStorage.removeItem('notentischSkipAutoLoadSavedFolder');
+        }
     } catch (err) {
     }
 
@@ -487,6 +596,40 @@ function restoreBoardSessionState() {
         restoreBoardSnapshotFromConfig(parsed.boardSnapshot, {
             preferDomRestore: true
         });
+    }
+
+    if (domSnapshot && document.querySelectorAll('.card-container[data-cardid]').length === 0) {
+        const domRestored = restoreBoardDomSnapshotFromConfig(domSnapshot);
+        if (!domRestored && !parsed && !cardLayoutSnapshot) {
+            return;
+        }
+    }
+
+    if (needsXmlHydrationForLayout) {
+        let hydrated = false;
+        try {
+            const handle = await loadXmlDirectFileHandle();
+            if (handle) {
+                let permission = 'granted';
+                if (typeof handle.queryPermission === 'function') {
+                    permission = await handle.queryPermission({ mode: 'read' });
+                }
+                if (permission === 'prompt' && typeof handle.requestPermission === 'function') {
+                    permission = await handle.requestPermission({ mode: 'read' });
+                }
+                if (permission === 'granted') {
+                    await openAndLoadXmlHandle(handle);
+                    hydrated = document.querySelectorAll('.card-container[data-cardid]').length > 0;
+                }
+            }
+        } catch (err) {
+            hydrated = false;
+        }
+
+        if (!hydrated && document.querySelectorAll('.card-container[data-cardid]').length === 0) {
+            // Snapshot erhalten, damit filehandling.js oder ein spaeterer Retry erneut wiederherstellen kann.
+            return;
+        }
     }
 
     // restoreCenterRuntimeState wird immer aufgerufen, damit showPdfPages das PDF lädt
@@ -505,6 +648,8 @@ function restoreBoardSessionState() {
     }
     localStorage.removeItem(BOARD_SESSION_FALLBACK_KEY);
     localStorage.removeItem(BOARD_CARD_LAYOUT_KEY);
+    sessionStorage.removeItem(BOARD_DOM_SNAPSHOT_KEY);
+    localStorage.removeItem(BOARD_DOM_SNAPSHOT_KEY);
 }
 
 function syncFullscreenButtonState() {

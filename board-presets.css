@@ -1,0 +1,238 @@
+body[data-board-preset="classic"] {
+    background: #121212;
+}
+
+body[data-board-preset="classic"] .quadrant {
+    background: #1f2e3a;
+}
+
+body[data-board-preset="classic"] .center-hole {
+    background: #1a3045;
+    border-color: #5a9fd4;
+    border-width: 4px;
+    gap: 0;
+    padding: 0;
+}
+
+body[data-board-preset="classic"] #center-content {
+    background: rgba(15, 33, 48, 0.24);
+}
+
+body[data-board-preset="carved-a"] {
+    --pattern-wood-url: url("Werkstatt/stock-photo-wooden-carved-pattern-with-a-large-flower-in-the-middle-with-intersecting-broken-lines-with-2259941291.jpg");
+    --center-frame-width: max(calc((var(--card-stack-width) - 190px) / 4), 12px);
+    --center-overlay-alpha: 0.2;
+    background: #17120d;
+}
+
+body[data-board-preset="carved-a"] .quadrant {
+    background: #4d392b;
+}
+
+body[data-board-preset="carved-a"] .center-hole {
+    background: var(--pattern-wood-url) center / 320px auto repeat;
+    gap: 0;
+    border: none;
+    padding: 0;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+    isolation: isolate;
+}
+
+body[data-board-preset="carved-a"] .center-hole::before {
+    content: "";
+    position: absolute;
+    inset: calc(-1 * var(--center-frame-width));
+    border-radius: calc(20px + var(--center-frame-width));
+    background:
+        linear-gradient(135deg, rgba(255, 247, 231, 0.22) 0%, rgba(74, 49, 30, 0.35) 100%),
+        var(--pattern-wood-url) center / 320px auto repeat;
+    box-shadow:
+        0 16px 30px rgba(0, 0, 0, 0.45),
+        0 0 0 1px rgba(40, 25, 14, 0.7),
+        inset 0 0 0 1px rgba(255, 246, 226, 0.42);
+    z-index: -1;
+    pointer-events: none;
+}
+
+body[data-board-preset="carved-a"] .center-hole::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: rgba(243, 231, 215, var(--center-overlay-alpha, 0.2));
+    z-index: 0;
+    pointer-events: none;
+}
+
+body[data-board-preset="carved-a"] .center-hole > * {
+    position: relative;
+    z-index: 1;
+}
+
+body[data-board-preset="carved-a"] #center-content {
+    background: transparent;
+    border-radius: 20px;
+    border: 1px solid #9d7d59;
+}
+
+body[data-board-preset="carved-a"] #center-content::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+        linear-gradient(to bottom, rgba(122, 94, 64, 0.4) 0px, rgba(122, 94, 64, 0) 8px),
+        linear-gradient(to top, rgba(122, 94, 64, 0.4) 0px, rgba(122, 94, 64, 0) 8px),
+        linear-gradient(to right, rgba(122, 94, 64, 0.4) 0px, rgba(122, 94, 64, 0) 8px),
+        linear-gradient(to left, rgba(122, 94, 64, 0.4) 0px, rgba(122, 94, 64, 0) 8px);
+    pointer-events: none;
+    z-index: 1;
+}
+
+body[data-board-preset="classic"] .center-hole::before,
+body[data-board-preset="classic"] .center-hole::after,
+body[data-board-preset="classic"] #center-content::before {
+    content: none;
+}
+
+body[data-board-preset="carved-b"] {
+    --pattern-stone-url: url("Werkstatt/stock-photo-stone-marble-granite-slab-surface-for-decorative-works-or-texture-19417213.jpg");
+    --center-frame-width: max(calc((var(--card-stack-width) - 190px) / 4), 12px);
+    --center-overlay-alpha: 0.2;
+    background: #16181b;
+}
+
+body[data-board-preset="carved-b"] .quadrant {
+    background: #49525a;
+}
+
+body[data-board-preset="carved-b"] .center-hole {
+    background: var(--pattern-stone-url) center / 380px auto repeat;
+    gap: 0;
+    border: none;
+    padding: 0;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.88);
+    isolation: isolate;
+}
+
+body[data-board-preset="carved-b"] .center-hole::before {
+    content: "";
+    position: absolute;
+    inset: calc(-1 * var(--center-frame-width));
+    border-radius: calc(20px + var(--center-frame-width));
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.20) 0%, rgba(78, 86, 94, 0.34) 100%),
+        var(--pattern-stone-url) center / 380px auto repeat;
+    box-shadow:
+        0 16px 30px rgba(0, 0, 0, 0.42),
+        0 0 0 1px rgba(54, 59, 65, 0.78),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+    z-index: -1;
+    pointer-events: none;
+}
+
+body[data-board-preset="carved-b"] .center-hole::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: rgba(236, 231, 223, var(--center-overlay-alpha, 0.2));
+    z-index: 0;
+    pointer-events: none;
+}
+
+body[data-board-preset="carved-b"] .center-hole > * {
+    position: relative;
+    z-index: 1;
+}
+
+body[data-board-preset="carved-b"] #center-content {
+    background: transparent;
+    border-radius: 20px;
+    border: 1px solid #8e959c;
+}
+
+body[data-board-preset="carved-b"] #center-content::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+        linear-gradient(to bottom, rgba(116, 124, 132, 0.36) 0px, rgba(116, 124, 132, 0) 8px),
+        linear-gradient(to top, rgba(116, 124, 132, 0.36) 0px, rgba(116, 124, 132, 0) 8px),
+        linear-gradient(to right, rgba(116, 124, 132, 0.36) 0px, rgba(116, 124, 132, 0) 8px),
+        linear-gradient(to left, rgba(116, 124, 132, 0.36) 0px, rgba(116, 124, 132, 0) 8px);
+    pointer-events: none;
+    z-index: 1;
+}
+
+body[data-board-preset="carved-c"] {
+    --pattern-japan-url: url("Werkstatt/stock-vector-japanese-or-chinese-seamless-pattern-with-luxury-green-and-gold-gradient-color-background-for-new-2405722885.jpg");
+    --center-frame-width: max(calc((var(--card-stack-width) - 190px) / 4), 12px);
+    --center-overlay-alpha: 0.2;
+    background: #111611;
+}
+
+body[data-board-preset="carved-c"] .quadrant {
+    background: #2a3b2d;
+}
+
+body[data-board-preset="carved-c"] .center-hole {
+    background: var(--pattern-japan-url) center / 300px auto repeat;
+    gap: 0;
+    border: none;
+    padding: 0;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.88);
+    isolation: isolate;
+}
+
+body[data-board-preset="carved-c"] .center-hole::before {
+    content: "";
+    position: absolute;
+    inset: calc(-1 * var(--center-frame-width));
+    border-radius: calc(20px + var(--center-frame-width));
+    background:
+        linear-gradient(135deg, rgba(248, 228, 171, 0.22) 0%, rgba(64, 78, 50, 0.32) 100%),
+        var(--pattern-japan-url) center / 300px auto repeat;
+    box-shadow:
+        0 16px 30px rgba(0, 0, 0, 0.42),
+        0 0 0 1px rgba(53, 63, 42, 0.8),
+        inset 0 0 0 1px rgba(255, 240, 195, 0.33);
+    z-index: -1;
+    pointer-events: none;
+}
+
+body[data-board-preset="carved-c"] .center-hole::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: rgba(232, 228, 216, var(--center-overlay-alpha, 0.2));
+    z-index: 0;
+    pointer-events: none;
+}
+
+body[data-board-preset="carved-c"] .center-hole > * {
+    position: relative;
+    z-index: 1;
+}
+
+body[data-board-preset="carved-c"] #center-content {
+    background: transparent;
+    border-radius: 20px;
+    border: 1px solid #b69b53;
+}
+
+body[data-board-preset="carved-c"] #center-content::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+        linear-gradient(to bottom, rgba(126, 110, 66, 0.34) 0px, rgba(126, 110, 66, 0) 8px),
+        linear-gradient(to top, rgba(126, 110, 66, 0.34) 0px, rgba(126, 110, 66, 0) 8px),
+        linear-gradient(to right, rgba(126, 110, 66, 0.34) 0px, rgba(126, 110, 66, 0) 8px),
+        linear-gradient(to left, rgba(126, 110, 66, 0.34) 0px, rgba(126, 110, 66, 0) 8px);
+    pointer-events: none;
+    z-index: 1;
+}

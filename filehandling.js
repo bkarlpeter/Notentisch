@@ -388,7 +388,8 @@ async function loadXmlDirectFileHandle() {
     }
 }
 
-async function ensureXmlFileHandle() {
+async function ensureXmlFileHandle(options = {}) {
+    const allowPicker = options.allowPicker !== false;
     const fileName = xmlFileName || 'Notentisch.xml';
 
     if (xmlFileHandle) {
@@ -416,6 +417,10 @@ async function ensureXmlFileHandle() {
             console.warn('Gespeicherter Ordner/Datei nicht nutzbar, frage neu ab:', err);
             xmlFileHandle = null;
         }
+    }
+
+    if (!allowPicker) {
+        return null;
     }
 
     const pickedFolder = await window.showDirectoryPicker();
@@ -1539,7 +1544,7 @@ function drop(event) {
         if (isPlayMode) {
             savePlayedDateToXml(card.dataset.cardid);
         }
-        saveXml(true);
+        saveXml(true, { allowPicker: false });
         console.log('Moved to quadrant: ' + targetId + ', lastCardIdFromCenter = ' + lastCardIdFromCenter);
         getRenderApi()?.updateStackLayout();
     }
@@ -1638,8 +1643,9 @@ async function resetFolder() {
         console.error('Fehler beim Zurücksetzen:', err);
     }
 }
-async function saveXml(silent = true) {
+async function saveXml(silent = true, options = {}) {
     if (!xmlData) return;
+    const allowPicker = options.allowPicker !== false;
     
     const saveBtn = document.getElementById('modeToggleBtn');
     const originalText = saveBtn ? saveBtn.textContent : '';
@@ -1653,7 +1659,11 @@ async function saveXml(silent = true) {
         }
         
         // Wiederverwendung des gespeicherten Ordners; neue Abfrage nur bei fehlender XML/Berechtigung
-        await ensureXmlFileHandle();
+        const ensuredHandle = await ensureXmlFileHandle({ allowPicker });
+        if (!ensuredHandle || !xmlFileHandle) {
+            markUnsavedChange();
+            return;
+        }
         
         // Direkt in die Datei schreiben (überschreibt)
         const writable = await xmlFileHandle.createWritable();
@@ -1715,6 +1725,53 @@ async function loadSavedFolder() {
         console.error('Fehler beim Laden des gespeicherten Ordners:', err);
     }
     return false;
+}
+
+async function autoLoadLastXmlFileIfNeeded() {
+    if (xmlData) return false;
+
+    try {
+        const directHandle = await loadXmlDirectFileHandle();
+        if (directHandle) {
+            let permission = 'granted';
+            if (typeof directHandle.queryPermission === 'function') {
+                permission = await directHandle.queryPermission({ mode: 'read' });
+            }
+            if (permission === 'prompt' && typeof directHandle.requestPermission === 'function') {
+                permission = await directHandle.requestPermission({ mode: 'read' });
+            }
+            if (permission === 'granted') {
+                await openAndLoadXmlHandle(directHandle);
+                return true;
+            }
+        }
+    } catch (err) {
+        console.warn('Direktes XML-Autoload fehlgeschlagen:', err);
+    }
+
+    try {
+        let folderHandle = xmlFolderHandle;
+        if (!folderHandle) {
+            folderHandle = await loadFolderHandle();
+        }
+        if (!folderHandle) return false;
+
+        let permission = 'granted';
+        if (typeof folderHandle.queryPermission === 'function') {
+            permission = await folderHandle.queryPermission({ mode: 'read' });
+        }
+        if (permission === 'prompt' && typeof folderHandle.requestPermission === 'function') {
+            permission = await folderHandle.requestPermission({ mode: 'read' });
+        }
+        if (permission !== 'granted') return false;
+
+        const fileName = localStorage.getItem('xmlLastFileName') || xmlFileName || 'Notentisch.xml';
+        const xmlHandle = await folderHandle.getFileHandle(fileName, { create: false });
+        await openAndLoadXmlHandle(xmlHandle);
+        return true;
+    } catch (err) {
+        return false;
+    }
 }
 
 function moveCardFromCenterTo(quadrantId) {
@@ -1784,7 +1841,7 @@ function moveCardFromCenterTo(quadrantId) {
             if (isPlayMode) {
                 savePlayedDateToXml(card.dataset.cardid);
             }
-            saveXml(true);
+            saveXml(true, { allowPicker: false });
         } catch (err) {
             console.warn('Metadaten konnten beim Zurücklegen nicht vollständig gespeichert werden:', err);
         }
@@ -1882,7 +1939,9 @@ function initializeBoardFilehandling() {
 
     safeRun(() => {
         if (!shouldSkipAutoLoadSavedFolder()) {
-            loadSavedFolder();
+            loadSavedFolder()
+                .then(() => autoLoadLastXmlFileIfNeeded())
+                .catch(() => {});
         }
     });
 
