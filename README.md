@@ -332,8 +332,10 @@ Das Skript nutzt automatisch:
 - Neue manuell angelegte Designs starten ebenfalls in `Werkstatt`.
 - `Release` bedeutet: Das Preset ist freigegeben und erscheint im Dropdown `Board-Design` in `config.html`.
 - `Werkstatt` bedeutet: Das Preset bleibt gespeichert, erscheint aber nicht in der normalen Design-Auswahl.
-- Eingebaute Presets koennen nicht geloescht, aber zwischen `Werkstatt` und `Release` umgeschaltet werden.
-- Eigene Presets koennen zusaetzlich geloescht werden.
+- Eingebaute Presets koennen ausgeblendet werden (Löschen-Button); sie verschwinden aus der Liste und tauchen unter `Ausgeblendete Designs` wieder auf, wo sie per `Wiederherstellen` zurueckgeholt werden koennen.
+- Das Preset `Klassisch` ist der Fallback und kann nicht ausgeblendet werden.
+- Eigene Presets koennen endgueltig geloescht werden.
+- Beim Werkstatt-Import wird die dominante Farbe des Musters automatisch als Quadrant-Farbe vorgeschlagen.
 
 ## Audio Auto (Mikrofon)
 

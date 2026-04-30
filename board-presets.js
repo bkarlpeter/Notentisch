@@ -3,9 +3,10 @@
 
     const USER_CONFIG_KEY     = 'notentischUserConfig';
     const LEGACY_PRESET_KEY   = 'notentischBoardPreset';
-    const CUSTOM_PRESETS_KEY  = 'notentischCustomPresets';
-    const PRESET_STATES_KEY   = 'notentischPresetStates';
-    const CUSTOM_ID_PREFIX    = 'custom-';
+    const CUSTOM_PRESETS_KEY   = 'notentischCustomPresets';
+    const PRESET_STATES_KEY    = 'notentischPresetStates';
+    const HIDDEN_BUILTINS_KEY  = 'notentischHiddenBuiltins';
+    const CUSTOM_ID_PREFIX     = 'custom-';
 
     const BUILTIN_PRESETS = [
         {
@@ -53,7 +54,18 @@
         try { localStorage.setItem(PRESET_STATES_KEY, JSON.stringify(s || {})); } catch {}
     }
     function isActiveInternal(id, states) { return id in states ? !!states[id] : true; }
-    function getAllInternal()              { return [...BUILTIN_PRESETS, ...readCustomPresets()]; }
+    function readHiddenBuiltins() {
+        try { const r = localStorage.getItem(HIDDEN_BUILTINS_KEY); const a = r ? JSON.parse(r) : [];
+              return new Set(Array.isArray(a) ? a : []); }
+        catch { return new Set(); }
+    }
+    function writeHiddenBuiltins(s) {
+        try { localStorage.setItem(HIDDEN_BUILTINS_KEY, JSON.stringify([...s])); } catch {}
+    }
+    function getAllInternal() {
+        const hidden = readHiddenBuiltins();
+        return [...BUILTIN_PRESETS.filter((p) => !hidden.has(p.id)), ...readCustomPresets()];
+    }
 
     // ── Normalization ─────────────────────────────────────────────────────────
 
@@ -190,12 +202,31 @@
 
     window.deleteCustomBoardPreset = function (id) {
         const idStr = String(id || '');
-        if (BUILTIN_IDS.includes(idStr)) return false;
+        if (BUILTIN_IDS.includes(idStr)) {
+            if (idStr === 'classic') return false;
+            const h = readHiddenBuiltins(); h.add(idStr); writeHiddenBuiltins(h);
+            if (readUserConfigPreset() === idStr) { writeUserConfigPreset(DEFAULT_PRESET); applyBoardPresetAttribute(DEFAULT_PRESET); }
+            refreshPublicOptions();
+            return true;
+        }
         writeCustomPresets(readCustomPresets().filter((p) => p.id !== idStr));
         const s = readPresetStates(); delete s[idStr]; writePresetStates(s);
         if (readUserConfigPreset() === idStr) { writeUserConfigPreset(DEFAULT_PRESET); applyBoardPresetAttribute(DEFAULT_PRESET); }
         injectCustomStyles(); refreshPublicOptions();
         return true;
+    };
+
+    window.restoreBuiltinPreset = function (id) {
+        const idStr = String(id || '');
+        if (!BUILTIN_IDS.includes(idStr)) return false;
+        const h = readHiddenBuiltins(); h.delete(idStr); writeHiddenBuiltins(h);
+        refreshPublicOptions();
+        return true;
+    };
+
+    window.getHiddenBuiltinPresets = function () {
+        const hidden = readHiddenBuiltins();
+        return BUILTIN_PRESETS.filter((p) => hidden.has(p.id));
     };
 
     window.setBoardPreset = function (value) {

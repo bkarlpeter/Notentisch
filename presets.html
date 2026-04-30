@@ -178,6 +178,11 @@
     <!-- Preset Grid -->
     <div id="presetGrid" class="preset-grid"></div>
 
+    <div id="hiddenSection" class="add-form hidden">
+        <h2>Ausgeblendete Designs</h2>
+        <div id="hiddenGrid" class="preset-grid"></div>
+    </div>
+
     <div id="status"></div>
 </div>
 
@@ -303,15 +308,55 @@
             .trim() || 'Neues Design';
     }
 
-    function importWerkstattDesign(fileEntry) {
+    // ── Color extraction from pattern image ──────────────────────────────────
+
+    function extractDarkColorFromImage(imagePath) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                const SIZE = 64;
+                const canvas = document.createElement('canvas');
+                canvas.width = SIZE; canvas.height = SIZE;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, SIZE, SIZE);
+                let data;
+                try { data = ctx.getImageData(0, 0, SIZE, SIZE).data; } catch { resolve(null); return; }
+                const counts = {};
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i], g = data[i+1], b = data[i+2];
+                    // Sehr helle (Hintergrund) und sehr dunkle Pixel überspringen
+                    const brightness = (r + g + b) / 3;
+                    if (brightness > 200 || brightness < 30) continue;
+                    const rq = Math.round(r / 32) * 32;
+                    const gq = Math.round(g / 32) * 32;
+                    const bq = Math.round(b / 32) * 32;
+                    const key = (rq << 16) | (gq << 8) | bq;
+                    counts[key] = (counts[key] || 0) + 1;
+                }
+                let best = null, bestCount = 0;
+                for (const [key, count] of Object.entries(counts)) {
+                    if (count > bestCount) { bestCount = count; best = parseInt(key); }
+                }
+                if (best === null) { resolve(null); return; }
+                const ro = (best >> 16) & 0xff, go = (best >> 8) & 0xff, bo = best & 0xff;
+                resolve('#' + [ro, go, bo].map((v) => v.toString(16).padStart(2, '0')).join(''));
+            };
+            img.onerror = () => resolve(null);
+            img.src = imagePath;
+        });
+    }
+
+    async function importWerkstattDesign(fileEntry) {
         if (!fileEntry?.path) return;
         const label = buildLabelFromFileName(fileEntry.name);
+        const quadrant = (await extractDarkColorFromImage(fileEntry.path)) || '#3d3428';
         const preset = window.addCustomBoardPreset({
             label,
             patternUrl: fileEntry.path,
             colors: {
                 board: '#121212',
-                quadrant: '#3d3428',
+                quadrant,
                 center: '#d4b896',
                 accent: '#8b7355'
             }
@@ -402,7 +447,7 @@
                         <button class="btn-toggle ${isActive ? 'active-on' : 'active-off'}" data-id="${esc(preset.id)}">
                             ${isActive ? 'Werkstatt' : 'Release'}
                         </button>
-                        ${!isBuiltin ? `<button class="btn-delete danger" data-id="${esc(preset.id)}">Löschen</button>` : ''}
+                        ${preset.id !== 'classic' ? `<button class="btn-delete danger" data-id="${esc(preset.id)}">Löschen</button>` : ''}
                     </div>
                 </div>`;
             grid.appendChild(card);
@@ -421,11 +466,60 @@
         grid.querySelectorAll('.btn-delete').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const id = btn.dataset.id;
-                if (!confirm('Eigenes Design wirklich löschen? Dies kann nicht rückgängig gemacht werden.')) return;
+                const isBuiltin = typeof window.isBuiltinPreset === 'function' ? window.isBuiltinPreset(id) : false;
+                const msg = isBuiltin
+                    ? 'Eingebautes Design ausblenden? Es kann unter "Ausgeblendete Designs" wiederhergestellt werden.'
+                    : 'Eigenes Design wirklich löschen? Dies kann nicht rückgängig gemacht werden.';
+                if (!confirm(msg)) return;
                 window.deleteCustomBoardPreset(id);
                 setStatus('Design gelöscht.');
+                renderHiddenSection();
                 renderGrid();
             });
+        });
+    }
+
+    // ── Hidden builtins section ──────────────────────────────────────────────
+
+    function renderHiddenSection() {
+        const section = document.getElementById('hiddenSection');
+        const grid    = document.getElementById('hiddenGrid');
+        if (!section || !grid) return;
+        const hidden = typeof window.getHiddenBuiltinPresets === 'function' ? window.getHiddenBuiltinPresets() : [];
+        section.classList.toggle('hidden', hidden.length === 0);
+        grid.innerHTML = '';
+        hidden.forEach((preset) => {
+            const pv = getPresetPreview(preset);
+            const card = document.createElement('div');
+            card.className = 'preset-card inactive';
+            card.innerHTML = `
+                <div class="preset-thumb">
+                    <div class="preset-thumb-stage" style="
+                        background: ${thumbBg(pv)};
+                        --thumb-quadrant: ${esc(pv.quadrant || '#3d3428')};
+                        --thumb-center:   ${esc(pv.center   || '#d4b896')};
+                        --thumb-accent:   ${esc(pv.accent   || '#8b7355')};">
+                        <div class="preset-thumb-q"></div>
+                        <div class="preset-thumb-q"></div>
+                        <div class="preset-thumb-q"></div>
+                        <div class="preset-thumb-q"></div>
+                    </div>
+                </div>
+                <div class="preset-card-body">
+                    <div class="preset-card-meta"><span class="preset-badge">Eingebaut</span></div>
+                    <div class="preset-card-name">${esc(preset.label || preset.id)}</div>
+                    <div class="preset-card-desc">${esc(preset.description || '')}</div>
+                    <div class="preset-card-actions">
+                        <button class="btn-restore success" data-id="${esc(preset.id)}">Wiederherstellen</button>
+                    </div>
+                </div>`;
+            card.querySelector('.btn-restore').addEventListener('click', () => {
+                window.restoreBuiltinPreset(preset.id);
+                setStatus('Design "' + (preset.label || preset.id) + '" wiederhergestellt.');
+                renderHiddenSection();
+                renderGrid();
+            });
+            grid.appendChild(card);
         });
     }
 
@@ -505,7 +599,18 @@
         renderGrid();
     });
 
-    document.getElementById('newPattern').addEventListener('change', updateFormPreview);
+    document.getElementById('newPattern').addEventListener('change', async () => {
+        updateFormPreview();
+        const path = document.getElementById('newPattern').value;
+        if (path) {
+            const color = await extractDarkColorFromImage(path);
+            if (color) {
+                document.getElementById('newQuadrantColor').value = color;
+                document.getElementById('newQuadrantColorHex').value = color;
+                updateFormPreview();
+            }
+        }
+    });
 
     document.getElementById('backBtn').addEventListener('click', () => {
         window.location.replace('config.html?v=20260429c');
@@ -520,6 +625,7 @@
 
     loadWerkstattFiles().then(() => {
         renderImportGrid();
+        renderHiddenSection();
         renderGrid();
     });
 </script>
