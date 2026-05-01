@@ -38,6 +38,10 @@ myMusic/
 # Board cache
 board_files/
 Blätter/
+
+# Werkstatt: nur Bilder tracken, keine Browser-Hilfsordner
+Werkstatt/*_files/
+Werkstatt/*.html
 *.accdb
 
 # Local history artifacts
