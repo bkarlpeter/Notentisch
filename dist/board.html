@@ -350,6 +350,7 @@
             min-width: 80px;
             text-align: center;
             height: 34px;
+            font-size: 12px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -479,6 +480,25 @@
             flex: 0 0 auto;
         }
 
+        #commandStatus {
+            margin-left: 8px;
+            min-width: 180px;
+            max-width: 460px;
+            flex: 1 1 360px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            padding: 0 10px;
+            border: 1px solid #3b4b59;
+            border-radius: 6px;
+            background: #121a22;
+            color: #cfe3f4;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         #saveDateHint {
             margin-left: auto;
             display: inline-block;
@@ -531,6 +551,12 @@
             #audioAssistStatus {
                 display: none;
             }
+
+            #commandStatus,
+            .page-info {
+                max-width: 320px;
+                font-size: 11px;
+            }
         }
 
         @media (max-width: 1280px) {
@@ -545,6 +571,12 @@
 
             .toolbar-right {
                 gap: 6px;
+            }
+
+            #commandStatus {
+                min-width: 140px;
+                max-width: 220px;
+                flex-basis: 180px;
             }
 
             #alignBtn {
@@ -914,7 +946,7 @@
         <div id="search-panel">
             <h3>&#128269;&nbsp;Blatt suchen</h3>
             <input type="text" id="search-input" placeholder="Titel eingeben..." autocomplete="off" inputmode="search" enterkeyhint="search" spellcheck="false"
-                oninput="searchCards()" onkeydown="searchKeyDown(event)" onclick="searchInputClicked()">
+                oninput="searchCards()" onkeydown="searchKeyDown(event)" onclick="searchInputClicked()" onfocus="searchInputClicked()">
             <div class="search-kbd-row">
                 <button class="btn btn-keyboard" onclick="openSearchKeyboardCompact(event)" title="Kleinformat-Tastatur öffnen" aria-label="Kleinformat-Tastatur öffnen"><span class="kbd-icon" aria-hidden="true">&#9000;</span><span class="kbd-label">Klein-Tastatur</span></button>
             </div>
@@ -968,7 +1000,6 @@
         <button class="btn" onclick="handleLoadButton()">LADEN</button>
         <span class="separator">|</span>
         <button class="btn" id="modeToggleBtn" onclick="togglePlayMode()">Spielen</button>
-        <button class="btn" id="overviewBtn" onclick="toggleOverviewMode()">Übersicht</button>
         <button class="btn btn-small btn-zoom" id="zoomOutBtn" onclick="zoomOut()">ZOOM -</button>
         <button class="btn btn-small btn-zoom" id="zoomInBtn" onclick="zoomIn()">ZOOM +</button>
         <button class="btn btn-small btn-zoom" onclick="fitPdfWidth()">Breite</button>
@@ -980,13 +1011,15 @@
         <button class="btn btn-small" onclick="toggleSaveCenterSettingsMode()" id="saveCenterSettingsBtn">Auto Zoom</button>
         <span class="separator">|</span>
         <button class="btn btn-small" onclick="previousPage()">&lt;</button>
-        <span id="pageInfo" class="page-info"></span>
+        <span id="pageInfo" class="page-info">Seiten</span>
         <button class="btn btn-small" onclick="nextPage()">&gt;</button>
         <span class="separator">|</span>
         <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)" class="hidden-file-input">
+        <span id="commandStatus" title="Status">Bereit</span>
         <div class="toolbar-right">
+            <button class="btn" id="overviewBtn" onclick="toggleOverviewMode()">Übersicht</button>
             <button class="btn" id="textSearchBtn" onclick="openSearchOverlay()" title="Blatt suchen">Textsuche</button>
-            <button class="btn" onclick="toggleAudioAssistMode(event)" id="audioAssistBtn" title="Kurz: Aus→Ton an, Ton an→Aus. Lang (in Ton an): Aufnahme. In Aufnahme: Kurz=Aus.">Tonsuche</button>
+            <button class="btn" onclick="toggleAudioAssistMode(event)" id="audioAssistBtn" title="Kurz: Aus→Hören, Hören→Aus. Lang (in Hören): Aufnahme. In Aufnahme: Kurz=Aus.">Hören</button>
             <span id="audioSaveBtn" title="Auto-Speichern Status">Speichern</span>
             <button class="btn btn-config" onclick="openConfigPage()" title="Staffelung">C</button>
             <button class="btn btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreenMode()" title="Vollbild (F11 / Esc)">F11</button>
@@ -999,13 +1032,13 @@
     <!-- SCRIPTS -->
     <script src="center-config.js?v=20260412n"></script>
     <script src="render.js?v=20260427g"></script>
-    <script src="filehandling.js?v=20260604b"></script>
+    <script src="filehandling.js?v=20260709a"></script>
     <script src="board-session-state.js?v=20260427b"></script>
     <script src="functions.js?v=20260510f"></script>
     <script src="center-view.js?v=20260510f"></script>
-    <script src="audio_core.js?v=20260510b"></script>
+    <script src="audio_core.js?v=20260605a"></script>
     <script src="audio_data.js?v=20260502a"></script>
-    <script src="audio_runtime.js?v=20260510b"></script>
+    <script src="audio_runtime.js?v=20260605a"></script>
 
 </body>
 </html>

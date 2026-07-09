@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "Werkstatt"
+		},
+		{
+			"path": "../NotenDatenbank/Access Module"
+		}
+	],
+	"settings": {
+		"workbench.settings.openDefaultSettings": true,
+		"workbench.settings.openDefaultKeybindings": true
+	}
+}

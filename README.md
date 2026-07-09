@@ -17,11 +17,13 @@
 - [Card-Bilder generieren](#card-bilder-generieren)
 - [Bedienung](#bedienung)
 - [Preset-Verwaltung](#preset-verwaltung)
+- [Algorithmen](#algorithmen)
 - [Audio Auto (Mikrofon)](#audio-auto-mikrofon)
 - [Audio Auto Troubleshooting](#audio-auto-troubleshooting)
 - [Center-/Zoom-Parameter (Basis fuer weitere Aenderungen)](#center-zoom-parameter-basis-fuer-weitere-aenderungen)
 - [CenterAnsicht je Blatt (XML)](#centeransicht-je-blatt-xml)
 - [Speichern](#speichern)
+- [Access-Board-Sync (Normalfall)](#access-board-sync-normalfall)
 - [Verzeichnisse (Ton/XML)](#verzeichnisse-tonxml)
 - [Use Cases](#use-cases)
 - [Dateiformat (XML)](#dateiformat-xml)
@@ -95,6 +97,13 @@ Aktueller Stand (28.04.2026):
 - Doppelklick auf eine Karte in `Uebersicht` oeffnet die Karte im CENTER, ohne den Modus automatisch zu verlassen.
 - Rueckkehr aus `Config` behaelt den `Uebersicht`-Status bei (Session-Snapshot inkl. Restore).
 - Beim Verlassen von `Uebersicht` wird die zuletzt aktive CENTER-Karte wiederhergestellt (inkl. Runtime-View-Fallback).
+
+Aktueller Stand (06.06.2026):
+- Audio-Hinweise werden in der Command-Zeile im Statusfeld (`#commandStatus`) angezeigt; es gibt keine separaten Toast-Overlays.
+- Bei unsicherem Treffer/Korrekturlauf wird
+ der Kandidatenstatus als `1/3`, `2/3`, `3/3` mit Hinweis `Kurzdruck Hören` angezeigt.
+- Wenn der Suchlauf mit `timeout_no_match` endet, startet ebenfalls der Top-Kandidaten-Korrekturlauf (statt sofortigem Abbruch).
+- Pflegehinweis fuer die Entwicklung: Aenderungen immer in Source und in `dist/` spiegeln (Verzeichnis für die Appweitergabe).
 
 Details siehe [CHANGELOG.md](CHANGELOG.md).
 
@@ -279,7 +288,11 @@ Das Skript nutzt automatisch:
 - `ZOOM - / ZOOM +` gedrueckt halten: kontinuierlicher Zoom (steuerbar ueber `centerZoomHoldEnabled`, `centerZoomHoldDelayMs`, `centerZoomHoldIntervalMs`)
 - Zoom-Grenzen: werden ueber `centerMinZoom` und `centerMaxZoom` begrenzt
 - Zoom-Render-Verzoegerung: ueber `centerZoomDebounceMs`
-- `Breite`: skaliert so, dass sichtbare Seiten in die aktuelle CENTER-Breite passen (inkl. `centerCanvasExtraWidth`, `centerFitMonitorPages`)
+- `Breite`: skaliert so, dass sichtbare Seiten in die aktuelle CENTER-Breite passen (`centerFitMonitorPages`)
+  - Advanced-Parameter: `Spalt Center-Stapel` (`centerCanvasExtraWidth`, Gap zwischen Center und Stapeln)
+  - Wirkung: reserviert horizontalen Zusatzabstand pro Seite (links/rechts)
+  - Hoeherer Wert: mehr Abstand, dadurch bei `Breite` kleinerer Zoom
+  - Niedrigerer Wert: weniger Abstand, dadurch bei `Breite` groesserer Zoom
 - `Höhe`: setzt den Zoom auf den konfigurierten Startwert (`centerDefaultZoom`)
 - `WIDE / NORMAL`: vergroessert CENTER nach links; rechter Rand bleibt fix
 - CENTER-Ausrichtung: `Links/Mitte/Rechts` per Button, persistent ueber `centerAlign`
@@ -302,7 +315,10 @@ Das Skript nutzt automatisch:
   - weißer Rahmen am Tonsuche-Button: während `Ton Rec` wird gerade musikalisches Signal aufgenommen
   - im Aufnahme-Modus mit Blatt im CENTER: kurze Referenzaufnahme wird automatisch beendet, sobald genug Material für `AudioReferenz` gesammelt wurde
   - optional in `Advanced`: alte Sequenz pro Titel löschen (`Löschen`) oder Historie behalten (`Beibehalten`)
-  - `Loeschen` löscht/verwirft eine laufende Aufnahme; nach automatischem Stopp wird derselbe Button zu `Nochmal` für sofortige Neuaufnahme derselben Center-Karte
+  - `Loeschen` verwirft eine laufende Aufnahme
+  - nach automatischem Stopp startet dieselbe Center-Karte nicht sofort neu
+  - Neuaufnahme derselben Karte erst nach kurzer Spielpause (>= 1s Stille) und erneutem Einspielen
+  - bei Blattwechsel im CENTER startet die Aufnahme für das neue Blatt sofort
   - ohne Blatt im CENTER: Live-Matching gegen gespeicherte Audio-Fingerprints; bei stabilem Treffer wird das Blatt automatisch ins CENTER geladen
 - Karten mit vorhandener Audio-Referenz zeigen optional einen gelben Marker oben rechts (Config: `Spielton-Marker`)
 - Config-Vorschau: nutzt zuerst lokalen PNG-Cache, dann XML/PDF-Fund (Ausschnitt) und sonst Bild-Fallback
@@ -336,6 +352,35 @@ Das Skript nutzt automatisch:
 - Das Preset `Klassisch` ist der Fallback und kann nicht ausgeblendet werden.
 - Eigene Presets koennen endgueltig geloescht werden.
 - Beim Werkstatt-Import wird die dominante Farbe des Musters automatisch als Quadrant-Farbe vorgeschlagen.
+
+### Unterstuetzte Formate im Preset-Manager
+
+- Musterdateien fuer den `Werkstatt-Import`: `.jpg`, `.jpeg`, `.png`, `.webp`
+- Quelle der Musterdateien: nur aus dem Ordner `Werkstatt/` (kein direkter Dateiupload in der Seite)
+- Nicht unterstuetzt fuer den Import: z. B. `.svg`, `.gif`, `.bmp`, `.tif`
+- Preset-Speicherung: als JSON in `localStorage` (`notentischCustomPresets`, `notentischPresetStates`, `notentischHiddenBuiltins`)
+
+## Algorithmen
+
+Dieses Kapitel beschreibt die wichtigsten Algorithmen rund um Tonsuche und Aufnahme.
+
+### Tonsuche
+
+- **Audio-Fingerprint**: Aus dem Live-Signal werden Mel-Baender und Delta-Werte gebildet, daraus entsteht der Fingerprint.
+- **Musik-Frame-Filter**: Nur Frames mit genug musikalischem Signal werden in die Suche bzw. Aufnahme uebernommen.
+- **Voting-Fenster**: Die Tonsuche bewertet nicht nur einen einzelnen Treffer, sondern sammelt mehrere aufeinanderfolgende Bestbewertungen in einem Fenster.
+- **Zwei-Stufen-Suche**: Erst wird breit ueber alle vorhandenen Prints verglichen, danach wird ein stabiler Kandidat schneller verdichtet und mit leicht gelockerten Schwellen weiter verfolgt.
+- **Adaptive Gap-Floors**: Bei sehr stabilen Treffern werden die Mindestabstaende zwischen erstem und zweitem Kandidaten vorsichtig abgesenkt, damit gute Wiedererkennung nicht blockiert wird.
+- **Timeout bei erfolgloser Suche**: Wenn alle vorhandenen Prints ohne stabilen Treffer durchlaufen wurden, bricht die Suche nach einem aus Kandidatenzahl und Pruefintervall abgeleiteten Zeitfenster ab.
+- **No-Signal-Abbruch**: Wenn laenger kein verwertbares Signal mehr ankommt, wird die Tonsuche beendet, statt stale Kandidaten weiter zu bewerten.
+
+Kurz gesagt: Die Suche soll schnell reagieren, aber erst dann ausloesen, wenn ein Kandidat wirklich stabil vorne liegt.
+
+### Aufnahme-Flow
+
+- **Re-arm-Probe fuer Aufnahme**: Nach einer Aufnahme wird derselbe Titel erst nach erkannter Stille wieder freigegeben, damit ein unmittelbarer Neuansatz nicht versehentlich denselben Lauf fortsetzt.
+
+Der Aufnahme-Flow trennt also sauberes Beenden, erneutes Starten und das Weiterverarbeiten des gleichen Titels.
 
 ## Audio Auto (Mikrofon)
 
@@ -431,10 +476,10 @@ Hinweis zur Strenge:
 4. Nach Ablauf der Wartezeit: zurück zu `Speichern` / `Speichern (Karten-ID)`, blau
 
 **Typische Folgeaktionen:**
-1. **Neuaufnahme derselben Karte**: erneut in `Ton Rec` bleiben oder dorthin zurückschalten; die Aufnahme startet sofort oder nach der eingestellten Verzögerung.
+1. **Neuaufnahme derselben Karte**: in `Ton Rec` bleibt die Karte nach Auto-Stopp zunächst gesperrt; erst nach >= `1` Sekunde Stille und erneutem Einspielen startet die nächste Aufnahme.
 2. **Zu Tonhören wechseln**: Kurzdruck auf BTN1 wechselt zurück zu `Ton An`.
 3. **Komplett ausschalten**: Langdruck aus `Ton An` schaltet zurück auf `Tonsuche`.
-4. **Neue Karte im CENTER**: eine neue CENTER-Karte startet die nächste Aufnahme wieder mit derselben Logik inklusive optionaler Verzögerung.
+4. **Neue Karte im CENTER**: eine neue CENTER-Karte hebt die alte Sperre auf und startet die Aufnahme für das neue Blatt direkt (inklusive optionaler Verzögerung).
 
 Wichtig:
 - Wenn `Alte Sequenz bei Neuaufnahme = Löschen`, bleibt pro Titel nur die neueste Referenz erhalten.
@@ -463,6 +508,8 @@ Zusätzlich:
 - Ähnliche Motive, starkes Rauschen oder andere Lautstärke können Fehl- oder Nichttreffer verursachen.
 - Nur Modus `Ton Rec` überschreibt bzw. erzeugt Referenzaufnahmen; `Ton An` sucht nur.
 - Im Modus `Ton Rec` stoppt die Aufnahme automatisch nach genug erkanntem Musiksignal; die Dauer ist in `Advanced` einstellbar.
+- Nach Auto-Stopp wird dieselbe Karte in `Ton Rec` nicht sofort erneut aufgenommen; Neustart erst nach >= `1` Sekunde Stille und neuem Tonsignal.
+- Beim Wechsel auf eine andere CENTER-Karte startet die Aufnahme für das neue Blatt sofort.
 - `Advanced > Verzögerung vor Aufnahme-Start`: steuert den Aufnahmestart zwischen `0` und `3000` ms nach Eintritt in `Ton Rec` mit Karte im CENTER.
 - `Advanced > Alte Sequenz bei Neuaufnahme`: `Löschen` hält pro Titel nur eine aktuelle Sequenz (alte Datei + alte XML-Referenzen werden entfernt), `Beibehalten` speichert zusätzliche Sequenzen.
 - `Advanced > Erkennungs-Strenge` beeinflusst die Trigger-Schwellen nach dem Voting:
@@ -532,6 +579,25 @@ Zusätzlich:
 - Aenderungen an `Arbeitsstatus` und (im Modus `Spielen`) `zuletztgespielt` werden beim Ablegen einer Karte auf `Q1` bis `Q4` automatisch in die XML-Datei geschrieben.
 - Beim ersten Schreibzugriff waehlt der User die XML-Datei; danach wird der gespeicherte Datei-Handle wiederverwendet.
 
+### Access-Board-Sync (Normalfall)
+
+- Zieldatei fuer den Austausch ist `Noten/Notentisch.xml`.
+- Normalfall-Reihenfolge:
+  1. Access exportiert nach `Notentisch.xml`.
+  2. Board laedt und bearbeitet diese Datei.
+  3. Board speichert zurueck nach `Notentisch.xml`.
+  4. Access importiert/synchronisiert aus `Notentisch.xml`.
+- Aktivierung des Sync: nur durch die aktuell fuehrende Instanz (eine Person/Geraet), direkt vor dem Access-Import und nach abgeschlossenem Speichern im Board.
+- Parallelbetrieb vermeiden: waehrend des Sync keine gleichzeitige Schreibbearbeitung auf zweitem Geraet (z. B. Tablet), sonst kann OneDrive Konfliktdateien erzeugen.
+- Testbearbeitung auf dem Vivobook gilt als Sonderfall: diese Stande werden nur auf ausdrueckliche Rueckfrage in die Hauptdatei uebernommen.
+- Lade-Prioritaet im Board: wenn vorhanden, wird immer `Notentisch.xml` bevorzugt; geraetespezifische Varianten dienen nur als Fallback, falls die Hauptdatei fehlt.
+- Verfahren bei Namenszusatz-Dateien (z. B. `Notentisch-Vivobook.xml`, `Notentisch-PetersBoard.xml`):
+  1. Diese Dateien gelten zunaechst als Konflikt-/Teststaende und werden nicht automatisch mit Access synchronisiert (sie entstehen typischerweise durch OneDrive-Konfliktkopien bei paralleler Bearbeitung auf mehreren Geraeten oder durch getrennte Testlaeufe mit abweichendem Dateinamen).
+  2. Master fuer Access bleibt `Notentisch.xml`.
+  3. Eine Uebernahme aus Namenszusatz-Dateien erfolgt nur auf ausdrueckliche Rueckfrage/Freigabe.
+  4. Bei freigegebener Uebernahme werden die Inhalte zusammengefuehrt; bei gleichem `NotID` gewinnt der juengste Stand.
+  5. Nach erfolgreicher Uebernahme werden Namenszusatz-Dateien bereinigt, sodass nur `Notentisch.xml` fuer den Austausch verbleibt.
+
 ### Verzeichnisse (Ton/XML)
 
 - Tonaufnahmen: werden lokal im Projektordner unter `mysounds/` gespeichert.
@@ -541,32 +607,47 @@ Zusätzlich:
 
 ## Use Cases
 
-### Usecase 1: User will Noten auf den Tisch legen
+### Usecase 1: Noten auf den Tisch legen
 
 1. Start: User laedt die XML mit Noten-Metadaten (`LADEN`). Dabei wird der Speicherort der Exportdatei gefragt, die zuvor mit MS Access erstellt wurde.
-2. User schaut sich Blaetter an, indem Karten ins CENTER gezogen werden.
+2. User schaut sich Blaetter an, indem Karten ins CENTER gezogen werden. Beim reinziehen weiterer Blaetter ins center wird das aktuelle Blatt dorthinzurueckgeschoben, wo es herkam.
 3. Karte wird aus dem CENTER auf einen Quadranten abgelegt.
-4. Dabei wird:
+    Dabei wird:
   - der neue **Arbeitsstatus** im XML aktualisiert
   - im Modus **Spielen** automatisch `zuletztgespielt` gesetzt
   - im Modus **Sichten** kein `zuletztgespielt` gesetzt
   - die XML-Datei automatisch gespeichert
-5. Abschluss: Weitere Karten koennen direkt weiter einsortiert werden; jede Ablage auf `Q1` bis `Q4` wird sofort gespeichert.
+4. Abschluss: Weitere Karten koennen direkt weiter einsortiert werden; jede Ablage auf `Q1` bis `Q4` wird sofort gespeichert.
 
-Hinweis zu 2: Beim Ansehen weiterer Blaetter wird das aktuelle Blatt dorthin zurueckgeschoben, wo es herkam.
+### Usecase 2: Noten suchen mit Tonsuche
 
-### Usecase 2: User will Noten mit Spielton suchen
+1. User schaltet `Tonsuche` auf `Ton Rec`
+2. User spielt 3-6 Sekunden ein, dabei sieht er die Fortschrittsanzeige:
+  - Grün heißt: Es wird noch gesammelt oder gewartet.
+  - Braun heißt: Die Suche ist schwierig bzw. unsicher, die Anzeige schaltet auf `search-difficult`.
+  - Das ist nur ein Hinweis, kein Abbruch. Die Matching-Logik läuft weiter und bewertet weiter Votes, Streak und Abstand.
+3. Wenn das anfangs gesammelte Material später stabil genug wird, wird aus demselben Lauf der richtige Treffer ausgelöst und das passende Blatt automatisch in den CENTER gezogen.
 
-1. User schaltet `Tonsuche` auf `Ton Rec` und legt das Zielblatt in den CENTER.
-2. User spielt das Motiv 3-6 Sekunden ein; die Referenzaufnahme stoppt automatisch nach genug erkanntem Musiksignal.
-3. Optional kann der User mit `Nochmal` sofort eine neue Referenz für dieselbe Center-Karte einspielen.
-4. Danach schaltet der User auf `Ton An` und spielt das Motiv erneut.
-5. Die App vergleicht den Live-Ton mit gespeicherten Fingerprints und zieht bei stabilem Treffer das passende Blatt automatisch in den CENTER.
+### Usecase 3: Ton aufnehmen für ein Blatt
+User stellAufnahme ein.
+
+1. **user spielt ein, und nach Aufnahme weiter (Blatt bleibt im CENTER)**
+  - Nach dem automatischen Aufnahme-Stopp startet keine sofortige Neuaufnahme.
+  - Ist die fertige Aufnahme zu kurz/ungeeignet, wird sie nicht gespeichert.
+  - Ist sie gut, wird sie gespeichert und zur Verbesserung der Referenz verwendet.
+2. **Gleiches Blatt, kurz warten, dann erneut einspielen**
+  - Nach mindestens `1` Sekunde warten und dann neuem Einspielen startet eine neue Aufnahme für dasselbe Blatt.
+3. **Neues Blatt wird in den CENTER gelegt und eingespielt**
+  - Die Aufnahme für das neue Blatt startet direkt.
+  - Die vorherige Sperre der alten Karte wird dabei aufgehoben.
+
+Hinweis zur einstellung der tonsammlung auf Advanced:
+- Die Einstellung auf Advanced `Alte Sequenz bei Neuaufnahme` steuert, ob pro Titel die aufnahme die alte ersetzt (`Löschen`) oder alle Einspielungen dafür gesammelt (`Beibehalten`) werden.
 
 ## Dateiformat (XML)
 Eine XML Datei muss vorliegen, die z.B mit Access exportiert wurde und einen Satz an Notenblättern enthält.
 
-Erwartete Haupteintraege:
+Erwartete Haupteinträge:
 - `<NotenTisch>` (unterstuetzt zusaetzlich `<Notentisch>`)
 - Unterfelder je Eintrag:
   - `<Titel>`

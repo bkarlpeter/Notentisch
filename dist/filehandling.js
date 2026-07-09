@@ -1759,6 +1759,59 @@ async function resetFolder() {
         console.error('Fehler beim Zurücksetzen:', err);
     }
 }
+
+async function syncCanonicalXmlAndCleanupVariants(serializedXml) {
+    if (!xmlFolderHandle) return;
+    if (typeof xmlFolderHandle.getFileHandle !== 'function') return;
+
+    const canonicalName = 'Notentisch.xml';
+    const currentName = String(xmlFileName || '').trim();
+
+    try {
+        // Immer eine kanonische Austauschdatei pflegen, damit Access eindeutig importiert.
+        const canonicalHandle = await xmlFolderHandle.getFileHandle(canonicalName, { create: true });
+        const writableCanonical = await canonicalHandle.createWritable();
+        await writableCanonical.write(serializedXml);
+        await writableCanonical.close();
+
+        xmlFileHandle = canonicalHandle;
+        xmlFileName = canonicalName;
+        await saveXmlDirectFileHandle(canonicalHandle);
+    } catch (err) {
+        console.warn('Kanonische XML konnte nicht geschrieben werden:', err);
+        return;
+    }
+
+    if (typeof xmlFolderHandle.removeEntry !== 'function') {
+        return;
+    }
+
+    try {
+        const variants = [];
+        for await (const entry of xmlFolderHandle.values()) {
+            if (!entry || entry.kind !== 'file') continue;
+            const name = String(entry.name || '');
+            if (!/^Notentisch-.+\.xml$/i.test(name)) continue;
+            variants.push(name);
+        }
+
+        for (const variantName of variants) {
+            if (currentName && variantName.toLowerCase() === currentName.toLowerCase()) {
+                // Aktuelle Varianten-Datei ist nach der Kanonisierung redundant.
+                await xmlFolderHandle.removeEntry(variantName);
+                continue;
+            }
+            await xmlFolderHandle.removeEntry(variantName);
+        }
+
+        if (variants.length) {
+            console.log('XML-Austausch bereinigt, entfernte Varianten: ' + variants.length);
+        }
+    } catch (err) {
+        console.warn('XML-Varianten konnten nicht vollständig bereinigt werden:', err);
+    }
+}
+
 async function saveXml(silent = true, options = {}) {
     if (!xmlData) return;
     const allowPicker = options.allowPicker !== false;
@@ -1782,9 +1835,11 @@ async function saveXml(silent = true, options = {}) {
         }
         
         // Direkt in die Datei schreiben (überschreibt)
+        const serializedXml = new XMLSerializer().serializeToString(xmlData);
         const writable = await xmlFileHandle.createWritable();
-        await writable.write(new XMLSerializer().serializeToString(xmlData));
+        await writable.write(serializedXml);
         await writable.close();
+        await syncCanonicalXmlAndCleanupVariants(serializedXml);
         console.log('XML gespeichert: ' + xmlFileName);
         hasUnsavedChanges = false;
         clearSafetyBackup();
@@ -1881,8 +1936,33 @@ async function autoLoadLastXmlFileIfNeeded() {
         }
         if (permission !== 'granted') return false;
 
-        const fileName = localStorage.getItem('xmlLastFileName') || xmlFileName || 'Notentisch.xml';
-        const xmlHandle = await folderHandle.getFileHandle(fileName, { create: false });
+        let canonicalExists = false;
+        let bestEntry = null;
+        for await (const entry of folderHandle.values()) {
+            if (!entry || entry.kind !== 'file') continue;
+            const name = String(entry.name || '');
+            if (!/^Notentisch.*\.xml$/i.test(name)) continue;
+            if (name.toLowerCase() === 'notentisch.xml') {
+                canonicalExists = true;
+                continue;
+            }
+
+            try {
+                const file = await entry.getFile();
+                const modified = Number(file?.lastModified || 0);
+                if (!bestEntry || modified > bestEntry.modified) {
+                    bestEntry = { name, modified };
+                }
+            } catch (err) {
+                console.warn('XML-Metadaten konnten nicht gelesen werden:', name, err);
+            }
+        }
+
+        const fallbackName = localStorage.getItem('xmlLastFileName') || xmlFileName || 'Notentisch.xml';
+        const selectedName = canonicalExists
+            ? 'Notentisch.xml'
+            : (bestEntry?.name || fallbackName);
+        const xmlHandle = await folderHandle.getFileHandle(selectedName, { create: false });
         await openAndLoadXmlHandle(xmlHandle);
         return true;
     } catch (err) {
