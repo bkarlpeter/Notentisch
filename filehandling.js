@@ -1733,7 +1733,8 @@ async function saveXml(silent = true, options = {}) {
         const writable = await xmlFileHandle.createWritable();
         await writable.write(serializedXml);
         await writable.close();
-        await syncCanonicalXmlAndCleanupVariants(serializedXml);
+        // Access-Austauschaktion bewusst deaktiviert:
+        // kein kanonischer Sync/Variant-Cleanup beim normalen Speichern.
         console.log('XML gespeichert: ' + xmlFileName);
         hasUnsavedChanges = false;
         clearSafetyBackup();
