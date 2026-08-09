@@ -1,0 +1,123 @@
+:root {
+  --bg: #f4f6f9;
+  --text: #222;
+  --header-bg: linear-gradient(135deg, #003366, #0066cc);
+  --accent: #003366;
+}
+
+body.dark {
+  --bg: #1e1e1e;
+  --text: #e6e6e6;
+  --header-bg: linear-gradient(135deg, #111, #333);
+  --accent: #66aaff;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  transition: background 0.3s, color 0.3s;
+}
+
+/* Navigation */
+nav {
+  background: var(--accent);
+  padding: 0.8rem 10%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+nav a {
+  color: white;
+  margin-right: 1.5rem;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+#themeToggle {
+  background: white;
+  color: var(--accent);
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+header {
+  background: var(--header-bg);
+  color: white;
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+section {
+  padding: 2.5rem 10%;
+  max-width: 1200px;
+  margin: auto;
+}
+
+h2 {
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+
+/* Bilder */
+.img-small {
+  width: 260px;
+  float: right;
+  margin: 0 0 1rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease-in-out;
+}
+
+.img-small:hover {
+  transform: scale(2.2);
+  z-index: 10;
+}
+
+.img-left {
+  width: 260px;
+  float: left;
+  margin: 0 1rem 1rem 0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease-in-out;
+}
+
+.img-left:hover {
+  transform: scale(2.2);
+  z-index: 10;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .img-small, .img-left {
+    float: none;
+    display: block;
+    margin: 1rem auto;
+    width: 90%;
+    max-width: 350px;
+  }
+}
+
+footer {
+  background-color: var(--accent);
+  color: white;
+  text-align: center;
+  padding: 1rem;
+  margin-top: 3rem;
+}
