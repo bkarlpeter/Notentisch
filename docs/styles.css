@@ -1,123 +1,95 @@
-:root {
-  --bg: #f4f6f9;
-  --text: #222;
-  --header-bg: linear-gradient(135deg, #003366, #0066cc);
-  --accent: #003366;
-}
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notentisch – dein digitaler Notenständer</title>
 
-body.dark {
-  --bg: #1e1e1e;
-  --text: #e6e6e6;
-  --header-bg: linear-gradient(135deg, #111, #333);
-  --accent: #66aaff;
-}
+<link rel="stylesheet" href="styles.css">
+</head>
 
-body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.6;
-  transition: background 0.3s, color 0.3s;
-}
+<body>
 
-/* Navigation */
-nav {
-  background: var(--accent);
-  padding: 0.8rem 10%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+<nav>
+  <div>
+    <a href="#alles-im-blick">Alles im Blick</a>
+    <a href="#uebungsverlauf">Übungsverlauf</a>
+    <a href="#anpassung">Darstellung</a>
+    <a href="#suche">Suche</a>
+  </div>
+  <button id="themeToggle">Dark/Light</button>
+</nav>
 
-nav a {
-  color: white;
-  margin-right: 1.5rem;
-  text-decoration: none;
-  font-weight: bold;
-}
+<header>
+  <h1>Notentisch – dein digitaler Notenständer</h1>
+  <p>Ordnung statt Notenchaos – übersichtlich, flexibel und perfekt für deinen Übungsalltag.</p>
+</header>
 
-nav a:hover {
-  text-decoration: underline;
-}
+<section id="alles-im-blick">
+  <h2>Alles im Blick</h2>
 
-#themeToggle {
-  background: white;
-  color: var(--accent);
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-}
+  <img src="images/Board twosided.jpg" class="img-small" alt="Board twosided">
+  <img src="images/Board fullscreen.jpg" class="img-small" alt="Board fullscreen">
 
-header {
-  background: var(--header-bg);
-  color: white;
-  text-align: center;
-  padding: 3rem 1rem;
-}
+  <p>
+    Notentisch zeigt dir deine Noten so, wie du sie wirklich brauchst: klar, groß und ohne Ablenkung.
+    Die zweiseitige Ansicht eignet sich ideal für Stücke mit schnellen Übergängen – du siehst beide
+    Seiten gleichzeitig und kannst ohne Umblättern spielen. Für besonders komplexe Passagen oder
+    große Notenblätter steht die Vollbildansicht bereit: maximale Fläche, maximale Lesbarkeit,
+    maximale Konzentration.
+  </p>
 
-header h1 {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
-}
+  <p>
+    Egal ob du übst, probst oder auftrittst – Notentisch sorgt dafür, dass du deine Musik immer
+    vollständig im Blick hast. Kein Suchen, kein Blättern, kein Chaos. Nur deine Noten, perfekt
+    präsentiert.
+  </p>
+</section>
 
-section {
-  padding: 2.5rem 10%;
-  max-width: 1200px;
-  margin: auto;
-}
+<section id="uebungsverlauf">
+  <h2>Dein Übungsverlauf</h2>
+  <img src="images/Board emptyblue.jpg" class="img-small" alt="Board emptyblue">
+  <p>
+    Dein Übungsfortschritt wird durch vier klar definierte Stapel sichtbar: <strong>Zurückgestellt</strong>,
+    <strong>Wiederholen</strong>, <strong>Geübt</strong> und <strong>Gelernt</strong>. Jedes Blatt wandert
+    automatisch oder manuell in den passenden Bereich. So entsteht ein intuitiver Übungsverlauf,
+    der dir zeigt, welche Stücke du bereits sicher beherrschst und welche du noch vertiefen möchtest.
+  </p>
+</section>
 
-h2 {
-  color: var(--accent);
-  margin-bottom: 1rem;
-}
+<section id="anpassung">
+  <h2>Anpassbare Darstellung</h2>
 
-/* Bilder */
-.img-small {
-  width: 260px;
-  float: right;
-  margin: 0 0 1rem 1rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  transition: transform 0.2s ease-in-out;
-}
+  <img src="images/Designs.jpg" class="img-left" alt="Designs">
+  <img src="images/Board emptychinesered.jpg" class="img-small" alt="Board emptychinesered">
 
-.img-small:hover {
-  transform: scale(2.2);
-  z-index: 10;
-}
+  <p>
+    Notentisch passt sich deinem Stil an. Wähle aus verschiedenen Hintergründen – klassisch,
+    modern, japanisch, marokkanisch oder minimalistisch. Du kannst die Anzahl der Stapel reduzieren,
+    das Layout verbreitern oder die Darstellung für große Notenhefte optimieren. Alle Einstellungen
+    werden automatisch gespeichert, sodass du jederzeit genau dort weitermachst, wo du aufgehört hast.
+  </p>
+</section>
 
-.img-left {
-  width: 260px;
-  float: left;
-  margin: 0 1rem 1rem 0;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  transition: transform 0.2s ease-in-out;
-}
+<section id="suche">
+  <h2>Intelligente Suche</h2>
+  <img src="images/Search by image.jpg" class="img-small" alt="Search by image">
+  <p>
+    Die Suche ist so flexibel wie du: Gib einen Titel ein oder spiele die ersten Takte eines Stücks –
+    Notentisch erkennt die Melodie und öffnet das passende Blatt automatisch. Ideal für große Sammlungen,
+    spontane Sessions oder wenn du ein Stück im Kopf hast, aber den Titel nicht mehr weißt.
+  </p>
+</section>
 
-.img-left:hover {
-  transform: scale(2.2);
-  z-index: 10;
-}
+<footer>
+  © 2026 Notentisch – GitHub Pages Version
+</footer>
 
-/* Responsive */
-@media (max-width: 900px) {
-  .img-small, .img-left {
-    float: none;
-    display: block;
-    margin: 1rem auto;
-    width: 90%;
-    max-width: 350px;
-  }
-}
+<script>
+  document.getElementById("themeToggle").onclick = () => {
+    document.body.classList.toggle("dark");
+  };
+</script>
 
-footer {
-  background-color: var(--accent);
-  color: white;
-  text-align: center;
-  padding: 1rem;
-  margin-top: 3rem;
-}
+</body>
+</html>
