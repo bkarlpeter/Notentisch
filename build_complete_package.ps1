@@ -13,7 +13,8 @@
 param(
     [string]$Version = "v2026.07.09",
     [string]$OutputDir = "dist/access",
-    [int]$SamplePdfCount = 10
+    [int]$SamplePdfCount = 0,
+    [int]$SeparateSamplePdfCount = 10
 )
 
 Set-StrictMode -Version Latest
@@ -24,6 +25,9 @@ $releaseDir = Join-Path $repoRoot $OutputDir
 $packageName = "Notentisch-Complete-$Version"
 $packageDir = Join-Path $releaseDir $packageName
 $zipPath = Join-Path $releaseDir "$packageName.zip"
+$samplePdfPackageName = "Notentisch-Beispiel-PDFs-$Version"
+$samplePdfPackageDir = Join-Path $releaseDir $samplePdfPackageName
+$samplePdfZipPath = Join-Path $releaseDir "$samplePdfPackageName.zip"
 $samplePdfFolderName = 'Bl' + [char]0x00E4 + 'tter'
 
 Write-Host "=== Building Notentisch Standalone Package ===" -ForegroundColor Green
@@ -35,6 +39,12 @@ if (Test-Path $packageDir) {
 }
 if (Test-Path $zipPath) {
     Remove-Item -Force $zipPath
+}
+if (Test-Path $samplePdfPackageDir) {
+    Remove-Item -Recurse -Force $samplePdfPackageDir
+}
+if (Test-Path $samplePdfZipPath) {
+    Remove-Item -Force $samplePdfZipPath
 }
 
 New-Item -ItemType Directory -Path $packageDir | Out-Null
@@ -92,15 +102,16 @@ Copy-Item "*.css" "$packageDir\" -Force 2>$null
 Copy-Item "board.html", "config.html", "presets.html", "advanced_config.html" "$packageDir\" -Force 2>$null
 
 $samplePdfSourceDir = Join-Path $repoRoot $samplePdfFolderName
-$samplePdfs = @(
-    Get-ChildItem -LiteralPath $samplePdfSourceDir -File -Filter "*.pdf" |
-        Sort-Object Name |
-        Select-Object -First $SamplePdfCount
-)
-if ($SamplePdfCount -gt 0 -and $samplePdfs.Count -lt $SamplePdfCount) {
-    throw "Only $($samplePdfs.Count) of $SamplePdfCount requested sample PDFs found in $samplePdfSourceDir"
-}
-if ($samplePdfs.Count -gt 0) {
+$samplePdfs = @()
+if ($SamplePdfCount -gt 0) {
+    $samplePdfs = @(
+        Get-ChildItem -LiteralPath $samplePdfSourceDir -File -Filter "*.pdf" |
+            Sort-Object Name |
+            Select-Object -First $SamplePdfCount
+    )
+    if ($samplePdfs.Count -lt $SamplePdfCount) {
+        throw "Only $($samplePdfs.Count) of $SamplePdfCount requested embedded PDFs found in $samplePdfSourceDir"
+    }
     $samplePdfTargetDir = Join-Path $packageDir $samplePdfFolderName
     New-Item -ItemType Directory -Path $samplePdfTargetDir -Force | Out-Null
     $samplePdfs | Copy-Item -Destination $samplePdfTargetDir -Force
@@ -159,7 +170,7 @@ $readmeContent = @"
 ## What's included
 - **Notentisch.exe**: Standalone note viewer (board.html)
 - **Web assets**: HTML/CSS/JS for board/config views
-- **Sample PDFs**: $($samplePdfs.Count) example scores in the $samplePdfFolderName folder
+- **Sample PDFs**: $($samplePdfs.Count) example scores (available separately when not included)
 - **Launcher script**: Quick start batch file
 
 ## Requirements
@@ -250,6 +261,30 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 Write-Host "  [OK] ZIP created" -ForegroundColor Green
 
+if ($SeparateSamplePdfCount -gt 0) {
+    $separateSamplePdfs = @(
+        Get-ChildItem -LiteralPath $samplePdfSourceDir -File -Filter "*.pdf" |
+            Sort-Object Name |
+            Select-Object -First $SeparateSamplePdfCount
+    )
+    if ($separateSamplePdfs.Count -lt $SeparateSamplePdfCount) {
+        throw "Only $($separateSamplePdfs.Count) of $SeparateSamplePdfCount requested separate sample PDFs found in $samplePdfSourceDir"
+    }
+
+    $separatePdfTargetDir = Join-Path $samplePdfPackageDir $samplePdfFolderName
+    New-Item -ItemType Directory -Path $separatePdfTargetDir -Force | Out-Null
+    $separateSamplePdfs | Copy-Item -Destination $separatePdfTargetDir -Force
+    [System.IO.Compression.ZipFile]::CreateFromDirectory(
+        $samplePdfPackageDir,
+        $samplePdfZipPath,
+        [System.IO.Compression.CompressionLevel]::Optimal,
+        $false,
+        [System.Text.Encoding]::UTF8
+    )
+    Remove-Item -Recurse -Force $samplePdfPackageDir
+    Write-Host "  [OK] Separate sample PDF ZIP created" -ForegroundColor Green
+}
+
 # ============================================
 # Summary
 # ============================================
@@ -259,6 +294,10 @@ Write-Host "  PACKAGE READY FOR DISTRIBUTION" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host "`nLocation: $zipPath" -ForegroundColor Cyan
 Write-Host "Size: $([math]::Round((Get-Item $zipPath).Length / 1MB, 2)) MB`n" -ForegroundColor Cyan
+if (Test-Path $samplePdfZipPath) {
+    Write-Host "Sample PDFs: $samplePdfZipPath" -ForegroundColor Cyan
+    Write-Host "Sample size: $([math]::Round((Get-Item $samplePdfZipPath).Length / 1MB, 2)) MB`n" -ForegroundColor Cyan
+}
 
 Write-Host "Next steps:" -ForegroundColor Yellow
 Write-Host "1. Share the ZIP file with recipient"
