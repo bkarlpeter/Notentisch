@@ -29,11 +29,16 @@ nav a {
   color: white;
   text-decoration: none;
   font-weight: bold;
+  padding: 0.4rem 0.8rem;   /* Abstand IN den Buttons */
+  margin-right: 0.8rem;     /* Abstand ZWISCHEN den Buttons */
+  border-radius: 6px;       /* leichte Rundung */
+  background: rgba(255,255,255,0.15); /* heller Hintergrund */
 }
 
 nav a:hover {
-  text-decoration: underline;
+  background: rgba(255,255,255,0.3);
 }
+
 
 /* Fixiertes Menü */
 .fixed-nav {
