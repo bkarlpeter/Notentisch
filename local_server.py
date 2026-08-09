@@ -253,7 +253,10 @@ def main() -> int:
             print(f'Ungueltiger Port: {sys.argv[1]}')
             return 2
 
-    webroot = os.path.dirname(os.path.abspath(__file__))
+    if getattr(sys, 'frozen', False):
+        webroot = os.path.dirname(os.path.abspath(sys.executable))
+    else:
+        webroot = os.path.dirname(os.path.abspath(__file__))
     os.chdir(webroot)
 
     server = ThreadingHTTPServer(('127.0.0.1', port), NotentischHandler)

@@ -16,6 +16,10 @@ desktop.ini
 *.bak
 *.swp
 *.swo
+__pycache__/
+/build/pyinstaller/
+/dist/pyinstaller/
+/dist/Access/
 
 # Export/Generated
 Cards_Export/
