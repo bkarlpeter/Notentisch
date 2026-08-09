@@ -127,15 +127,18 @@ h2 {
   to { opacity: 1; }
 }
 
-/* Galerie */
 .gallery {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 2rem;
+  justify-content: flex-start;
+  align-items: flex-start;
 }
 
 .gallery img {
-  width: 220px;
+  width: auto;              /* Originalbreite */
+  max-width: 100%;          /* aber nicht größer als der Container */
+  height: auto;             /* korrekte Proportionen */
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   transition: transform 0.2s ease-in-out;
@@ -184,7 +187,8 @@ h2 {
   }
 
   .gallery img {
-    width: 45%;
+    width: 100%;     /* auf kleinen Displays volle Breite */
+    max-width: 100%;
   }
 }
 
