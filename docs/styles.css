@@ -20,6 +20,18 @@
   <button id="themeToggle">Dark/Light</button>
 </nav>
 
+#logo {
+  height: 40px;
+  margin-right: 1rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease-in-out;
+}
+
+#logo:hover {
+  transform: scale(1.15);
+}
+
 <header>
   <h1>Notentisch – dein digitaler Notenständer</h1>
   <p>Ordnung statt Notenchaos – übersichtlich, flexibel und perfekt für deinen Übungsalltag.</p>
@@ -80,6 +92,23 @@
     spontane Sessions oder wenn du ein Stück im Kopf hast, aber den Titel nicht mehr weißt.
   </p>
 </section>
+
+/* Responsive */
+@media (max-width: 900px) {
+  .img-small, .img-left {
+    float: none;
+    display: block;
+    margin: 1rem auto;
+    width: 90%;
+    max-width: 350px;
+  }
+
+  /* Logo responsive */
+  #logo {
+    height: 32px;
+    margin-right: 0.5rem;
+  }
+}
 
 <footer>
   © 2026 Notentisch – GitHub Pages Version
