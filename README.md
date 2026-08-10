@@ -1,3 +1,14 @@
+## Einblick
+
+<p align="center">
+  <img src="Dokumentation/screenshots/Board0.jpg" alt="Notentisch Startansicht" width="100%" />
+</p>
+
+<p align="center">
+  <img src="Dokumentation/screenshots/%C3%9Cbersicht.jpg" alt="Uebersicht" width="32%" />
+  <img src="Dokumentation/screenshots/Konfig.jpg" alt="Konfiguration" width="32%" />
+  <img src="Dokumentation/screenshots/Advanced.jpg" alt="Advanced Einstellungen" width="32%" />
+</p>
 
 ## Installation & Schnellstart
 
@@ -149,7 +160,40 @@ Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. te
 - CDN-Einbindung von PDF.js bleibt ein Supply-Chain-Risiko (bei kompromittiertem externen CDN).
 - Admin-Setup bleibt ein bewusstes Betriebsmodell; daher Setup-Skripte nur aus vertrauenswuerdiger Quelle ausfuehren.
 - Energieprofil-Aenderungen durch `Notentisch.bat` koennen bei hartem Abbruch temporär bestehen bleiben, bis erneut sauber beendet oder manuell zurueckgesetzt wird.
+## Distribution & Troubleshooting (v2026.07.15)
 
+### Erkannte und behobene Bugs in der ZIP-Distribution
+
+**Bug 1: Doppeltes Terminal-Fenster beim Start**
+- **Ursache**: `Start-Notentisch.bat` startete das EXE mit `start "" Notentisch.exe` (neues Fenster) und endete mit `pause` (BAT-Fenster aktiv).
+- **Symptom**: User sah zwei geöffnete Fenster nach Ausführung.
+- **Behebung**: Start mit `start /B Notentisch.exe >nul 2>&1` (Hintergrund, kein neues Fenster) + Entfernung des finalen `pause` → nur kurz BAT-Fenster, schließt nach Browser-Öffnung automatisch.
+
+**Bug 2: Config-Buttons reagieren nicht**
+- **Ursache**: `config.html` lädt `pdf.js` CDN via `<script src="https://...">` **ohne `async`** → Rendering blockiert; bei fehlender Internet-Verbindung wartete der Browser bis zum CDN-Timeout (bis 60s) bevor JavaScript-Event-Listener registriert wurden.
+- **Symptom**: Buttons wie "Zurück zum Board", "Advanced", "Designs ✦" waren klickbar, aber nicht funktional (Listener nie gebunden).
+- **Behebung**: `<script async src="...">` hinzugefügt → PDF-Library lädt parallel, Buttons reagieren sofort.
+
+**Bug 3: Fehlende oder alte JS-Dateien im ZIP**
+- **Ursache**: Build-Skript kopierte nur explizit aufgelistete Dateien statt aus dem vollständigen `dist/` Verzeichnis → neue JS-Module wurden übersehen.
+- **Behebung**: `build_complete_package.ps1` geändert: Alle App-Dateien werden aus `dist/` kopiert; neue Dateien sind automatisch enthalten.
+
+### Download und Installation
+
+- **Publikation**: `docs/Notentisch-Complete-v2026.07.15.zip` (7.2 MB, PDF-frei)
+- **Separate Beispiel-PDFs**: `docs/Notentisch-Beispiel-PDFs-v2026.07.15.zip` (7.56 MB)
+- **Startoptionen**:
+  - Einfach: `Start-Notentisch.bat` doppelklicken (empfohlen)
+  - Alternativ: `Notentisch.vbs` doppelklicken (VB-Wrapper mit Optional-Setup auf erstem Start)
+
+### Bekannte Limitations und Workarounds
+
+- **Kein Internet während Start**: Wenn bei Entpacken/Start kein Internet verfügbar ist, schlägt die PDF.js-CDN-Einbindung fehl, aber die App läuft weiter (nur PDF-Rendering ist nicht verfügbar, alles andere funktioniert).
+- **Notentisch.exe Exit-Code 1**: Wenn das EXE nicht startet, prüfen:
+  1. Antivirussoftware oder Windows Defender können das EXE blockieren (Zugriff auf Temp-Ordner nötig).
+  2. PyInstaller extrahiert automatisch ins `%TEMP%`, daher Tempdir muss beschreibbar sein.
+  3. Ggf. `%TEMP%` leeren und erneut versuchen.
+- **Alte ZIP-Version nutzen**: Falls Probleme bleiben, zurückgreifen auf frühere Release und berichten.
 ## Funktionen
 
 - 4 Quadranten nach Arbeitsstatus:

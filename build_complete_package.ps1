@@ -102,6 +102,12 @@ Get-ChildItem -Path (Join-Path $repoRoot 'dist') -File |
     Where-Object { $_.Extension -ne '.exe' -and $_.Name -ne 'Start-Notentisch.bat' -and $_.Name -ne 'README.txt' } |
     Copy-Item -Destination "$packageDir\" -Force
 
+# Copy VBS wrapper (alternative starter)
+$vbsPath = Join-Path $repoRoot 'Notentisch.vbs'
+if (Test-Path $vbsPath) {
+    Copy-Item $vbsPath "$packageDir\" -Force
+}
+
 $samplePdfSourceDir = Join-Path $repoRoot $samplePdfFolderName
 $samplePdfs = @()
 if ($SamplePdfCount -gt 0) {
