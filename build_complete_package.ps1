@@ -97,9 +97,10 @@ if ($LASTEXITCODE -ne 0) {
 
 # Copy EXE to package
 Copy-Item (Join-Path $pyDistDir "Notentisch.exe") "$packageDir\" -Force
-Copy-Item "*.js" "$packageDir\" -Exclude "*.spec" -Force 2>$null
-Copy-Item "*.css" "$packageDir\" -Force 2>$null
-Copy-Item "board.html", "config.html", "presets.html", "advanced_config.html" "$packageDir\" -Force 2>$null
+# Copy all application files from dist/ (EXE and launcher are generated separately)
+Get-ChildItem -Path (Join-Path $repoRoot 'dist') -File |
+    Where-Object { $_.Extension -ne '.exe' -and $_.Name -ne 'Start-Notentisch.bat' -and $_.Name -ne 'README.txt' } |
+    Copy-Item -Destination "$packageDir\" -Force
 
 $samplePdfSourceDir = Join-Path $repoRoot $samplePdfFolderName
 $samplePdfs = @()
@@ -134,9 +135,8 @@ REM ===========================================
 
 cd /d "%~dp0"
 
-REM Start Notentisch server
-echo Starting Notentisch server...
-start "" Notentisch.exe
+REM Start Notentisch server in background (no extra window)
+start /B Notentisch.exe >nul 2>&1
 
 REM Wait until the one-file EXE has unpacked and the server is reachable.
 for /L %%I in (1,1,20) do (
@@ -151,8 +151,6 @@ exit /b 1
 
 :server_ready
 start "" "http://127.0.0.1:8000/board.html"
-
-pause
 "@
 
 [System.IO.File]::WriteAllText("$packageDir\Start-Notentisch.bat", $launcherContent, [System.Text.Encoding]::ASCII)
