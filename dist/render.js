@@ -868,7 +868,10 @@
 		tryFromBlaetterHandle().then(ok => {
 			if (ok) { finish(); return; }
 			tryNextPdf();
-		});imgElement, titel, pdfPath, onComplete = null) {
+		});
+	}
+
+	function loadCardImage(imgElement, titel, pdfPath, onComplete = null) {
 		let completed = false;
 		const finish = () => {
 			if (completed) return;
