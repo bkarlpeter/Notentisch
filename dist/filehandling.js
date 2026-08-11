@@ -486,6 +486,13 @@ async function openAndLoadXmlHandle(handle) {
     const xmlText = await file.text();
     applyLoadedXml(xmlText, file.name || handle.name, handle);
     await saveXmlDirectFileHandle(handle);
+    await promptBlaetterIfNeeded();
+}
+
+async function promptBlaetterIfNeeded() {
+    if (blaetterDirHandle || !window.showDirectoryPicker) return;
+    const ok = confirm('Blätter-Ordner noch nicht gewählt.\nJetzt den Ordner mit deinen PDF-Noten auswählen?');
+    if (ok) await pickBlaetterDir();
 }
 
 // ---------------------------------------------------------------------------
@@ -604,6 +611,9 @@ async function offerPdfImportIfMissing() {
         if (err && err.name !== 'AbortError') console.warn('PDF-Import abgebrochen:', err);
         return;
     }
+    // Denselben Ordner gleich als Blätter-Handle merken
+    blaetterDirHandle = dirHandle;
+    window.blaetterDirHandle = dirHandle;
 
     // Alle bekannten PDF-Dateinamen aus der XML sammeln (normalisiert)
     const knownFileNames = new Set();
