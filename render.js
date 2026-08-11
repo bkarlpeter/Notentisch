@@ -769,6 +769,35 @@
 		const paths = getPdfPathCandidates(pdfPath, titel);
 		let pathIndex = 0;
 
+		// Dateinamen aus Pfad-Kandidaten für blaetterDirHandle-Lookup
+		const uniqueNames = [...new Set(paths.map(p => p.split('/').pop()).filter(Boolean))];
+
+		async function tryFromBlaetterHandle() {
+			const handle = window.blaetterDirHandle;
+			if (!handle || typeof pdfjsLib === 'undefined') return false;
+			for (const fname of uniqueNames) {
+				try {
+					const fh = await handle.getFileHandle(fname);
+					const file = await fh.getFile();
+					const blobUrl = URL.createObjectURL(file);
+					try {
+						const pdf = await pdfjsLib.getDocument(blobUrl).promise;
+						const page = await pdf.getPage(1);
+						URL.revokeObjectURL(blobUrl);
+						const viewport = page.getViewport({ scale: 0.35 });
+						const canvas = document.createElement('canvas');
+						canvas.width = viewport.width;
+						canvas.height = viewport.height;
+						await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+						imgElement.style.backgroundImage = 'url("' + canvas.toDataURL('image/png') + '")';
+						imgElement.style.backgroundColor = '#fff';
+						return true;
+					} catch { URL.revokeObjectURL(blobUrl); }
+				} catch { /* Datei nicht im Handle */ }
+			}
+			return false;
+		}
+
 		function encodePath(pathValue) {
 			if (!pathValue) return '';
 			const safeDecode = (segment) => {
@@ -836,10 +865,10 @@
 				});
 		}
 
-		tryNextPdf();
-	}
-
-	function loadCardImage(imgElement, titel, pdfPath, onComplete = null) {
+		tryFromBlaetterHandle().then(ok => {
+			if (ok) { finish(); return; }
+			tryNextPdf();
+		});imgElement, titel, pdfPath, onComplete = null) {
 		let completed = false;
 		const finish = () => {
 			if (completed) return;
