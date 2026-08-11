@@ -694,6 +694,8 @@ async function handleLoadButton() {
         }
 
         try {
+            const statusEl = document.getElementById('commandStatus');
+            if (statusEl) statusEl.textContent = 'XML-Datei wählen — oder Abbrechen für automatische Erstellung aus PDF-Ordner';
             const [pickedHandle] = await window.showOpenFilePicker({
                 multiple: false,
                 types: [{
