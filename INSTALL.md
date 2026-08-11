@@ -1,6 +1,31 @@
 # DIGITALER NOTENTISCH - INSTALLATION
 
-## Schnellstart
+## Erststart aus dem ZIP-Download
+
+### Was automatisch passiert
+1. `Start-Notentisch.bat` doppelklicken – der Server (`Notentisch.exe`) startet im Hintergrund, kein extra Fenster.
+2. Sobald der Server bereit ist, öffnet sich `board.html` automatisch im Browser.
+3. Die App ist zunächst leer – noch kein XML, noch kein Blätter-Verzeichnis.
+
+### Schritt 1 – Noten laden
+Klicke auf **LADEN**:
+- **XML vorhanden?** → Datei auswählen, Board lädt sofort.
+- **Noch kein XML?** → Dialog abbrechen → App fragt, ob XML automatisch aus einem PDF-Ordner erstellt werden soll → **Ja** → PDF-Ordner wählen → XML wird aus den Dateinamen erzeugt.
+
+### Schritt 2 – Verzeichnisse einrichten (einmalig pro Browser-Session)
+Gehe in der App: **Config → Advanced → Verzeichnisse**
+
+| Verzeichnis | Bedeutung | Pflicht? |
+|---|---|---|
+| **Blätter** | Dein PDF-Ordner (Noten-Vollanzeige im Center) | Ja |
+| **Cards_Export** | Vorschaubilder-Ordner | Optional |
+| **Werkstatt** | Eigene Design-Muster | Optional |
+
+> **Hinweis:** Browser erlauben keinen dauerhaften Dateisystem-Zugriff. Die gepickten Ordner gelten nur für die aktuelle Browser-Session und müssen nach einem Neustart einmalig neu gewählt werden.
+
+---
+
+## Schnellstart (Repository / Entwicklung)
 1. Projektordner auf neuen Windows-Rechner kopieren
 2. Doppelklick auf `Notentisch.bat`
 3. Browser öffnet: [http://localhost:8000/board.html](http://localhost:8000/board.html)

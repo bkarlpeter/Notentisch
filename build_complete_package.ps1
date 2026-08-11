@@ -239,7 +239,7 @@ Write-Host "  [OK] Quick reference created" -ForegroundColor Green
 # ============================================
 Write-Host "`n[BONUS] Copying documentation..." -ForegroundColor Yellow
 
-$docsToCopy = @("README.md", "changelog.md", "LICENSE.txt")
+$docsToCopy = @("README.md", "changelog.md", "LICENSE.txt", "INSTALL.md")
 foreach ($doc in $docsToCopy) {
     $docPath = Join-Path $repoRoot $doc
     if (Test-Path $docPath) {
