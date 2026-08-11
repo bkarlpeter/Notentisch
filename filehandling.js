@@ -645,14 +645,15 @@ async function importPdfsFromHandle(dirHandle) {
 // ---------------------------------------------------------------------------
 async function offerPdfImportIfMissing() {
     if (!window.showDirectoryPicker) return;
+    // Banner statt confirm() — direkter Klick gibt valide User-Geste für showDirectoryPicker
+    const hint = document.getElementById('xmlImportHint');
+    if (hint) hint.style.display = 'block';
+}
 
-    const isFresh = !xmlData || xmlData.querySelectorAll('NotenTisch, Notentisch').length === 0;
-    const msg = isFresh
-        ? 'Kein XML gew\u00e4hlt. Soll eine neue XML aus einem PDF-Ordner erstellt werden?'
-        : 'Sollen neue PDFs aus dem Bl\u00e4tter-Ordner als Eintr\u00e4ge erg\u00e4nzt werden?\n\n(Nur fehlende Titel werden hinzugef\u00fcgt \u2013 vorhandene Eintr\u00e4ge bleiben unver\u00e4ndert.)';
-
-    if (!confirm(msg)) return;
-
+async function startXmlImportFromFolder() {
+    const hint = document.getElementById('xmlImportHint');
+    if (hint) hint.style.display = 'none';
+    if (!window.showDirectoryPicker) return;
     let dirHandle;
     try {
         dirHandle = await window.showDirectoryPicker({ mode: 'read' });
