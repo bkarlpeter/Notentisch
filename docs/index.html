@@ -160,12 +160,34 @@
 
   <h3>Nach dem Download</h3>
   <ol>
-    <li>Entpacke <strong>Notentisch-Complete-v2026.07.15.zip</strong> in einen beliebigen Ordner (z. B. <code>C:\\Notentisch</code>).</li>
-    <li>Starte <strong>Start-Notentisch.bat</strong> – damit werden der lokale Server und die Anwendung geöffnet.</li>
-    <li>Falls Windows die Ausführung blockiert, bestätige die Sicherheitsabfrage mit „Trotzdem ausführen“.</li>
-    <li>Lege deine PDFs im Ordner <strong>Blätter</strong> ab und lade anschließend deine Notentisch-XML in der Anwendung.</li>
+    <li>Entpacke <strong>Notentisch-Complete-v2026.07.15.zip</strong> in einen beliebigen Ordner (z. B. <code>C:\Notentisch</code>).</li>
+    <li>Starte <strong>Start-Notentisch.bat</strong> – der Server startet im Hintergrund, der Browser öffnet sich automatisch.</li>
+    <li>Falls Windows die Ausführung blockiert, bestätige die Sicherheitsabfrage mit „Trotzdem ausführen".</li>
     <li>Die zum Start benötigten Programmdateien sind bereits im ZIP enthalten – eine Python-Installation ist nicht erforderlich.</li>
   </ol>
+
+  <h3>Erststart – was passiert automatisch?</h3>
+  <p>
+    Beim ersten Start ist die App leer: noch kein XML, noch kein Blätter-Verzeichnis.
+    Klicke auf <strong>LADEN</strong>. Du wirst durch folgende Schritte geführt:
+  </p>
+  <ol>
+    <li><strong>Kein XML vorhanden?</strong> Dialog abbrechen → die App fragt, ob aus einem PDF-Ordner automatisch eine XML erstellt werden soll → <em>Ja</em> → PDF-Ordner wählen → XML wird sofort aus den Dateinamen erzeugt.</li>
+    <li><strong>XML vorhanden?</strong> Datei auswählen – das Board lädt direkt.</li>
+  </ol>
+
+  <h3>Nach dem ersten Laden – Einstellungen in Advanced Config</h3>
+  <p>
+    Gehe in der App auf <strong>Config → Advanced</strong> und stelle unter <em>Verzeichnisse</em> folgende Ordner ein:
+  </p>
+  <ul>
+    <li><strong>Blätter</strong> – dein PDF-Ordner (für die Vollanzeige der Noten im Center)</li>
+    <li><strong>Cards_Export</strong> – Vorschaubilder-Ordner (optional, für schnellere Kartendarstellung)</li>
+    <li><strong>Werkstatt</strong> – Ordner für eigene Design-Muster (optional)</li>
+  </ul>
+  <p>
+    Da Browser keinen dauerhaften Dateisystem-Zugriff erlauben, müssen die Ordner nach einem Browser-Neustart einmalig neu gewählt werden.
+  </p>
 
   <p>
     Weitere Hinweise findest du im <strong>README.md</strong> im Repository.

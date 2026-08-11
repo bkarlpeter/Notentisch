@@ -16,6 +16,23 @@
 
 👉 Für den Access/XML-Austausch siehe [Zusammenarbeit Access-HTML.md](Zusammenarbeit%20Access-HTML.md) (aktueller Stand in der Datei).
 
+### Erststart aus dem ZIP-Download
+
+**Was beim ersten Start automatisch passiert:**
+1. `Start-Notentisch.bat` startet den lokalen Server (`Notentisch.exe`) im Hintergrund – kein extra Fenster.
+2. Sobald der Server bereit ist, öffnet sich `board.html` automatisch im Browser.
+3. Die App ist leer – es liegt noch kein XML und kein Blätter-Verzeichnis vor.
+
+**Was du beim ersten Mal tun musst:**
+1. Klick auf **LADEN** – es öffnet sich ein Datei-Dialog für deine XML.
+2. Wenn du noch kein XML hast: Dialog abbrechen → die App fragt, ob aus einem PDF-Ordner automatisch ein XML erstellt werden soll → **Ja** → Ordner mit deinen PDFs wählen → XML wird sofort aus den Dateinamen erzeugt.
+3. Anschließend in der App auf den **Advanced-Button** (oben rechts in Config) gehen und unter **Verzeichnisse** die Ordner einmalig picken:
+   - **Blätter** – dein PDF-Ordner (für Vollanzeige der Noten)
+   - **Cards_Export** – Ordner für Vorschaubilder (optional)
+   - **Werkstatt** – Ordner für eigene Design-Muster (optional)
+
+> Die gepickten Verzeichnisse gelten für die laufende Session. Da Browser keinen dauerhaften Dateisystem-Zugriff erlauben, muss das Picken nach einem Browser-Neustart einmalig wiederholt werden.
+
 ## Inhaltsverzeichnis
 
 - [Projekt-Funktions-Check (Test der Umgebung)](#projekt-funktions-check-test-der-umgebung)
