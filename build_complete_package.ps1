@@ -83,12 +83,6 @@ $pyiCmd = if (Test-Path $venvPython) { @($venvPython, '-m', 'PyInstaller') } els
     --workpath "$pyWorkDir" `
     --specpath "$pySpecPath" `
     --name "Notentisch" `
-    --add-data "$(Join-Path $repoRoot 'board.html');." `
-    --add-data "$(Join-Path $repoRoot 'config.html');." `
-    --add-data "$(Join-Path $repoRoot 'advanced_config.html');." `
-    --add-data "$(Join-Path $repoRoot 'presets.html');." `
-    --add-data "$(Join-Path $repoRoot 'board-presets.css');." `
-    --add-data "$(Join-Path $repoRoot 'board-presets.js');." `
     local_server.py
 
 if ($LASTEXITCODE -ne 0) {
