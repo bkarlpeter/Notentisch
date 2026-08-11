@@ -511,6 +511,9 @@ async function pickBlaetterDir() {
         updateDirDisplay();
         const hint = document.getElementById('blaetterHint');
         if (hint) hint.style.display = 'none';
+        // Wenn noch keine XML-Einträge vorhanden, direkt aus diesem Ordner importieren
+        const entryCount = xmlData ? xmlData.querySelectorAll('NotenTisch, Notentisch').length : 0;
+        if (entryCount === 0) await importPdfsFromHandle(handle);
     } catch (err) {
         if (err && err.name !== 'AbortError') console.warn('Blätter-Verzeichnis Fehler:', err);
     }
@@ -573,23 +576,12 @@ function updateDirDisplay() {
 window.addEventListener('load', updateDirDisplay);
 
 // ---------------------------------------------------------------------------
-// Optionaler PDF-Import: erzeugt eine neue XML aus einem Blätter-Ordner oder
-// ergänzt fehlende Einträge. Wird nur aufgerufen wenn kein XML geladen wurde.
+// PDF-Import aus einem bereits bekannten DirHandle (kein erneuter Picker)
 // ---------------------------------------------------------------------------
-async function offerPdfImportIfMissing() {
-    if (!window.showDirectoryPicker) return; // API nicht verfügbar
-
-    const isFresh = !xmlData;
-    const msg = isFresh
-        ? 'Kein XML gewählt. Soll eine neue XML aus einem PDF-Ordner erstellt werden?'
-        : 'Sollen neue PDFs aus dem Blätter-Ordner als Einträge ergänzt werden?\n\n(Nur fehlende Titel werden hinzugefügt – vorhandene Einträge bleiben unverändert.)';
-
-    const doImport = confirm(msg);
-    if (!doImport) return;
-
-    // Frische XML-Struktur anlegen wenn noch keine vorhanden
+async function importPdfsFromHandle(dirHandle) {
+    const isFresh = !xmlData || xmlData.querySelectorAll('NotenTisch, Notentisch').length === 0;
     if (isFresh) {
-        const timestamp = new Date().toISOString().replace('T', 'T').slice(0, 19);
+        const timestamp = new Date().toISOString().slice(0, 19);
         const parser = new DOMParser();
         xmlData = parser.parseFromString(
             '<?xml version="1.0" encoding="UTF-8"?><dataroot xmlns:od="urn:schemas-microsoft-com:officedata" generated="' + timestamp + '"></dataroot>',
@@ -600,30 +592,16 @@ async function offerPdfImportIfMissing() {
         xmlFileHandle = null;
     }
 
-    let dirHandle;
-    try {
-        dirHandle = await window.showDirectoryPicker({ mode: 'read' });
-    } catch (err) {
-        if (err && err.name !== 'AbortError') console.warn('PDF-Import abgebrochen:', err);
-        return;
-    }
-    // Denselben Ordner gleich als Blätter-Handle merken
-    blaetterDirHandle = dirHandle;
-    window.blaetterDirHandle = dirHandle;
-
-    // Alle bekannten PDF-Dateinamen aus der XML sammeln (normalisiert)
     const knownFileNames = new Set();
     xmlData.querySelectorAll('NotenTisch, Notentisch').forEach(node => {
         const sp = node.querySelector('Speicherort')?.textContent || '';
         sp.split('#').forEach(part => {
             const p = part.trim();
-            if (p.toLowerCase().endsWith('.pdf')) {
+            if (p.toLowerCase().endsWith('.pdf'))
                 knownFileNames.add(p.split(/[\\/]/).pop().toLowerCase().trim());
-            }
         });
     });
 
-    // PDFs im gewählten Ordner einlesen
     const newEntries = [];
     let maxId = 0;
     xmlData.querySelectorAll('NotenTisch, Notentisch').forEach(node => {
@@ -635,33 +613,59 @@ async function offerPdfImportIfMissing() {
         if (entry.kind !== 'file') continue;
         if (!entry.name.toLowerCase().endsWith('.pdf')) continue;
         if (knownFileNames.has(entry.name.toLowerCase().trim())) continue;
-
         const title = entry.name.replace(/\.pdf$/i, '');
-        // Speicherort: Titel#Dateiname.pdf# (relativ, da Vollpfad im Browser unbekannt)
         const speicherort = title + '#' + entry.name + '#';
-
         maxId++;
         const node = xmlData.createElement('NotenTisch');
         node.innerHTML =
             '<NotID>' + maxId + '</NotID>' +
             '<Arbeitsstatus>zur\u00fcckgestellt</Arbeitsstatus>' +
-            '<Titel>' + title.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</Titel>' +
+            '<Titel>' + title.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</Titel>' +
             '<zuletztgespielt/>' +
-            '<Speicherort>' + speicherort.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</Speicherort>';
+            '<Speicherort>' + speicherort.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</Speicherort>';
         newEntries.push(node);
     }
 
     if (newEntries.length === 0) {
-        alert('Keine neuen PDFs gefunden – alle sind bereits in der XML enthalten.');
+        alert('Keine neuen PDFs gefunden \u2013 alle sind bereits in der XML enthalten.');
         return;
     }
 
     const root = xmlData.documentElement;
     newEntries.forEach(n => root.appendChild(n));
     getRenderApi()?.resetCardRenderCache();
+    getRenderApi()?.resetQuadrantOffsets();
     getRenderApi()?.renderBoard();
     markUnsavedChange();
-    alert(newEntries.length + ' neue Einträge hinzugefügt. Bitte XML speichern.');
+    alert(newEntries.length + ' neue Eintr\u00e4ge hinzugef\u00fcgt. Bitte XML speichern.');
+}
+
+// ---------------------------------------------------------------------------
+// Optionaler PDF-Import: fragt Ordner ab und ruft importPdfsFromHandle
+// ---------------------------------------------------------------------------
+async function offerPdfImportIfMissing() {
+    if (!window.showDirectoryPicker) return;
+
+    const isFresh = !xmlData || xmlData.querySelectorAll('NotenTisch, Notentisch').length === 0;
+    const msg = isFresh
+        ? 'Kein XML gew\u00e4hlt. Soll eine neue XML aus einem PDF-Ordner erstellt werden?'
+        : 'Sollen neue PDFs aus dem Bl\u00e4tter-Ordner als Eintr\u00e4ge erg\u00e4nzt werden?\n\n(Nur fehlende Titel werden hinzugef\u00fcgt \u2013 vorhandene Eintr\u00e4ge bleiben unver\u00e4ndert.)';
+
+    if (!confirm(msg)) return;
+
+    let dirHandle;
+    try {
+        dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+    } catch (err) {
+        if (err && err.name !== 'AbortError') console.warn('PDF-Import abgebrochen:', err);
+        return;
+    }
+    blaetterDirHandle = dirHandle;
+    window.blaetterDirHandle = dirHandle;
+    const hint = document.getElementById('blaetterHint');
+    if (hint) hint.style.display = 'none';
+
+    await importPdfsFromHandle(dirHandle);
 }
 
 async function handleLoadButton() {
