@@ -486,13 +486,10 @@ async function openAndLoadXmlHandle(handle) {
     const xmlText = await file.text();
     applyLoadedXml(xmlText, file.name || handle.name, handle);
     await saveXmlDirectFileHandle(handle);
-    await promptBlaetterIfNeeded();
-}
-
-async function promptBlaetterIfNeeded() {
-    if (blaetterDirHandle || !window.showDirectoryPicker) return;
-    const ok = confirm('Blätter-Ordner noch nicht gewählt.\nJetzt den Ordner mit deinen PDF-Noten auswählen?');
-    if (ok) await pickBlaetterDir();
+    if (!blaetterDirHandle) {
+        const hint = document.getElementById('blaetterHint');
+        if (hint) hint.style.display = 'block';
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -512,9 +509,8 @@ async function pickBlaetterDir() {
         blaetterDirHandle = handle;
         window.blaetterDirHandle = handle;
         updateDirDisplay();
-        // Button-Label aktualisieren
-        const btn = document.getElementById('blaetterPickBtn');
-        if (btn) btn.textContent = '\uD83D\uDCC1 ' + handle.name;
+        const hint = document.getElementById('blaetterHint');
+        if (hint) hint.style.display = 'none';
     } catch (err) {
         if (err && err.name !== 'AbortError') console.warn('Blätter-Verzeichnis Fehler:', err);
     }
