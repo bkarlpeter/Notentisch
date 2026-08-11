@@ -497,7 +497,7 @@ let werkstattDirHandle = null;
 
 async function pickBlaetterDir() {
     if (!window.showDirectoryPicker) {
-        alert('Dein Browser unterstützt Directory Picker nicht.');
+        alert('Dein Browser unterstützt Directory Picker nicht (Chrome/Edge verwenden).');
         return;
     }
     try {
@@ -505,8 +505,18 @@ async function pickBlaetterDir() {
         blaetterDirHandle = handle;
         window.blaetterDirHandle = handle;
         updateDirDisplay();
+        // Button-Label aktualisieren
+        const btn = document.getElementById('blaetterPickBtn');
+        if (btn) btn.textContent = '\uD83D\uDCC1 ' + handle.name;
     } catch (err) {
         if (err && err.name !== 'AbortError') console.warn('Blätter-Verzeichnis Fehler:', err);
+    }
+}
+
+async function pickBlaetterDirAndRetry(pdfPath) {
+    await pickBlaetterDir();
+    if (window.blaetterDirHandle && typeof showPdfPages === 'function') {
+        showPdfPages(pdfPath);
     }
 }
 

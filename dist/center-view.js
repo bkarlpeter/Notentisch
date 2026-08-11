@@ -737,10 +737,17 @@ function showPdfPages(pdfPath, options = {}) {
 
     function tryLoadPdf() {
         if (pathIndex >= paths.length) {
-            console.error('PDF nicht erreichbar');
             const centerContainer = document.getElementById('center-content');
             if (centerContainer) {
-                centerContainer.innerHTML = '<div style="text-align:center; padding:20px;"><p>PDF nicht erreichbar</p><p style="font-size:10px; color:#999;">Pfad: ' + actualPath + '</p><button onclick="selectPdfManually()" style="padding:10px 20px; background:#3498db; color:white; border:none; border-radius:4px; cursor:pointer;">PDF öffnen</button></div>';
+                const hasHandle = !!window.blaetterDirHandle;
+                centerContainer.innerHTML = '<div style="text-align:center;padding:20px;">' +
+                    '<p>PDF nicht erreichbar</p>' +
+                    '<p style="font-size:11px;color:#999;">' + actualPath + '</p>' +
+                    (!hasHandle
+                        ? '<button onclick="pickBlaetterDirAndRetry(' + JSON.stringify(rawPath) + ')" style="padding:10px 20px;background:#27ae60;color:white;border:none;border-radius:4px;cursor:pointer;margin:4px;">Blätter-Ordner wählen</button>'
+                        : '') +
+                    '<button onclick="selectPdfManually()" style="padding:10px 20px;background:#3498db;color:white;border:none;border-radius:4px;cursor:pointer;margin:4px;">PDF direkt öffnen</button>' +
+                    '</div>';
             }
             return;
         }
