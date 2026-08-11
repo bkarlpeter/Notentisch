@@ -503,6 +503,7 @@ async function pickBlaetterDir() {
     try {
         const handle = await window.showDirectoryPicker({ mode: 'read' });
         blaetterDirHandle = handle;
+        window.blaetterDirHandle = handle;
         updateDirDisplay();
     } catch (err) {
         if (err && err.name !== 'AbortError') console.warn('Blätter-Verzeichnis Fehler:', err);

@@ -709,6 +709,32 @@ function showPdfPages(pdfPath, options = {}) {
 
     let pathIndex = 0;
 
+    // Try loading directly from picked blaetterDirHandle (File System Access API)
+    async function tryLoadFromDirectHandle() {
+        const handle = window.blaetterDirHandle;
+        if (!handle || typeof pdfjsLib === 'undefined') return false;
+        for (const fname of uniqueFileNames) {
+            try {
+                const fh = await handle.getFileHandle(fname);
+                const file = await fh.getFile();
+                const blobUrl = URL.createObjectURL(file);
+                try {
+                    const pdf = await pdfjsLib.getDocument(blobUrl).promise;
+                    URL.revokeObjectURL(blobUrl);
+                    currentPdfDoc = pdf;
+                    totalPages = pdf.numPages;
+                    currentPageOffset = Math.min(currentPageOffset, Math.max(0, totalPages - 1));
+                    renderPdfPages();
+                    updateCenterFilenameLabel(currentPdfPath);
+                    return true;
+                } catch {
+                    URL.revokeObjectURL(blobUrl);
+                }
+            } catch { /* file not in handle, try next name */ }
+        }
+        return false;
+    }
+
     function tryLoadPdf() {
         if (pathIndex >= paths.length) {
             console.error('PDF nicht erreichbar');
@@ -736,7 +762,7 @@ function showPdfPages(pdfPath, options = {}) {
         });
     }
 
-    tryLoadPdf();
+    tryLoadFromDirectHandle().then(ok => { if (!ok) tryLoadPdf(); });
 }
 
 function selectPdfManually() {
