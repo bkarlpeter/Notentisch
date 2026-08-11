@@ -489,6 +489,76 @@ async function openAndLoadXmlHandle(handle) {
 }
 
 // ---------------------------------------------------------------------------
+// Verzeichnis-Management: User kann Blätter, Cards_Export, Werkstatt picken
+// ---------------------------------------------------------------------------
+let blaetterDirHandle = null;
+let cardsExportDirHandle = null;
+let werkstattDirHandle = null;
+
+async function pickBlaetterDir() {
+    if (!window.showDirectoryPicker) {
+        alert('Dein Browser unterstützt Directory Picker nicht.');
+        return;
+    }
+    try {
+        const handle = await window.showDirectoryPicker({ mode: 'read' });
+        blaetterDirHandle = handle;
+        updateDirDisplay();
+    } catch (err) {
+        if (err && err.name !== 'AbortError') console.warn('Blätter-Verzeichnis Fehler:', err);
+    }
+}
+
+async function pickCardsExportDir() {
+    if (!window.showDirectoryPicker) {
+        alert('Dein Browser unterstützt Directory Picker nicht.');
+        return;
+    }
+    try {
+        const handle = await window.showDirectoryPicker({ mode: 'read' });
+        cardsExportDirHandle = handle;
+        updateDirDisplay();
+    } catch (err) {
+        if (err && err.name !== 'AbortError') console.warn('Cards-Verzeichnis Fehler:', err);
+    }
+}
+
+async function pickWerkstattDir() {
+    if (!window.showDirectoryPicker) {
+        alert('Dein Browser unterstützt Directory Picker nicht.');
+        return;
+    }
+    try {
+        const handle = await window.showDirectoryPicker({ mode: 'read' });
+        werkstattDirHandle = handle;
+        updateDirDisplay();
+    } catch (err) {
+        if (err && err.name !== 'AbortError') console.warn('Werkstatt-Verzeichnis Fehler:', err);
+    }
+}
+
+function updateDirDisplay() {
+    const blaetterEl = document.getElementById('blaetterDirDisplay');
+    const cardsEl = document.getElementById('cardsExportDirDisplay');
+    const werkstattEl = document.getElementById('werkstattDirDisplay');
+
+    if (blaetterEl) {
+        blaetterEl.textContent = blaetterDirHandle ? ('📁 ' + blaetterDirHandle.name) : '(nicht gewählt)';
+        blaetterEl.style.color = blaetterDirHandle ? '#52be80' : '#888';
+    }
+    if (cardsEl) {
+        cardsEl.textContent = cardsExportDirHandle ? ('📁 ' + cardsExportDirHandle.name) : '(nicht gewählt)';
+        cardsEl.style.color = cardsExportDirHandle ? '#52be80' : '#888';
+    }
+    if (werkstattEl) {
+        werkstattEl.textContent = werkstattDirHandle ? ('📁 ' + werkstattDirHandle.name) : '(nicht gewählt)';
+        werkstattEl.style.color = werkstattDirHandle ? '#52be80' : '#888';
+    }
+}
+
+window.addEventListener('load', updateDirDisplay);
+
+// ---------------------------------------------------------------------------
 // Optionaler PDF-Import: erzeugt eine neue XML aus einem Blätter-Ordner oder
 // ergänzt fehlende Einträge. Wird nur aufgerufen wenn kein XML geladen wurde.
 // ---------------------------------------------------------------------------
