@@ -3,25 +3,19 @@
 ## Erststart aus dem ZIP-Download
 
 ### Was automatisch passiert
-1. `Start-Notentisch.bat` doppelklicken – der Server (`Notentisch.exe`) startet im Hintergrund, kein extra Fenster.
+1. `Notentisch.bat` doppelklicken – der Server (`Notentisch.exe`) startet im Hintergrund, kein extra Fenster.
 2. Sobald der Server bereit ist, öffnet sich `board.html` automatisch im Browser.
-3. Die App ist zunächst leer – noch kein XML, noch kein Blätter-Verzeichnis.
+3. Die App ist zunächst leer – noch kein XML.
 
 ### Schritt 1 – Noten laden
 Klicke auf **LADEN**:
 - **XML vorhanden?** → Datei auswählen, Board lädt sofort.
-- **Noch kein XML?** → Dialog abbrechen → App fragt, ob XML automatisch aus einem PDF-Ordner erstellt werden soll → **Ja** → PDF-Ordner wählen → XML wird aus den Dateinamen erzeugt.
+- **Noch kein XML?** → Dialog abbrechen → App fragt, ob XML automatisch aus einem PDF-Ordner erstellt werden soll → **Ja** → PDF-Ordner wählen (z.B. `c:/meinverzeichnis/Blätter`) → XML wird aus den Dateinamen erzeugt.
 
-### Schritt 2 – Verzeichnisse einrichten (einmalig pro Browser-Session)
-Gehe in der App: **Config → Advanced → Verzeichnisse**
-
-| Verzeichnis | Bedeutung | Pflicht? |
-|---|---|---|
-| **Blätter** | Dein PDF-Ordner (Noten-Vollanzeige im Center) | Ja |
-| **Cards_Export** | Vorschaubilder-Ordner | Optional |
-| **Werkstatt** | Eigene Design-Muster | Optional |
-
-> **Hinweis:** Browser erlauben keinen dauerhaften Dateisystem-Zugriff. Die gepickten Ordner gelten nur für die aktuelle Browser-Session und müssen nach einem Neustart einmalig neu gewählt werden.
+### Schritt 2 – Voraussetzungen prüfen
+- Der PDF-Ordner muss als fester Pfad `Blätter/` vorhanden sein, typischerweise als Junction auf deinen lokalen Notenbestand.
+- Für Kartenbilder und den PDF-basierten Fallback braucht das Projekt Poppler, konkret `pdfimages.exe`. Das ZIP-Paket liefert `poppler-25.12.0/` lokal mit; beim Erstellen des Pakets muss dieser Ordner im Projekt vorhanden sein.
+- Es gibt keine Verzeichnis-Picker mehr in der Config; die Pfade werden über die Projekt-/Setup-Struktur festgelegt.
 
 ---
 
@@ -70,6 +64,7 @@ Falls "Blätter" auf dem Zielrechner nicht funktioniert (z.B. alte Junction):
 
 Optionaler Konfigwert (Advanced/User-Config): `pdfBaseDir`
 - Erlaubte Werte: `Blätter`, `Noten/Blätter`, `Noten`
+- Empfehlung für den Standardfall: `Blätter`
 
 ### 4. App starten
 **Variante A (empfohlen):**
@@ -84,10 +79,30 @@ Optionaler Konfigwert (Advanced/User-Config): `pdfBaseDir`
 1. In der App auf "LADEN" klicken
 2. XML-Datei auswählen → Karten erscheinen in den Quadranten
 
-**Noch keine XML vorhanden?** Beim Abbrechen des Datei-Dialogs erscheint ein Angebot, eine neue XML direkt aus einem PDF-Ordner zu erstellen. Alternativ:
+**Noch keine XML vorhanden?** Beim Abbrechen des Datei-Dialogs erscheint ein Angebot, eine neue XML direkt aus einem PDF-Ordner zu erstellen.
+
+### 5a. XML per PowerShell eindeutig erzeugen (empfohlen)
+Diese Schritte sind bewusst eindeutig und mit Dummy-Pfad dokumentiert.
+
+1. Projektordner öffnen und in PowerShell wechseln
+2. XML gezielt erzeugen
+
 ```powershell
-.\create_xml_from_pdfs.ps1 -PdfDir "C:\Pfad\zu\PDFs" -OutputXml "Notentisch.xml"
+Set-Location "c:/meinverzeichnis"
+.\create_xml_from_pdfs.ps1 -PdfDir "c:/meinverzeichnis/Blätter" -OutputXml "c:/meinverzeichnis/Blätter/Notentisch.xml"
 ```
+
+3. Prüfen, ob die Datei wirklich geschrieben wurde
+
+```powershell
+Get-Item "c:/meinverzeichnis/Blätter/Notentisch.xml" | Select-Object FullName, LastWriteTime, Length
+```
+
+4. Notentisch neu starten und genau diese XML laden
+
+Wichtig:
+- Wenn du einen Testbestand nutzt, immer den Testpfad einsetzen (z.B. `c:/meinverzeichnis`) und nicht die Hauptinstallation.
+- So vermeidest du, dass versehentlich die falsche XML geändert wird.
 
 ---
 
@@ -162,7 +177,7 @@ Du kannst das Skript jederzeit erneut ausführen, falls du die Ordnerstruktur od
 
 **Problem:** Keine Kartenbilder
 - `.\extract_cards.ps1` ausführen
-- Poppler-Pfad prüfen (siehe Optional)
+- Poppler-Pfad prüfen (siehe Optional); `pdfimages.exe` muss verfügbar sein
 
 **Problem:** Mikrofon wird nicht abgefragt (Audio Auto)
 - Browser-Berechtigung für Mikrofon prüfen

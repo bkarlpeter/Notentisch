@@ -32,6 +32,11 @@ $excludeFilePatterns = @(
     '*.bak',
     '*.tmp'
 )
+$popplerDir = Join-Path $repoRoot 'poppler-25.12.0'
+
+if (-not (Test-Path $popplerDir)) {
+    throw "Poppler-Ordner nicht gefunden: $popplerDir"
+}
 
 if (-not (Test-Path $releaseDir)) {
     New-Item -ItemType Directory -Path $releaseDir | Out-Null

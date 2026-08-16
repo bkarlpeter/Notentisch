@@ -269,7 +269,8 @@ function applyLayoutPreset(preset) {
 function applyCenterAppearance() {
     const centerContainer = document.getElementById('center-content');
     if (!centerContainer) return;
-    centerContainer.style.background = 'rgba(52, 152, 219, 0.12)';
+    centerContainer.style.border = 'none';
+    centerContainer.style.boxShadow = 'none';
 }
 
 function applyPageInfoTone(tone) {

@@ -11,7 +11,7 @@
 #>
 
 param(
-    [string]$Version = "v2026.07.09",
+    [string]$Version = "v2026.08.14",
     [string]$OutputDir = "dist/access",
     [int]$SamplePdfCount = 0,
     [int]$SeparateSamplePdfCount = 10
@@ -29,6 +29,8 @@ $samplePdfPackageName = "Notentisch-Beispiel-PDFs-$Version"
 $samplePdfPackageDir = Join-Path $releaseDir $samplePdfPackageName
 $samplePdfZipPath = Join-Path $releaseDir "$samplePdfPackageName.zip"
 $samplePdfFolderName = 'Bl' + [char]0x00E4 + 'tter'
+$popplerSourceDir = Join-Path $repoRoot 'poppler-25.12.0'
+$popplerTargetDir = Join-Path $packageDir 'poppler-25.12.0'
 
 Write-Host "=== Building Notentisch Standalone Package ===" -ForegroundColor Green
 Write-Host "Version: $Version`n" -ForegroundColor Cyan
@@ -48,6 +50,10 @@ if (Test-Path $samplePdfZipPath) {
 }
 
 New-Item -ItemType Directory -Path $packageDir | Out-Null
+
+if (-not (Test-Path $popplerSourceDir)) {
+    throw "Poppler-Ordner nicht gefunden: $popplerSourceDir"
+}
 
 # ============================================
 # 1. Build Standalone EXE
@@ -95,6 +101,10 @@ Copy-Item (Join-Path $pyDistDir "Notentisch.exe") "$packageDir\" -Force
 Get-ChildItem -Path (Join-Path $repoRoot 'dist') -File |
     Where-Object { $_.Extension -ne '.exe' -and $_.Name -ne 'Start-Notentisch.bat' -and $_.Name -ne 'README.txt' } |
     Copy-Item -Destination "$packageDir\" -Force
+
+Copy-Item (Join-Path $repoRoot 'styles.css') $packageDir -Force
+
+Copy-Item -Recurse -Force $popplerSourceDir $packageDir
 
 # Copy VBS wrapper (alternative starter)
 $vbsPath = Join-Path $repoRoot 'Notentisch.vbs'
@@ -153,64 +163,14 @@ exit /b 1
 start "" "http://127.0.0.1:8000/board.html"
 "@
 
-[System.IO.File]::WriteAllText("$packageDir\Start-Notentisch.bat", $launcherContent, [System.Text.Encoding]::ASCII)
+[System.IO.File]::WriteAllText("$packageDir\Notentisch.bat", $launcherContent, [System.Text.Encoding]::ASCII)
 
 Write-Host "  [OK] Launcher script created" -ForegroundColor Green
 
 # ============================================
-# 3. Create installation/setup document
+# 3. Add quick reference
 # ============================================
-Write-Host "[3/4] Creating installation guide..." -ForegroundColor Yellow
-
-$readmeContent = @"
-# Notentisch Complete Package - Installation Guide
-
-## What's included
-- **Notentisch.exe**: Standalone note viewer (board.html)
-- **Web assets**: HTML/CSS/JS for board/config views
-- **Sample PDFs**: $($samplePdfs.Count) example scores (available separately when not included)
-- **Launcher script**: Quick start batch file
-
-## Requirements
-- Windows 7 or later
-
-## Installation
-
-1. Extract all files to a folder (e.g., C:\Notentisch)
-
-2. Double-click **Start-Notentisch.bat**
-
-## First Use
-
-### For Note Viewing:
-1. Run Start-Notentisch.bat
-2. Browser opens automatically to http://127.0.0.1:8000/board.html
-3. Displays the note board interface
-
-## Troubleshooting
-
-**"Notentisch.exe won't start"**
--> Check Windows Defender, may need to allow through firewall
-
-**"Browser opens but page does not load"**
--> Ensure port 8000 is free and not blocked by another app.
-
-## Support
-For issues or questions, check the project repository.
-
----
-Version: $Version
-Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-"@
-
-$readmeContent | Set-Content "$packageDir\INSTALLATION.md" -Encoding UTF8
-
-Write-Host "  [OK] Installation guide created" -ForegroundColor Green
-
-# ============================================
-# 4. Add quick reference
-# ============================================
-Write-Host "[4/4] Creating quick reference..." -ForegroundColor Yellow
+Write-Host "[3/3] Creating quick reference..." -ForegroundColor Yellow
 
 $quickRefContent = @"
 =============================================
@@ -218,7 +178,7 @@ $quickRefContent = @"
 =============================================
 
     View Notes:
-        Double-click: Start-Notentisch.bat
+        Double-click: Notentisch.bat
 
     Access from browser:
         http://127.0.0.1:8000/board.html
@@ -238,6 +198,20 @@ foreach ($doc in $docsToCopy) {
     $docPath = Join-Path $repoRoot $doc
     if (Test-Path $docPath) {
         Copy-Item $docPath "$packageDir\" -Force 2>$null
+    }
+}
+
+$runtimeToolsToCopy = @(
+    "create_xml_from_pdfs.ps1",
+    "extract_cards.ps1",
+    "merge_audio_refs.ps1",
+    "setup_notentisch.ps1",
+    "Serverfunktion.md"
+)
+foreach ($toolFile in $runtimeToolsToCopy) {
+    $toolPath = Join-Path $repoRoot $toolFile
+    if (Test-Path $toolPath) {
+        Copy-Item $toolPath "$packageDir\" -Force 2>$null
     }
 }
 
@@ -300,7 +274,7 @@ if (Test-Path $samplePdfZipPath) {
 Write-Host "Next steps:" -ForegroundColor Yellow
 Write-Host "1. Share the ZIP file with recipient"
 Write-Host "2. Recipient extracts it to a folder"
-Write-Host "3. Recipient runs Start-Notentisch.bat"
+Write-Host "3. Recipient runs Notentisch.bat"
 Write-Host "`n"
 
 Write-Host "[OK] Build complete!" -ForegroundColor Green

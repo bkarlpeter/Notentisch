@@ -481,15 +481,117 @@ function applyLoadedXml(xmlText, fileName, directHandle) {
     setSaveDateState(false, getModeHintText());
 }
 
+function collectXmlPdfFileNames() {
+    const names = new Set();
+    if (!xmlData) return names;
+
+    xmlData.querySelectorAll('NotenTisch, Notentisch').forEach((node) => {
+        const sp = node.querySelector('Speicherort')?.textContent || '';
+        sp.split('#').forEach((part) => {
+            const p = String(part || '').trim();
+            if (!p.toLowerCase().endsWith('.pdf')) return;
+            const base = p.split(/[\\/]/).pop()?.toLowerCase().trim();
+            if (base) names.add(base);
+        });
+    });
+
+    return names;
+}
+
+async function collectFolderPdfFileNames(dirHandle) {
+    const names = new Set();
+    if (!dirHandle) return names;
+
+    for await (const entry of dirHandle.values()) {
+        if (!entry || entry.kind !== 'file') continue;
+        const n = String(entry.name || '').toLowerCase().trim();
+        if (n.endsWith('.pdf')) names.add(n);
+    }
+
+    return names;
+}
+
+function countIntersection(a, b) {
+    let count = 0;
+    for (const item of a) {
+        if (b.has(item)) count++;
+    }
+    return count;
+}
+
+async function ensureXmlMatchesBlaetterFolderOrAsk() {
+    if (!xmlData) return true;
+    if (!blaetterDirHandle) {
+        const statusEl = document.getElementById('commandStatus');
+        if (statusEl) {
+            statusEl.textContent = 'Blätterordner einstellen';
+        }
+        return true;
+    }
+
+    const xmlPdfNames = collectXmlPdfFileNames();
+    if (xmlPdfNames.size === 0) return true;
+
+    let folderPdfNames;
+    try {
+        folderPdfNames = await collectFolderPdfFileNames(blaetterDirHandle);
+    } catch (err) {
+        console.warn('Blätter-Ordner konnte für Match-Prüfung nicht gelesen werden:', err);
+        return true;
+    }
+    if (folderPdfNames.size === 0) return true;
+
+    const overlap = countIntersection(xmlPdfNames, folderPdfNames);
+    const base = Math.max(1, Math.min(xmlPdfNames.size, folderPdfNames.size));
+    const ratio = overlap / base;
+    const mismatch = overlap === 0 || ratio < 0.2;
+    if (!mismatch) return true;
+
+    const statusEl = document.getElementById('commandStatus');
+    if (statusEl) {
+        statusEl.textContent = 'XML passt nicht zum gewählten Blätter-Ordner';
+    }
+
+    const keepCurrent = confirm(
+        'Die geladene XML passt nicht zum eingestellten Blätter-Ordner.\n\n' +
+        'OK = XML trotzdem verwenden\n' +
+        'Abbrechen = andere XML wählen'
+    );
+
+    if (keepCurrent) return true;
+
+    if (window.showOpenFilePicker) {
+        try {
+            const [pickedHandle] = await window.showOpenFilePicker({
+                multiple: false,
+                types: [{
+                    description: 'XML',
+                    accept: {
+                        'application/xml': ['.xml'],
+                        'text/xml': ['.xml']
+                    }
+                }]
+            });
+            if (pickedHandle) {
+                await openAndLoadXmlHandle(pickedHandle);
+            }
+            return false;
+        } catch (err) {
+            if (err && err.name !== 'AbortError') {
+                console.warn('Andere XML konnte nicht gewählt werden:', err);
+            }
+        }
+    }
+
+    return false;
+}
+
 async function openAndLoadXmlHandle(handle) {
     const file = await handle.getFile();
     const xmlText = await file.text();
     applyLoadedXml(xmlText, file.name || handle.name, handle);
+    await ensureXmlMatchesBlaetterFolderOrAsk();
     await saveXmlDirectFileHandle(handle);
-    if (!blaetterDirHandle) {
-        const hint = document.getElementById('blaetterHint');
-        if (hint) hint.style.display = 'block';
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -588,7 +690,7 @@ async function importPdfsFromHandle(dirHandle) {
             'text/xml'
         );
         getRenderApi()?.resetCardRenderCache();
-        xmlFileName = 'Notentisch-Neu.xml';
+        xmlFileName = 'Notentisch.xml';
         xmlFileHandle = null;
     }
 
@@ -637,7 +739,14 @@ async function importPdfsFromHandle(dirHandle) {
     getRenderApi()?.resetQuadrantOffsets();
     getRenderApi()?.renderBoard();
     markUnsavedChange();
-    alert(newEntries.length + ' neue Eintr\u00e4ge hinzugef\u00fcgt. Bitte XML speichern.');
+
+    // Nach Import direkt Speichern versuchen, damit die neue XML auch wirklich als Datei entsteht.
+    await saveXml(false);
+    if (hasUnsavedChanges) {
+        alert(newEntries.length + ' neue Eintr\u00e4ge hinzugef\u00fcgt. Bitte XML speichern.');
+    } else {
+        alert(newEntries.length + ' neue Eintr\u00e4ge hinzugef\u00fcgt und gespeichert.');
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -645,15 +754,7 @@ async function importPdfsFromHandle(dirHandle) {
 // ---------------------------------------------------------------------------
 async function offerPdfImportIfMissing() {
     if (!window.showDirectoryPicker) return;
-    // Banner statt confirm() — direkter Klick gibt valide User-Geste für showDirectoryPicker
-    const hint = document.getElementById('xmlImportHint');
-    if (hint) hint.style.display = 'block';
-}
 
-async function startXmlImportFromFolder() {
-    const hint = document.getElementById('xmlImportHint');
-    if (hint) hint.style.display = 'none';
-    if (!window.showDirectoryPicker) return;
     let dirHandle;
     try {
         dirHandle = await window.showDirectoryPicker({ mode: 'read' });
@@ -670,33 +771,33 @@ async function startXmlImportFromFolder() {
 }
 
 async function handleLoadButton() {
+    const replaceLoadedXml = !!xmlData;
+
     if (window.showOpenFilePicker) {
-        let storedHandle = null;
-
-        try {
-            storedHandle = await loadXmlDirectFileHandle();
-            if (storedHandle) {
-                const permission = await storedHandle.queryPermission({ mode: 'read' });
-                if (permission === 'granted') {
-                    await openAndLoadXmlHandle(storedHandle);
-                    return;
-                }
-
-                if (permission === 'prompt') {
-                    const requested = await storedHandle.requestPermission({ mode: 'read' });
-                    if (requested === 'granted') {
+        if (!replaceLoadedXml) {
+            try {
+                const storedHandle = await loadXmlDirectFileHandle();
+                if (storedHandle) {
+                    const permission = await storedHandle.queryPermission({ mode: 'read' });
+                    if (permission === 'granted') {
                         await openAndLoadXmlHandle(storedHandle);
                         return;
                     }
+
+                    if (permission === 'prompt') {
+                        const requested = await storedHandle.requestPermission({ mode: 'read' });
+                        if (requested === 'granted') {
+                            await openAndLoadXmlHandle(storedHandle);
+                            return;
+                        }
+                    }
                 }
+            } catch (err) {
+                console.warn('Gespeicherte XML-Datei nicht nutzbar, öffne Explorer:', err);
             }
-        } catch (err) {
-            console.warn('Gespeicherte XML-Datei nicht nutzbar, öffne Explorer:', err);
         }
 
         try {
-            const statusEl = document.getElementById('commandStatus');
-            if (statusEl) statusEl.textContent = 'XML-Datei wählen — oder Abbrechen für automatische Erstellung aus PDF-Ordner';
             const [pickedHandle] = await window.showOpenFilePicker({
                 multiple: false,
                 types: [{
@@ -715,9 +816,6 @@ async function handleLoadButton() {
         } catch (err) {
             if (err && err.name !== 'AbortError') {
                 console.error('Fehler beim XML-Laden:', err);
-            } else {
-                // Kein XML gewählt – PDF-Import anbieten
-                await offerPdfImportIfMissing();
             }
             return;
         }

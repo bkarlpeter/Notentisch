@@ -1,0 +1,45 @@
+ <p>
+Notentisch – dein digitaler Notenständer
+
+Notentisch bringt Ordnung in dein Notenchaos: Statt vieler einzelner Blätter auf dem Pult verwaltest du deine Noten bequem auf dem Bildschirm. So hast du beim Üben alles im Blick, findest Stücke schneller und kannst dich voll auf die Musik konzentrieren.
+  </p>
+
+  <p>
+Notentisch zeigt auf dem Bildschirm ein großes zentrales Notenfeld, und links und rechts kleinere Fenster für die vier Notenstapel. Die Stapel sind benannt nach Arbeitszuständen die deinem Übungsverlauf entsprechen. Mit den Buttons der unteren Zeile können die Funktionen gesteuert werden.
+  </p>
+
+  <p>
+Du hast deine Notenblätter gescannt und die Dateinamen dem Titel angepasst und als Notenliste gespeichert. Damit kannst du anfangen. Notentisch übernimmt die Blätter und ordnet ihnen zunächst einen ersten Bearbeitungsstand zu, durch Ablegen im Stapel "zurückgelegt". Die anderen Stapel tragen die Namen wiederholen, geübt, gelernt.  
+Durch Verschieben auf die Stapel wird dem Notenblatt automatisch der neue Stapelname zugeordnet. Du kannst sie beliebig in diesem Setup verschieben, je nach dem deinem Übungsverlauf.
+  </p>
+
+  <p>
+Die Darstellung im Bildschirm kannst du vielfältig an deine Spielgewohnheiten anpassen. Z. B. breit für dreiseitige Notenblätter, oder weniger Stapel, aber größeres Notenfeld. 
+  </p>
+
+  <p>
+Auch den Hintergrund kannst du dir individuell gestalten. Dazu kannst du Muster verwenden, die du dir zuvor aus Websites heruntergeladen hast.
+Neben Verschieben aus den Stapeln kannst du auf weitere Arten deine Noten aufs Notenfeld zaubern, z.B. mit Textsuche, Bildsuche oder durch Vorspielen der ersten Takte. Dazu musst du sie aber einmal einspielen.
+ 
+Ein Blatt im zentralen Notenfeld kannst du formatieren mit Position oder Vergrößerung. Das Notentisch merkt sich dieses Format und stellt es beim nächsten Reinschieben wieder so ein.
+   </p>
+
+  <p>
+Arbeitsstand, Format, Erkennungstonsequenz und Zeitpunkt der Ablage werden dem Notentitel in der Notenliste zugeordnet und gespeichert. Damit kannst sie in einer externen Notensammlung weiterverwalten. Ich habe dazu eine MS Accessdatei entworfen.
+  </p>
+
+  <p>
+
+Das Notenverzeichnis habe ich in MS Access erstellt. Es arbeitet zusammen mit deinem Notenverzeichnis.
+Du kannst die aktuelle Notenliste aus Notentisch per Knopfdruck hier übernehmen und den im Access ebenso gespeicherten Notentiteln zuordnen. Das ganze geht natürlich auch umgekehrt. Erstelle erst eine Notenliste aus deinen Titeln und exportiere sie per Knopfdruck ins Notentisch Verzeichnis. 
+   </p>
+
+  <p>
+Dort kannst du natürlich auch viel mehr an Bearbeitungsständen hinzufügen, z. B. Neuzugang, oder erst-gespielt. Du kannst auch die Notenliste völlig neu machen. Weiter kannst du die Zuordnung zu Heften vornehmen oder Potpourris zusammenstellen. 
+Ein sehr nützliche Funktion ist das Umbenennen eines Noten Scans. 
+Nach dem Einscannen werden die Titel meist vom Scanner vergeben. Das kannst du mit einer speziellen Funktion elegant ändern. Schiebe dazu Scan in deinen Notenordner, den du für Notentisch anfangs angegeben musstest. Übertrage den Hyperlink anschließend ins Access. Ein Knopfdruck nennt dann den Scan-Titel um in deinen eigenen Notentitel.
+   </p>
+
+  <p>
+Ein evtl. mit anderen Tools erstelltes Notenverzeichnis kannst du sehr  wahrscheinlich übernehmen m.H. der Export/Import von Access
+  </p>

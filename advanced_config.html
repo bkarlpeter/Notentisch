@@ -73,34 +73,6 @@
             </div>
         </div>
 
-        <!-- GRUPPE: Verzeichnisse -->
-        <div class="group">
-            <div class="group-header"><h2 class="group-title">Verzeichnisse</h2></div>
-            <div class="group-body cols-1">
-                <div class="field field-full">
-                    <label>Blätter (PDF)</label>
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        <span id="blaetterDirDisplay" style="flex: 1; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; font-size: 13px; word-break: break-all;">(nicht gewählt)</span>
-                        <button type="button" onclick="pickBlaetterDir()" style="padding: 8px 12px; background: #3498db; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap;">Wählen</button>
-                    </div>
-                </div>
-                <div class="field field-full">
-                    <label>Cards_Export (Vorschaubilder)</label>
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        <span id="cardsExportDirDisplay" style="flex: 1; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; font-size: 13px; word-break: break-all;">(nicht gewählt)</span>
-                        <button type="button" onclick="pickCardsExportDir()" style="padding: 8px 12px; background: #3498db; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap;">Wählen</button>
-                    </div>
-                </div>
-                <div class="field field-full">
-                    <label>Werkstatt (Design-Muster)</label>
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        <span id="werkstattDirDisplay" style="flex: 1; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; font-size: 13px; word-break: break-all;">(nicht gewählt)</span>
-                        <button type="button" onclick="pickWerkstattDir()" style="padding: 8px 12px; background: #3498db; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap;">Wählen</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- GRUPPE: Karten & Stapel -->
         <div class="group">
             <div class="group-header"><h2 class="group-title">Karten &amp; Stapel</h2></div>
@@ -166,36 +138,6 @@
     </div>
 
     <script src="center-config.js?v=20260412n"></script>
-    <script>
-        // Verzeichnis-Picker: stehen nur in diesem Script zur Verfügung (filehandling.js wird hier nicht geladen)
-        let blaetterDirHandle = null;
-        let cardsExportDirHandle = null;
-        let werkstattDirHandle = null;
-
-        function updateDirDisplay() {
-            const b = document.getElementById('blaetterDirDisplay');
-            const c = document.getElementById('cardsExportDirDisplay');
-            const w = document.getElementById('werkstattDirDisplay');
-            if (b) { b.textContent = blaetterDirHandle ? ('\uD83D\uDCC1 ' + blaetterDirHandle.name) : '(nicht gewählt)'; b.style.color = blaetterDirHandle ? '#52be80' : '#888'; }
-            if (c) { c.textContent = cardsExportDirHandle ? ('\uD83D\uDCC1 ' + cardsExportDirHandle.name) : '(nicht gewählt)'; c.style.color = cardsExportDirHandle ? '#52be80' : '#888'; }
-            if (w) { w.textContent = werkstattDirHandle ? ('\uD83D\uDCC1 ' + werkstattDirHandle.name) : '(nicht gewählt)'; w.style.color = werkstattDirHandle ? '#52be80' : '#888'; }
-        }
-
-        async function pickBlaetterDir() {
-            if (!window.showDirectoryPicker) { alert('Dein Browser unterstützt keinen Verzeichnis-Picker (Chrome/Edge verwenden).'); return; }
-            try { blaetterDirHandle = await window.showDirectoryPicker({ mode: 'read' }); updateDirDisplay(); } catch (e) { if (e.name !== 'AbortError') console.warn(e); }
-        }
-        async function pickCardsExportDir() {
-            if (!window.showDirectoryPicker) { alert('Dein Browser unterstützt keinen Verzeichnis-Picker (Chrome/Edge verwenden).'); return; }
-            try { cardsExportDirHandle = await window.showDirectoryPicker({ mode: 'read' }); updateDirDisplay(); } catch (e) { if (e.name !== 'AbortError') console.warn(e); }
-        }
-        async function pickWerkstattDir() {
-            if (!window.showDirectoryPicker) { alert('Dein Browser unterstützt keinen Verzeichnis-Picker (Chrome/Edge verwenden).'); return; }
-            try { werkstattDirHandle = await window.showDirectoryPicker({ mode: 'read' }); updateDirDisplay(); } catch (e) { if (e.name !== 'AbortError') console.warn(e); }
-        }
-
-        window.addEventListener('load', updateDirDisplay);
-    </script>
     <script>
         const USER_CONFIG_KEY = 'notentischUserConfig';
         const DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS } : {};

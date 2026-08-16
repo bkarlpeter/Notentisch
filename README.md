@@ -21,17 +21,64 @@
 **Was beim ersten Start automatisch passiert:**
 1. `Start-Notentisch.bat` startet den lokalen Server (`Notentisch.exe`) im Hintergrund – kein extra Fenster.
 2. Sobald der Server bereit ist, öffnet sich `board.html` automatisch im Browser.
-3. Die App ist leer – es liegt noch kein XML und kein Blätter-Verzeichnis vor.
+3. Die App ist leer – XML, PDF-Zuordnungen und Cards sind noch nicht bekannt.
 
-**Was du beim ersten Mal tun musst:**
-1. Klick auf **LADEN** – es öffnet sich ein Datei-Dialog für deine XML.
-2. Wenn du noch kein XML hast: Dialog abbrechen → die App fragt, ob aus einem PDF-Ordner automatisch ein XML erstellt werden soll → **Ja** → Ordner mit deinen PDFs wählen → XML wird sofort aus den Dateinamen erzeugt.
-3. Anschließend in der App auf den **Advanced-Button** (oben rechts in Config) gehen und unter **Verzeichnisse** die Ordner einmalig picken:
-   - **Blätter** – dein PDF-Ordner (für Vollanzeige der Noten)
-   - **Cards_Export** – Ordner für Vorschaubilder (optional)
-   - **Werkstatt** – Ordner für eigene Design-Muster (optional)
+**Erststart-Ablauf (wenn XML/PDF/Cards noch unbekannt sind):**
+1. Das Board erscheint leer; es öffnet sich noch kein Dateidialog.
+2. Klick auf **LADEN** und wähle die vorhandene `Notentisch*.xml` aus.
+3. Die XML wird geladen, die Karten werden angezeigt und die Dateiauswahl wird im Browser gespeichert.
+4. Wenn noch keine XML existiert, zuerst den Blätterordner mit PDFs vorbereiten und eine XML erzeugen (siehe Abschnitt [XML aus PDF-Verzeichnis erstellen oder ergänzen](#xml-aus-pdf-verzeichnis-erstellen-oder-ergänzen)); danach erneut **LADEN** und die erzeugte XML wählen.
+5. Falls noch kein Blätterordner gesetzt ist, erscheint der Hinweis `Blätterordner einstellen` in der Statuszeile.
+6. Stelle den Blätterordner ein (Ordner mit den PDFs).
+7. Wenn XML und Blätterordner nicht zusammenpassen, erscheint eine Rückfrage:
+  - `OK`: XML trotzdem verwenden
+  - `Abbrechen`: andere XML wählen
+8. Öffne die Konfigurationsansicht. Falls noch keine Kartenbilder vorhanden sind, erstelle sie über den dokumentierten Card-Export-Flow.
+9. Kehre zum Board zurück und prüfe, ob Kartenvorschau und CENTER-PDF-Anzeige funktionieren.
 
-> Die gepickten Verzeichnisse gelten für die laufende Session. Da Browser keinen dauerhaften Dateisystem-Zugriff erlauben, muss das Picken nach einem Browser-Neustart einmalig wiederholt werden.
+**Spätere Starts und XML-Wechsel:**
+1. Beim nächsten Boardstart wird die zuletzt gewählte XML automatisch geladen, solange die Browserberechtigung gültig ist.
+2. Falls der Browser erneut nach dem Dateizugriff fragt, bestätige den Zugriff einmalig.
+3. Ein Klick auf **LADEN** bei bereits geladenem Board öffnet ohne zusätzliche Meldung direkt die XML-Dateiauswahl.
+4. Eine neu gewählte XML ersetzt die bisherige Auswahl und wird für die nächsten Starts gespeichert.
+5. Wird die Dateiauswahl abgebrochen, bleibt die aktuelle XML geladen.
+
+**Prüf-Checkliste für Regressionstests (Erststart):**
+1. Ohne bekannte XML startet die App ohne Zwischendesign und ohne automatische XML-Ersatzdialoge.
+2. Nach XML-Laden ohne Blätterordner wird `Blätterordner einstellen` angezeigt.
+3. Bei passendem Blätterordner erscheint keine zusätzliche XML-Abfrage.
+4. Bei unpassendem Blätterordner erscheint genau eine Abfrage zur XML-Weiterverwendung.
+5. Ohne vorhandene Cards bleibt der Ablauf nutzbar; Kartenbilder können danach erzeugt werden.
+
+**Manueller Testfall Erststart (5-Minuten-Check):**
+1. Start mit sauberem Zustand: Browser öffnen, Board laden, noch keine XML aktiv.
+  Soll: Board erscheint direkt mit letztem Preset (kein sichtbares Zwischendesign).
+2. Klick auf **LADEN** und vorhandene XML auswählen.
+  Soll: XML wird geladen, Titel/Kartenstatus sind verfügbar.
+3. Es ist noch kein Blätterordner gesetzt.
+  Soll: In der Statuszeile erscheint `Blätterordner einstellen`.
+4. Blätterordner mit den zugehörigen PDFs setzen.
+  Soll: Bei passendem Ordner kommt keine weitere XML-Abfrage.
+5. Optionaler Negativtest: absichtlich falschen Blätterordner setzen und erneut XML laden.
+  Soll: Genau eine Rückfrage erscheint (`OK = XML trotzdem verwenden`, `Abbrechen = andere XML wählen`).
+6. Falls keine Cards existieren: Card-Export ausführen.
+  Soll: Kartenvorschau ist anschließend sichtbar; CENTER kann PDF anzeigen.
+7. Ein Blatt ins CENTER ziehen.
+  Soll: PDF-Seiten werden geladen, Bedienung bleibt ohne zusätzliche Startdialoge nutzbar.
+
+**Kurztest für Release-Abnahme (3 Pflichtprüfungen):**
+1. XML laden bei noch nicht gesetztem Blätterordner.
+  Soll: Status zeigt `Blätterordner einstellen`.
+2. XML laden bei passendem Blätterordner.
+  Soll: Keine zusätzliche XML-Abfrage.
+3. XML laden bei absichtlich unpassendem Blätterordner.
+  Soll: Genau eine Rückfrage (`OK = XML trotzdem verwenden`, `Abbrechen = andere XML wählen`).
+
+**Wichtig für den Start:**
+- Der PDF-Ordner muss als fester Pfad `Blätter/` verfügbar sein, typischerweise als Junction auf deinen lokalen Notenbestand.
+- Für das Erzeugen von Kartenbildern braucht das Projekt Poppler, konkret `pdfimages.exe`. Im ZIP-Paket ist das lokal mit dabei; beim Build muss der Ordner `poppler-25.12.0/` im Projekt vorhanden sein.
+
+> Die App arbeitet ohne Verzeichnis-Picker im Config-Dialog. Der Pfad zu `Blätter/` wird über die Projekt-/Setup-Struktur festgelegt.
 
 ## Inhaltsverzeichnis
 
@@ -302,29 +349,35 @@ Wenn beim Klick auf `LADEN` kein XML ausgewählt wird (Abbruch im Dateipicker), 
 
 Wenn ein XML geladen wird, erscheint der Dialog **nicht**.
 
-### Variante 2 – PowerShell-Skript `scripts/create_xml_from_pdfs.ps1`
+### Variante 2 – PowerShell-Skript `create_xml_from_pdfs.ps1`
 
 Für neue Installationen ohne bestehende XML oder für Batch-Nutzung:
 
 ```powershell
-# Frische XML aus Ordner erstellen:
-.\scripts\create_xml_from_pdfs.ps1 -PdfDir "C:\...\Noten\Blätter" -OutputXml "Notentisch-Neu.xml"
+Set-Location "c:/meinverzeichnis"
+
+# Frische XML aus dem Test- oder Zielordner erstellen:
+.\create_xml_from_pdfs.ps1 -PdfDir "c:/meinverzeichnis/Blätter" -OutputXml "c:/meinverzeichnis/Blätter/Notentisch.xml"
 
 # Bestehende XML um fehlende PDFs ergänzen (Merge):
-.\scripts\create_xml_from_pdfs.ps1 -PdfDir "C:\...\Noten\Blätter" -OutputXml "Notentisch.xml" -Merge
+.\create_xml_from_pdfs.ps1 -PdfDir "c:/meinverzeichnis/Blätter" -OutputXml "c:/meinverzeichnis/Blätter/Notentisch.xml" -Merge
 
 # Abweichender Standard-Status (Default: "zurückgestellt"):
-.\scripts\create_xml_from_pdfs.ps1 -PdfDir "C:\...\Noten\Blätter" -OutputXml "Notentisch.xml" -Merge -Arbeitsstatus "wiederholen"
+.\create_xml_from_pdfs.ps1 -PdfDir "c:/meinverzeichnis/Blätter" -OutputXml "c:/meinverzeichnis/Blätter/Notentisch.xml" -Merge -Arbeitsstatus "wiederholen"
 ```
 
 Parameter:
 
 | Parameter | Pflicht | Beschreibung |
 |---|---|---|
-| `-PdfDir` | ja | Verzeichnis mit den PDF-Dateien |
-| `-OutputXml` | ja | Pfad der zu erzeugenden bzw. zu ergänzenden XML |
+| `-PdfDir` | ja | Verzeichnis mit den PDF-Dateien, z. B. `c:/meinverzeichnis/Blätter` |
+| `-OutputXml` | ja | Pfad der zu erzeugenden bzw. zu ergänzenden XML, z. B. `c:/meinverzeichnis/Blätter/Notentisch.xml` |
 | `-Merge` | nein | Bestehende XML ergänzen statt neu erstellen |
 | `-Arbeitsstatus` | nein | Startstatus neuer Einträge (Default: `zurückgestellt`) |
+
+Wichtig:
+- Wenn du mit einem Testbestand arbeitest, immer nur den Testpfad verwenden.
+- Nicht mit der Hauptinstallation verwechseln.
 
 ---
 

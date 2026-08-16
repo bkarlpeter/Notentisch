@@ -15,7 +15,13 @@ body[data-board-preset="classic"] .center-hole {
 }
 
 body[data-board-preset="classic"] #center-content {
-    background: rgba(15, 33, 48, 0.24);
+    background: #1a3045;
+    border: none;
+    box-shadow: none;
+}
+
+body[data-board-preset="classic"] #center-content::before {
+    content: none;
 }
 
 body[data-board-preset="carved-a"] {
@@ -70,23 +76,14 @@ body[data-board-preset="carved-a"] .center-hole > * {
 }
 
 body[data-board-preset="carved-a"] #center-content {
-    background: transparent;
+    background: var(--pattern-wood-url) center / 320px auto repeat;
     border-radius: 20px;
-    border: 1px solid #9d7d59;
+    border: none;
+    box-shadow: none;
 }
 
 body[data-board-preset="carved-a"] #center-content::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background:
-        linear-gradient(to bottom, rgba(122, 94, 64, 0.4) 0px, rgba(122, 94, 64, 0) 8px),
-        linear-gradient(to top, rgba(122, 94, 64, 0.4) 0px, rgba(122, 94, 64, 0) 8px),
-        linear-gradient(to right, rgba(122, 94, 64, 0.4) 0px, rgba(122, 94, 64, 0) 8px),
-        linear-gradient(to left, rgba(122, 94, 64, 0.4) 0px, rgba(122, 94, 64, 0) 8px);
-    pointer-events: none;
-    z-index: 1;
+    content: none;
 }
 
 body[data-board-preset="classic"] .center-hole::before,
@@ -147,23 +144,14 @@ body[data-board-preset="carved-b"] .center-hole > * {
 }
 
 body[data-board-preset="carved-b"] #center-content {
-    background: transparent;
+    background: var(--pattern-stone-url) center / 380px auto repeat;
     border-radius: 20px;
-    border: 1px solid #8e959c;
+    border: none;
+    box-shadow: none;
 }
 
 body[data-board-preset="carved-b"] #center-content::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background:
-        linear-gradient(to bottom, rgba(116, 124, 132, 0.36) 0px, rgba(116, 124, 132, 0) 8px),
-        linear-gradient(to top, rgba(116, 124, 132, 0.36) 0px, rgba(116, 124, 132, 0) 8px),
-        linear-gradient(to right, rgba(116, 124, 132, 0.36) 0px, rgba(116, 124, 132, 0) 8px),
-        linear-gradient(to left, rgba(116, 124, 132, 0.36) 0px, rgba(116, 124, 132, 0) 8px);
-    pointer-events: none;
-    z-index: 1;
+    content: none;
 }
 
 body[data-board-preset="carved-c"] {
@@ -218,21 +206,12 @@ body[data-board-preset="carved-c"] .center-hole > * {
 }
 
 body[data-board-preset="carved-c"] #center-content {
-    background: transparent;
+    background: var(--pattern-japan-url) center / 300px auto repeat;
     border-radius: 20px;
-    border: 1px solid #b69b53;
+    border: none;
+    box-shadow: none;
 }
 
 body[data-board-preset="carved-c"] #center-content::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background:
-        linear-gradient(to bottom, rgba(126, 110, 66, 0.34) 0px, rgba(126, 110, 66, 0) 8px),
-        linear-gradient(to top, rgba(126, 110, 66, 0.34) 0px, rgba(126, 110, 66, 0) 8px),
-        linear-gradient(to right, rgba(126, 110, 66, 0.34) 0px, rgba(126, 110, 66, 0) 8px),
-        linear-gradient(to left, rgba(126, 110, 66, 0.34) 0px, rgba(126, 110, 66, 0) 8px);
-    pointer-events: none;
-    z-index: 1;
+    content: none;
 }

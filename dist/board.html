@@ -6,6 +6,7 @@
     <title>Digitaler Notentisch - Projekt Notentisch</title>
     <!-- Quadrant title styles are externalized in quadrant-titles.css -->
     <link rel="stylesheet" href="quadrant-titles.css?v=20260510b">
+    <link rel="stylesheet" href="styles.css">
 
 <style>
         :root {
@@ -52,6 +53,7 @@
             height: 100%;
             min-height: 0;
             position: relative;
+            isolation: isolate;
         }
 
         #layout-2x2.hidden { display: none; }
@@ -64,6 +66,7 @@
             gap: 0;
             height: 100%;
             position: relative;
+            isolation: isolate;
             --card-stack-width: 140px;
         }
 
@@ -79,6 +82,7 @@
             overflow-y: scroll;
             cursor: pointer;
             background: #3d3428;
+            z-index: 1;
         }
 
         .quadrant-links {
@@ -194,7 +198,7 @@
             height: calc(100vh - var(--control-bar-height) - var(--center-bottom-gap));
             background: #d4b896;
             border-radius: 20px;
-            z-index: 1000;
+            z-index: 10;
             box-shadow: 0 0 50px rgba(0,0,0,0.9),
                         inset 0 0 30px rgba(0,0,0,0.2);
             display: flex;
@@ -213,7 +217,9 @@
             width: 100%;
             flex: 1 1 auto;
             min-height: 0;
-            background: rgba(212, 184, 150, 0.08);
+            background: #d4b896;
+            border: none;
+            box-shadow: none;
             display: flex;
             align-items: flex-start;
             justify-content: flex-start;
@@ -812,9 +818,7 @@
         }
 
         .center-placeholder {
-            text-align: center;
-            color: #9aa;
-            font-size: 12px;
+            display: none;
         }
 
         #center-filename-label {
@@ -973,8 +977,7 @@
                     PDF im Center anzeigen
                 </div>
             </div>
-            <div id="blaetterHint" style="display:none;position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:#27ae60;color:#fff;padding:8px 14px;border-radius:6px;font-size:13px;z-index:20;white-space:nowrap;">Blätter-Ordner nicht gewählt &nbsp;<button onclick="pickBlaetterDir()" style="background:#fff;color:#27ae60;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:700;">Wählen</button>&nbsp;<button onclick="document.getElementById('blaetterHint').style.display='none'" style="background:transparent;color:#fff;border:none;cursor:pointer;font-size:14px;line-height:1;">&#x2715;</button></div>
-            <div id="xmlImportHint" style="display:none;position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:#3498db;color:#fff;padding:8px 14px;border-radius:6px;font-size:13px;z-index:20;white-space:nowrap;">Kein XML &nbsp;<button onclick="startXmlImportFromFolder()" style="background:#fff;color:#3498db;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:700;">Aus PDF-Ordner erstellen</button>&nbsp;<button onclick="document.getElementById('xmlImportHint').style.display='none'" style="background:transparent;color:#fff;border:none;cursor:pointer;font-size:14px;line-height:1;">&#x2715;</button></div>
+            <div id="blaetterHint">Blätter-Ordner nicht gewählt &nbsp;<button class="blaetter-hint-pick" onclick="pickBlaetterDir()">Wählen</button>&nbsp;<button class="blaetter-hint-close" onclick="document.getElementById('blaetterHint').style.display='none'">&#x2715;</button></div>
             <div id="center-filename-label"></div>
             <div id="audio-record-progress">
                 <span id="audio-progress-label">Searching</span>
@@ -1042,7 +1045,26 @@
     <script src="audio_data.js?v=20260502a"></script>
     <script src="audio_runtime.js?v=20260605a"></script>
 
-</body>
+<body>
+    <script>
+        (function applyLastPresetEarly() {
+            try {
+                const raw = localStorage.getItem('notentischUserConfig');
+                let preset = '';
+                if (raw) {
+                    const cfg = JSON.parse(raw);
+                    if (typeof cfg?.boardPreset === 'string') preset = cfg.boardPreset;
+                }
+                if (!preset) {
+                    preset = localStorage.getItem('notentischBoardPreset') || '';
+                }
+                preset = String(preset || '').trim().toLowerCase() || 'carved-a';
+                document.body.setAttribute('data-board-preset', preset);
+            } catch {
+                document.body.setAttribute('data-board-preset', 'carved-a');
+            }
+        })();
+    </script>
 </html>
 
 

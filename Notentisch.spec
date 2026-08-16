@@ -5,7 +5,7 @@ a = Analysis(
     ['local_server.py'],
     pathex=[],
     binaries=[],
-    datas=[('board.html', '.'), ('config.html', '.'), ('advanced_config.html', '.'), ('presets.html', '.'), ('board-presets.css', '.'), ('board-presets.js', '.')],
+    datas=[],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

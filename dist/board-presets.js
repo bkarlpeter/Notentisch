@@ -132,8 +132,8 @@
             `body[data-board-preset="${id}"] .center-hole::before { content:""; position:absolute; inset:calc(-1 * var(--center-frame-width)); border-radius:calc(20px + var(--center-frame-width)); background: linear-gradient(135deg,rgba(255,255,255,.18) 0%,rgba(0,0,0,.22) 100%), var(${v}) center/${bgSize} ${bgRepeat}; box-shadow:0 16px 30px rgba(0,0,0,.42),0 0 0 1px rgba(30,30,30,.7),inset 0 0 0 1px rgba(255,255,255,.3); z-index:-1; pointer-events:none; }`,
             `body[data-board-preset="${id}"] .center-hole::after { content:""; position:absolute; inset:0; border-radius:20px; background:rgba(${ccRgb.r}, ${ccRgb.g}, ${ccRgb.b}, var(--center-overlay-alpha, 0.2)); z-index:0; pointer-events:none; }`,
             `body[data-board-preset="${id}"] .center-hole > * { position:relative; z-index:1; }`,
-            `body[data-board-preset="${id}"] #center-content { background:transparent; border-radius:20px; border:1px solid ${ac}; }`,
-            `body[data-board-preset="${id}"] #center-content::before { content:""; position:absolute; inset:0; border-radius:inherit; background: linear-gradient(to bottom,rgba(0,0,0,.22) 0px,rgba(0,0,0,0) 8px), linear-gradient(to top,rgba(0,0,0,.22) 0px,rgba(0,0,0,0) 8px), linear-gradient(to right,rgba(0,0,0,.22) 0px,rgba(0,0,0,0) 8px), linear-gradient(to left,rgba(0,0,0,.22) 0px,rgba(0,0,0,0) 8px); pointer-events:none; z-index:1; }`
+            `body[data-board-preset="${id}"] #center-content { background: var(${v}) center/${bgSize} ${bgRepeat}; border-radius:20px; border:none; box-shadow:none; }`,
+            `body[data-board-preset="${id}"] #center-content::before { content:none; }`
         ].join('\n');
     }
 

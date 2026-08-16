@@ -1,24 +1,7 @@
-<#
+﻿<#
 .SYNOPSIS
-    Erzeugt eine Notentisch-XML aus einem PDF-Verzeichnis.
-    Kann auch eine bestehende XML um fehlende PDFs ergänzen (--Merge).
-
-.PARAMETER PdfDir
-    Verzeichnis mit den PDF-Dateien (Blätter).
-
-.PARAMETER OutputXml
-    Pfad der zu erzeugenden XML-Datei.
-
-.PARAMETER Merge
-    Wenn angegeben: bestehende XML wird geladen und nur fehlende PDFs werden hinzugefügt.
-    Vorhandene Einträge bleiben unverändert.
-
-.PARAMETER Arbeitsstatus
-    Standard-Arbeitsstatus für neue Einträge. Default: "zurückgestellt"
-
-.EXAMPLE
-    .\create_xml_from_pdfs.ps1 -PdfDir "C:\...\Noten\Blätter" -OutputXml "Notentisch-Neu.xml"
-    .\create_xml_from_pdfs.ps1 -PdfDir "C:\...\Noten\Blätter" -OutputXml "Notentisch.xml" -Merge
+    Creates a Notentisch XML from a PDF folder.
+    Can also merge missing PDFs into an existing XML (--Merge).
 #>
 
 param(
@@ -30,123 +13,98 @@ param(
 
     [switch]$Merge,
 
-    [string]$Arbeitsstatus = 'zurückgestellt'
+    [string]$Arbeitsstatus = ('zur' + [char]0x00FC + 'ckgestellt')
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# --- Hilfsfunktion: XML-Sonderzeichen escapen ---
 function Escape-Xml([string]$s) {
-    $s = $s.Replace('&',  '&amp;')
-    $s = $s.Replace('<',  '&lt;')
-    $s = $s.Replace('>',  '&gt;')
-    $s = $s.Replace('"',  '&quot;')
-    $s = $s.Replace("'",  '&apos;')
+    $s = $s.Replace('&', '&amp;')
+    $s = $s.Replace('<', '&lt;')
+    $s = $s.Replace('>', '&gt;')
+    $s = $s.Replace('"', '&quot;')
+    $s = $s.Replace("'", '&apos;')
     return $s
 }
 
-# --- PDFs einlesen ---
-if (-not (Test-Path $PdfDir)) {
-    Write-Error "PDF-Verzeichnis nicht gefunden: $PdfDir"
-    exit 1
+if (-not (Test-Path -LiteralPath $PdfDir)) {
+    throw "PDF directory not found: $PdfDir"
 }
 
-$pdfs = Get-ChildItem -Path $PdfDir -Filter '*.pdf' | Sort-Object Name
-Write-Host "$($pdfs.Count) PDF(s) gefunden in: $PdfDir"
+$pdfs = Get-ChildItem -LiteralPath $PdfDir -File -Filter '*.pdf' | Sort-Object Name
+Write-Host ($pdfs.Count.ToString() + ' PDF(s) found in: ' + $PdfDir)
 
-# --- Merge: bestehende XML laden und bekannte Pfade ermitteln ---
 $existingXmlContent = $null
-$knownPaths = @{}
-$maxNotID = 0
+$knownNames = @{}
+$maxNotId = 0
 
-if ($Merge -and (Test-Path $OutputXml)) {
-    Write-Host "Merge-Modus: lade bestehende XML: $OutputXml"
-    [xml]$existingDoc = Get-Content -Path $OutputXml -Encoding UTF8
+if ($Merge -and (Test-Path -LiteralPath $OutputXml)) {
+    [xml]$existingDoc = Get-Content -LiteralPath $OutputXml -Encoding UTF8
 
     foreach ($node in $existingDoc.dataroot.ChildNodes) {
-        $sp = $node.Speicherort
+        $sp = [string]$node.Speicherort
         if ($sp) {
-            # Normalisiere Pfadvergleich: nur Dateiname ohne Pfad
             $parts = $sp -split '#'
             foreach ($p in $parts) {
                 $clean = $p.Trim()
-                if ($clean -ne '' -and $clean.ToLower().EndsWith('.pdf')) {
+                if ($clean -and $clean.ToLower().EndsWith('.pdf')) {
                     $fname = [System.IO.Path]::GetFileName($clean).ToLower().Trim()
-                    $knownPaths[$fname] = $true
+                    if ($fname) { $knownNames[$fname] = $true }
                 }
             }
         }
-        $idText = $node.NotID
-        $idNum  = 0
-        if ([int]::TryParse($idText, [ref]$idNum)) {
-            if ($idNum -gt $maxNotID) { $maxNotID = $idNum }
+
+        $idNum = 0
+        if ([int]::TryParse([string]$node.NotID, [ref]$idNum)) {
+            if ($idNum -gt $maxNotId) { $maxNotId = $idNum }
         }
     }
-    $existingXmlContent = Get-Content -Path $OutputXml -Encoding UTF8 -Raw
-    Write-Host "$($knownPaths.Count) bereits vorhandene Einträge."
+
+    $existingXmlContent = Get-Content -LiteralPath $OutputXml -Encoding UTF8 -Raw
+    Write-Host ($knownNames.Count.ToString() + ' existing entries loaded.')
 }
 
-# --- Neue Einträge bauen ---
-$newEntries = [System.Collections.Generic.List[string]]::new()
-$nextId = $maxNotID + 1
-$addedCount = 0
+$newEntries = New-Object System.Collections.Generic.List[string]
+$nextId = $maxNotId + 1
 
 foreach ($pdf in $pdfs) {
     $fname = $pdf.Name.ToLower().Trim()
+    if ($Merge -and $knownNames.ContainsKey($fname)) { continue }
 
-    if ($Merge -and $knownPaths.ContainsKey($fname)) {
-        continue  # bereits vorhanden
-    }
+    $titleRaw = [System.IO.Path]::GetFileNameWithoutExtension($pdf.Name)
+    $title = Escape-Xml $titleRaw
+    $fullPath = $pdf.FullName
+    $speicher = Escape-Xml ("$titleRaw#$fullPath#")
+    $status = Escape-Xml $Arbeitsstatus
 
-    $titleRaw  = [System.IO.Path]::GetFileNameWithoutExtension($pdf.Name)
-    $title     = Escape-Xml $titleRaw
-    $fullPath  = $pdf.FullName
-    $speicher  = Escape-Xml "$titleRaw#$fullPath#"
-    $status    = Escape-Xml $Arbeitsstatus
-    $timestamp = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss')
-
-    $entry = @"
-	<NotenTisch>
-		<NotID>$nextId</NotID>
-		<Arbeitsstatus>$status</Arbeitsstatus>
-		<Titel>$title</Titel>
-		<zuletztgespielt/>
-		<Speicherort>$speicher</Speicherort>
-	</NotenTisch>
-"@
+    $entry = "<NotenTisch><NotID>$nextId</NotID><Arbeitsstatus>$status</Arbeitsstatus><Titel>$title</Titel><zuletztgespielt/><Speicherort>$speicher</Speicherort></NotenTisch>"
     $newEntries.Add($entry)
     $nextId++
-    $addedCount++
 }
 
-Write-Host "$addedCount neue Einträge werden hinzugefügt."
+$addedCount = $newEntries.Count
+Write-Host ($addedCount.ToString() + ' new entries to add.')
 
 if ($addedCount -eq 0) {
-    Write-Host "Keine neuen Einträge – XML bleibt unverändert."
+    Write-Host 'No new entries. XML unchanged.'
     exit 0
 }
 
-# --- XML zusammenbauen ---
 $timestamp = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss')
 
 if ($Merge -and $existingXmlContent) {
-    # Neue Einträge vor </dataroot> einfügen
     $insertion = $newEntries -join "`n"
-    $newXml = $existingXmlContent -replace '</dataroot>', "$insertion`n</dataroot>"
+    $newXml = $existingXmlContent -replace '</dataroot>', ($insertion + "`n</dataroot>")
 } else {
-    # Frische XML erzeugen
     $body = $newEntries -join "`n"
-    $newXml = @"
-<?xml version="1.0" encoding="UTF-8"?><dataroot xmlns:od="urn:schemas-microsoft-com:officedata" generated="$timestamp">
-$body</dataroot>
-"@
+    $newXml = '<?xml version="1.0" encoding="UTF-8"?><dataroot xmlns:od="urn:schemas-microsoft-com:officedata" generated="' + $timestamp + '">' + "`n" + $body + "`n" + '</dataroot>'
 }
 
-# --- Schreiben ---
 $outDir = [System.IO.Path]::GetDirectoryName($OutputXml)
-if ($outDir -and -not (Test-Path $outDir)) {
+if ($outDir -and -not (Test-Path -LiteralPath $outDir)) {
     New-Item -ItemType Directory -Path $outDir | Out-Null
 }
 
 [System.IO.File]::WriteAllText($OutputXml, $newXml, [System.Text.Encoding]::UTF8)
-Write-Host "XML gespeichert: $OutputXml ($addedCount neue Einträge)"
+Write-Host ('XML written: ' + $OutputXml + ' (' + $addedCount + ' new entries)')

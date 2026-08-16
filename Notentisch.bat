@@ -4,7 +4,7 @@ setlocal
 
 REM === Projektpfad ===
 set "WEBROOT=%~dp0"
-set "PORT=8000"
+set "PORT=9000"
 set "ENTRY=board.html"
 set "POWER_RESTORE_CMD="
 
