@@ -1,191 +1,97 @@
-# Notentisch – Lokaler Server (Python HTTP Server)
+# Notentisch: lokaler Server
 
-Dieses Dokument beschreibt die vollständige, funktionierende Server‑Konfiguration
-für das Projekt *Digitaler Notentisch*.  
-Es dient als Referenz, falls der Server neu eingerichtet, repariert oder
-auf einen anderen Rechner übertragen werden soll.
+Notentisch verwendet `local_server.py` als lokalen HTTP-Server. Er liefert die
+HTML-, JavaScript- und CSS-Dateien aus und ermöglicht den Zugriff auf
+`Cards_Export/`, `Blätter/` und `mysounds/`.
 
----
+## Start
 
-## 1. Ziel des Servers
-
-Der lokale Python‑Server übernimmt:
-
-- Ausliefern von `board.html` / `board_server.html`
-- Bereitstellen der Kartenbilder aus `Cards_Export/`
-- Bereitstellen der PDF‑Dateien über die Junction `Blätter/`
-- Laden der JavaScript‑Dateien (`functions.js`, `filehandling.js`, `board.js`)
-- Ermöglichen von Drag & Drop und PDF‑Anzeige über PDF.js
-
-Ohne Server funktionieren:
-- PDF‑Anzeige nicht  
-- Kartenbilder nicht  
-- Drag & Drop nicht  
-- XML‑Laden nur teilweise  
-
----
-
-## 2. Ordnerstruktur (muss exakt so sein):
-Projekt notentisch/ │ 
-├── board_server.html 
-├── board.js 
-├── functions.js 
-├── filehandling.js 
-├── start_server.ps1 
-├── notentisch_start.vbs 
-├── notenblaetter_cards.xml 
-│ ├── Cards_Export/ ← PNG‑Kartenbilder 
-│ ├── Beispiel1.png 
-│ ├── Beispiel2.png 
-│ └── ... │ 
-├── Blätter/ ← JUNCTION! zeigt auf echten PDF‑Ordner 
-│ ├── Auf der Zwieselalm.pdf 
-│ ├── Alpenecho.pdf 
-│ └── ... 
-│ └── (weitere Dateien)
-
-
-**Wichtig:**  
-`Blätter/` ist kein echter Ordner, sondern eine *Junction*.
-
----
-
-## 3. Junction „Blätter“ erstellen
-
-PowerShell **als Administrator**:
+Im Projektordner:
 
 ```powershell
-cd "C:\Users\User\OneDrive\lapdaten (E)\Daten\Projekt notentisch"
+py -3 local_server.py 8000
+```
 
-cmd /c mklink /J "Blätter" "C:\Users\User\OneDrive\myMusic\Noten\Blätter"
-Erwartet Ausgabe:
-Junction created for Blätter <<===>> C:\Users\User\OneDrive\myMusic\Noten\Blätter
+Danach öffnen:
 
-TEST
-dir Blätter
-→ PDFs müssen sichtbar sein.
+```text
+http://127.0.0.1:8000/board.html
+```
 
-4. Server starten (Port 5500)
-Der Port 8000 wird von Edge falsch gecached.
-Port 5500 funktioniert zuverlässig.
-cd "C:\Users\User\OneDrive\lapdaten (E)\Daten\Projekt notentisch"
-python -m http.server 5500
-Server läuft auf http://localhost:5500/
+Im Release-Paket übernimmt `Notentisch.exe` diese Aufgabe. Der Start erfolgt
+über `Notentisch.bat` oder unsichtbar über `Notentisch.vbs`.
 
-Start über vbs
+## Verzeichnisstruktur
 
-Set WshShell = CreateObject("WScript.Shell")
-WshShell.Run "powershell -ExecutionPolicy Bypass -File ""start_server.ps1""", 0, False
-WScript.Sleep 2000
-WshShell.Run "http://localhost:5500/board_server.html", 1, False
+```text
+Notentisch/
+├── board.html
+├── config.html
+├── advanced_config.html
+├── local_server.py
+├── Notentisch.bat
+├── Notentisch.vbs
+├── Cards_Export/              # optionale PNG-Kartenbilder
+├── Blätter/                   # lokaler PDF-Ordner oder Junction
+├── mysounds/                  # lokale Audioaufnahmen und Diagnose-Logs
+└── poppler-25.12.0/           # Poppler für die Kartenvorschau
+```
 
-5. Browser öffnen
-Edge:
-http://localhost:5500/board_server.html
-Falls Edge den Port ignoriert:
-http://127.0.0.1:5500/board_server.html
+`Blätter/` enthält die persönlichen PDF-Noten und wird nicht mit dem
+öffentlichen Release ausgeliefert. Für eine Junction als Administrator:
 
-6. Funktionstest
-XML laden
+```powershell
+cmd /c mklink /J "Blätter" "D:\Pfad\zu\deinen\PDFs"
+```
 
-Karte ins Center ziehen
+## Serververhalten
 
-PDF muss erscheinen
+- Bindung ausschließlich an `127.0.0.1`; kein externer Netzwerkzugriff.
+- Standard-Port: `8000`; ein anderer Port kann als erstes Argument angegeben werden.
+- Normale Dateien werden mit `no-cache` ausgeliefert.
+- Steuer- und API-Endpunkte verwenden `no-store`.
+- Der Server läuft als `ThreadingHTTPServer`.
 
-Kartenbilder müssen sichtbar sein
+## Audio-Endpunkte
 
-Keine 404‑Fehler im Serverfenster
+Der Browser verwendet diese lokalen POST-Endpunkte:
 
-7. Typische Fehler & Lösungen
-404 bei PNG oder PDF
-→ Server läuft im falschen Ordner
-→ Junction fehlt
-→ Cards_Export fehlt
-→ Dateiname stimmt nicht (Groß/Klein)
+| Endpunkt | Zweck |
+|---|---|
+| `/__audio_upload__?filename=...` | Audioaufnahme nach `mysounds/` speichern |
+| `/__audio_delete__?path=mysounds/...` | Audioaufnahme löschen |
+| `/__audio_diag__` | Diagnose-Events in `mysounds/musicprint_diagnostics.jsonl` speichern |
+| `/__session__` | Session-Token für das Beenden abfragen |
+| `/__shutdown__` | Server mit gültigem Token beenden |
 
-Edge lädt falsche Datei
-→ Port 8000 vermeiden
-→ Port 5500 verwenden
-→ Browser über start öffnen
-→ Notfalls 127.0.0.1 statt localhost
+Audio-Uploads sind auf `.webm`, `.ogg`, `.wav`, `.m4a` und `.mp3` beschränkt
+und dürfen höchstens 25 MB groß sein. Der Diagnose-Request ist auf 512 KB
+begrenzt.
 
-PowerShell „hängt“
-→ Normal, wenn Server läuft
-→ Zweites PowerShell‑Fenster für Browserstart verwenden
+`GET /__shutdown__` ist absichtlich deaktiviert. Das Beenden benötigt einen
+`POST` mit dem Header `X-Notentisch-Token` und dem Body `shutdown`.
 
-8. Minimaler Startablauf (funktioniert immer)
-PowerShell (windows+R, powershell) Fenster 1:
-cd <Projektordner>
-python -m http.server 5500
+## Kartenvorschauen
 
-PowerShell Fenster 2:
-start http://localhost:5500/board_server.html
+`extract_cards.ps1` nutzt bevorzugt:
 
+```text
+poppler-25.12.0\Library\bin\pdfimages.exe
+```
 
----
+Falls `pdfimages.exe` keine Vorschau erzeugt, wird nach Möglichkeit
+`pdftoppm.exe` als Fallback verwendet. Die PNG-Dateien werden in
+`Cards_Export/` abgelegt.
 
-# **Vorschläge für spätere Verbesserungen**
+## Fehlerprüfung
 
-Hier sind die Erweiterungen, die dein System noch stabiler, schneller und wartungsärmer machen würden.
+404 bei Board, PDF oder PNG weist meistens auf einen falschen Serverordner,
+eine fehlende `Blätter`-Junction oder fehlende Kartenvorschauen hin.
 
----
+Bei Audio-Problemen zuerst prüfen, ob der Server läuft und `mysounds/`
+beschreibbar ist. Diagnose-Events können anschließend mit folgendem Skript
+ausgewertet werden:
 
-## **1. Startskript robuster machen**
-- Serverstart prüfen  
-- Warten, bis Port 5500 wirklich offen ist  
-- Browser erst dann öffnen  
-- Edge‑Cache für localhost automatisch umgehen  
-
-Das macht den Start „idiotensicher“.
-
----
-
-## **2. Projekt aus OneDrive herauslösen**
-OneDrive ist praktisch, aber für lokale Server oft störend.
-
-Ein stabiler Pfad wäre:
-
-C:\Notentisch\
-
-
-Vorteile:
-- keine Synchronisationsverzögerungen  
-- keine Blockaden  
-- keine falschen Dateiversionen  
-- keine Edge‑Sicherheitswarnungen  
-
----
-
-## **3. Diagnose‑Overlay im Notentisch**
-Ein kleines JS‑Modul könnte prüfen:
-
-- Ist `/Blätter/` erreichbar?  
-- Ist `/Cards_Export/` erreichbar?  
-- Ist PDF.js geladen?  
-- Ist die XML gültig?  
-
-Bei Fehlern: klare Meldung statt „PDF nicht gefunden“.
-
----
-
-## **4. Automatische Junction‑Reparatur**
-Ein kleines PowerShell‑Skript könnte:
-
-- prüfen, ob `Blätter/` existiert  
-- prüfen, ob es eine Junction ist  
-- prüfen, ob der Zielpfad existiert  
-- bei Fehlern automatisch neu setzen  
-
----
-
-## **5. Port‑Fallback**
-Wenn 5500 belegt ist:
-
-- automatisch 5501, 5502, 5503 testen  
-- Browser mit dem funktionierenden Port öffnen  
-
----
-
-Wenn du willst, kann ich dir eines dieser Features sofort bauen — oder alle zusammen in einem „Notentisch‑Starter 2.0“.
-
-Sag einfach, worauf du Lust hast.
+```powershell
+.\analyze_musicprint_diag.ps1
+```

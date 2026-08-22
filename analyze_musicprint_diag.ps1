@@ -26,7 +26,7 @@ function Save-ReportFile {
     Write-Host "Report gespeichert: $ReportPath"
 }
 
-function Finish-AndExit {
+function Complete-Report {
     Save-ReportFile
     if ($PauseAtEnd) {
         [void](Read-Host "ENTER druecken zum Beenden")
@@ -34,7 +34,7 @@ function Finish-AndExit {
     exit 0
 }
 
-function Safe-Average {
+function Get-SafeAverage {
     param([double[]]$Values)
     if (-not $Values -or $Values.Count -eq 0) { return $null }
     return [Math]::Round((($Values | Measure-Object -Average).Average), 4)
@@ -43,7 +43,7 @@ function Safe-Average {
 if (-not (Test-Path -LiteralPath $InputPath)) {
     Add-ReportLine "Keine Diagnose-Datei gefunden: $InputPath"
     Add-ReportLine "Erzeuge erst Laufdaten in Tonsuche, dann erneut ausfuehren."
-    Finish-AndExit
+    Complete-Report
 }
 
 $events = New-Object System.Collections.Generic.List[object]
@@ -62,13 +62,13 @@ Get-Content -LiteralPath $InputPath -Encoding UTF8 | ForEach-Object {
 
 if ($events.Count -eq 0) {
     Add-ReportLine "Keine gueltigen JSON-Events in: $InputPath"
-    Finish-AndExit
+    Complete-Report
 }
 
 $byEvent = @($events | Group-Object event | Sort-Object Count -Descending)
 $matchingScored = @($events | Where-Object { $_.event -eq "matching_scored" })
 $matchingDrop = @($events | Where-Object { $_.event -eq "matching_triggered_drop" })
-$matchingPending = @($events | Where-Object { $_.event -eq "matching_pending_hits" })
+$matchingPending = @($events | Where-Object { $_.event -eq "matching_pending_votes" })
 $fingerprintSaved = @($events | Where-Object { $_.event -eq "fingerprint_saved" })
 $recordingTooShort = @($events | Where-Object { $_.event -eq "recording_too_short" })
 
@@ -111,8 +111,8 @@ $summary = [pscustomobject]@{
         scoredCount = $matchingScored.Count
         triggeredDrops = $matchingDrop.Count
         pendingHits = $matchingPending.Count
-        avgBestScore = (Safe-Average -Values $bestScores)
-        avgGapToSecond = (Safe-Average -Values $gaps)
+        avgBestScore = (Get-SafeAverage -Values $bestScores)
+        avgGapToSecond = (Get-SafeAverage -Values $gaps)
         threshold = $threshold
         gapLimit = $gapLimit
         belowThresholdCount = $belowThresholdCount
@@ -175,4 +175,4 @@ Add-ReportLine "Recording:"
 Add-ReportLine "- fingerprintSaved: $($summary.recording.fingerprintSaved)"
 Add-ReportLine "- tooShort: $($summary.recording.tooShort)"
 
-Finish-AndExit
+Complete-Report
