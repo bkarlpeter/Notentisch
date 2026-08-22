@@ -255,6 +255,7 @@
 
     // ── Init ──────────────────────────────────────────────────────────────────
 
+    injectCustomStyles();
     refreshPublicOptions();
     document.addEventListener('DOMContentLoaded', function () {
         injectCustomStyles();

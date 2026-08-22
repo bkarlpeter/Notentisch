@@ -3,17 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="copyright" content="© 2026 Karl-Peter Blaser. Alle Rechte vorbehalten.">
 <title>Notentisch – dein digitaler Notenständer</title>
-
 <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-
 <nav class="fixed-nav">
-  <div style="display:flex; align-items:center;">
+  <div style="display:flex; align-items:left;">
     <img src="images/Zither2.jpg" id="logo" alt="Notentisch Logo">
-    <a href="#alles-im-blick">Alles im Blick</a>
+    <a href="#alles-im-blick">Überblick</a>
     <a href="#uebungsverlauf">Übungsverlauf</a>
     <a href="#anpassung">Darstellung</a>
     <a href="#suche">Suche</a>
@@ -28,17 +27,14 @@
   <p>Ordnung statt Notenchaos – übersichtlich, flexibel und perfekt für deinen Übungsalltag.</p>
 </header>
 
-
-
 <section id="alles-im-blick" class="fadein">
-  <h2>Alles im Blick</h2>
+  <h2>Überblick</h2>
 
   <img src="images/Board twosided.jpg" class="img-small" alt="Board twosided">
-  <img src="images/Board fullscreen.jpg" class="img-small" alt="Board fullscreen">
-
   <p>
     Notentisch bringt Ordnung in dein Notenchaos: Statt vieler einzelner Blätter auf dem Pult verwaltest du deine Noten bequem auf dem Bildschirm. So hast du beim Üben alles im Blick, findest Stücke schneller und kannst dich voll auf die Musik konzentrieren.
   </p>
+  <img src="images/Board fullscreen.jpg" class="img-small" alt="Board fullscreen">
 
   <p>
     Egal ob du übst, probst oder auftrittst – Notentisch sorgt dafür, dass du deine Musik immer vollständig im Blick hast. Kein Suchen, kein Blättern, kein Chaos. Nur deine Noten, perfekt
@@ -47,7 +43,6 @@
 
   <div class="clear"></div>
 </section>
-
 
 <section id="uebungsverlauf" class="fadein">
   <h2>Dein Übungsverlauf</h2>
@@ -64,7 +59,7 @@
   <img src="images/Board emptychinesered.jpg" class="img-small" alt="Board emptychinesered">
 
   <p>
-    Du kannst die Anzahl der Stapel reduzieren, das Layout verbreitern oder die Darstellung für große Notenblätter optimieren. 
+    Du kannst die Anzahl der sichtbaren Stapel reduzieren, das Layout verbreitern oder die Darstellung für große Notenblätter optimieren. 
     Auch den Hintergrund kannst du dir individuell gestalten. Dazu kannst du Muster verwenden, die du dir zuvor aus Image-Websites heruntergeladen hast.
     Alle Anpassungen werden automatisch gespeichert, sodass du jederzeit genau dort weitermachst, wo du aufgehört hast.
   </p>
@@ -152,26 +147,31 @@
   </p>
 
   <p>
-  <a href="Notentisch-Complete-v2026.08.14.zip" class="download-btn">
+  <a href="Notentisch-Complete-v2026.08.21.zip" class="download-btn">
       Download Notentisch (ZIP)
   </a>
   </p>
-
+  <h3>Vor der Installation</h3>
   <p>
-    <strong>Hinweis zu den Noten:</strong> Dieses öffentliche Download-Paket enthält nur die Anwendung und keine Notenblätter oder persönlichen XML-Daten. Eigene PDF-Noten werden nach dem Entpacken im Ordner <code>Blätter</code> abgelegt oder mit diesem Ordner verknüpft. Die zehn Beispiel-PDFs werden in einem getrennten Archiv verwaltet und sind nicht Bestandteil dieses Downloads.
+    <strong>Hinweis:</strong> Dieses öffentliche Download-Paket enthält nur die Anwendung und keine Notenblätter oder persönlichen XML-Daten. Eigene PDF-Noten werden nach dem Entpacken im Ordner <code>Blätter</code> abgelegt oder mit diesem Ordner verknüpft. Die zehn Beispiel-PDFs werden in einem getrennten Archiv gepeichert und sind nicht Bestandteil dieses Downloads.
+    daher musst du zunächst deine Notenblätter scannen und in einem Ordner <code>Blätter</code> ablegen. Die Dateinamen der PDFs sollten den Titeln entsprechen, damit du sie besser erkennen kannst. Alternativ kannst du auch eine bestehende XML-Datei verwenden, die du zuvor schon mit deinem Access erstellt hast. Diese XML-Datei enthält die Titel und Arbeitsstände deiner Noten und wird von Notentisch beim Start automatisch geladen.
   </p>
-
-  <h3>Nach dem Download</h3>
-  <ol>
-    <li>Entpacke <strong>Notentisch-Complete-v2026.07.15.zip</strong> in einen beliebigen Ordner (z. B. <code>C:\Notentisch</code>).</li>
-    <li>Starte <strong>Start-Notentisch.bat</strong> – der Server startet im Hintergrund, der Browser öffnet sich automatisch.</li>
-    <li>Falls Windows die Ausführung blockiert, bestätige die Sicherheitsabfrage mit „Trotzdem ausführen".</li>
-    <li>Die zum Start benötigten Programmdateien sind bereits im ZIP enthalten – eine Python-Installation ist nicht erforderlich.</li>
-  </ol>
-
-  <h3>Erststart – was passiert automatisch?</h3>
   <p>
-    Beim ersten Start ist die App leer: noch kein XML, noch kein Blätter-Verzeichnis.
+    Für Hardware empfehle ich einen Monitor mit 3/2 Format, z. B. 1920×1280 oder 2048×1365 Pixel.
+    Außerdem brauchst du ein Windows-System, z. B. auf einem Tablet, das du über USB an den Monitor anschließt. Darüber sollte auch die Stromversorgung laufen, damit du dir ein Kabel sparst.
+  </p>
+<h3>Nach dem Download</h3>
+<ol>
+  <li>Entpacke die ZIP-Datei in einen beliebigen Ordner (z. B. <code>C:\Notentisch</code>).</li>
+  <li>Starte <strong>AutoInstaller.bat</strong> per Doppelklick.</li>
+  <li>Das Skript führt einmalig <code>setup_notentisch.ps1</code> und <code>extract_cards.ps1</code> aus und startet danach <strong>Notentisch.bat</strong>.</li>
+  <li>Der Server startet im Hintergrund, der Browser öffnet sich automatisch mit dem Notentisch-Board.</li>
+  <li>Falls Windows die Ausführung blockiert, bestätige die Sicherheitsabfrage mit „Trotzdem ausführen“.</li>
+</ol>
+
+  <h3>Erststart – was passiert dabei?</h3>
+  <p>
+    Beim ersten Start ist die App leer: noch kein XML, noch kein Blätter-Verzeichnis. (Das XML ist eine Excel-Datei, die deine Notentitel und deren Arbeitsstatus speichert.
     Klicke auf <strong>LADEN</strong>. Du wirst durch folgende Schritte geführt:
   </p>
   <ol>
@@ -179,27 +179,108 @@
     <li><strong>XML vorhanden?</strong> Datei auswählen – das Board lädt direkt.</li>
   </ol>
 
-  <h3>Nach dem ersten Laden – Einstellungen in Advanced Config</h3>
-  <p>
-    Gehe in der App auf <strong>Config → Advanced</strong> und stelle unter <em>Verzeichnisse</em> folgende Ordner ein:
-  </p>
-  <ul>
-    <li><strong>Blätter</strong> – dein PDF-Ordner (für die Vollanzeige der Noten im Center)</li>
-    <li><strong>Cards_Export</strong> – Vorschaubilder-Ordner (optional, für schnellere Kartendarstellung)</li>
-    <li><strong>Werkstatt</strong> – Ordner für eigene Design-Muster (optional)</li>
-  </ul>
   <p>
     Da Browser keinen dauerhaften Dateisystem-Zugriff erlauben, müssen die Ordner nach einem Browser-Neustart einmalig neu gewählt werden.
   </p>
 
   <p>
-    Weitere Hinweise findest du im <strong>README.md</strong> im Repository.
+    Weitere Hinweise findest du im <strong>README.md und Install.md</strong> im Repository.
   </p>
 </section>
 
+<script>
+  // Öffnen/Schließen
+  function toggleAcc(id) {
+    const box = document.getElementById(id);
+
+    // Alle anderen schließen
+    document.querySelectorAll('.acc-content').forEach(el => {
+      if (el !== box) el.style.display = 'none';
+    });
+
+    // Dieses toggeln
+    box.style.display = (box.style.display === "block") ? "none" : "block";
+  }
+
+  // Klick außerhalb → alles schließen
+  document.addEventListener('click', function(e) {
+    const isButton = e.target.closest('.acc-btn');
+    const isContent = e.target.closest('.acc-content');
+
+    if (!isButton && !isContent) {
+      document.querySelectorAll('.acc-content').forEach(el => {
+        el.style.display = 'none';
+      });
+    }
+  });
+</script>
+
 <footer>
-  © 2026 Notentisch – GitHub Pages Version
+
+  <!-- ALL footer elements in one line -->
+  <div class="footer-row">
+
+    <!-- GitHub Icon -->
+    <a class="github-badge" href="https://github.com/bkarlpeter/Notentisch" target="_blank" style="gap:12px;">
+      <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub">
+      <!--   <span style="opacity:1; color:#ccc;">Erstellt mit GitHub · 2026</span> -->
+    </a>
+
+    <!-- Fragen und Antworten per E-Mail -->
+    <a class="acc-btn" href="mailto:karl-peter.blaser@arcor.de?subject=Frage%20zu%20Notentisch">
+      Fragen &amp; Antworten
+    </a>
+
+    <!-- Smiley Donate Button -->
+    <a class="smiley-donate" href="donate.html">
+      <span class="donate-text">Donate</span>
+      😊
+    </a>
+
+
+    <!-- Impressum Button -->
+    <button class="acc-btn" onclick="toggleAcc('acc-impressum')">
+      <img src="https://cdn-icons-png.flaticon.com/512/84/84380.png" alt="Impressum Icon">
+      Impressum
+    </button>
+
+    <!-- Datenschutz Button -->
+    <button class="acc-btn" onclick="toggleAcc('acc-datenschutz')">
+      <img src="https://cdn-icons-png.flaticon.com/512/565/565547.png" alt="Datenschutz Icon">
+      Datenschutz
+    </button>
+
+  </div>
+
+  <!-- Impressum Content -->
+  <div id="acc-impressum" class="acc-content">
+    <strong>Impressum</strong><br>
+    Verantwortlich gemäß § 5 TMG / § 18 Abs. 2 MStV:<br>
+    Karl-Peter &lt;Blaser&gt;<br>
+    &lt;Drosselstr. 3&gt;<br>
+    &lt;83052 Bruckmühlt&gt;<br>
+    Deutschland<br>
+    E-Mail: &lt;karl-peter.blaser@arcor.de&gt;<br><br>
+    Dieses Projekt ist eine nicht-kommerzielle private Webseite.<br>
+    Der Spendenlink dient ausschließlich der freiwilligen Unterstützung.
+  </div>
+
+  <!-- Datenschutz Content -->
+  <div id="acc-datenschutz" class="acc-content">
+    <strong>Datenschutz</strong><br>
+    Diese Webseite wird über GitHub Pages bereitgestellt.<br>
+    Beim Aufruf werden technische Daten (z.&nbsp;B. IP-Adresse, Browsertyp) durch GitHub verarbeitet.<br>
+    Weitere Informationen:<br>
+    <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement" target="_blank">
+      GitHub Privacy Statement
+    </a>
+  </div>
+
 </footer>
+
+<script>
+console.log("JS läuft!");
+</script>
 
 </body>
 </html>

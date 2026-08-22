@@ -7,12 +7,12 @@
     Package version (default: v2026.07.09)
 
 .PARAMETER OutputDir
-    Output directory for package (default: release)
+    Output directory for package (default: dist/releases)
 #>
 
 param(
     [string]$Version = "v2026.08.14",
-    [string]$OutputDir = "dist/access",
+    [string]$OutputDir = "dist/releases",
     [int]$SamplePdfCount = 0,
     [int]$SeparateSamplePdfCount = 10
 )
@@ -30,7 +30,6 @@ $samplePdfPackageDir = Join-Path $releaseDir $samplePdfPackageName
 $samplePdfZipPath = Join-Path $releaseDir "$samplePdfPackageName.zip"
 $samplePdfFolderName = 'Bl' + [char]0x00E4 + 'tter'
 $popplerSourceDir = Join-Path $repoRoot 'poppler-25.12.0'
-$popplerTargetDir = Join-Path $packageDir 'poppler-25.12.0'
 
 Write-Host "=== Building Notentisch Standalone Package ===" -ForegroundColor Green
 Write-Host "Version: $Version`n" -ForegroundColor Cyan
@@ -97,9 +96,9 @@ if ($LASTEXITCODE -ne 0) {
 
 # Copy EXE to package
 Copy-Item (Join-Path $pyDistDir "Notentisch.exe") "$packageDir\" -Force
-# Copy all application files from dist/ (EXE and launcher are generated separately)
-Get-ChildItem -Path (Join-Path $repoRoot 'dist') -File |
-    Where-Object { $_.Extension -ne '.exe' -and $_.Name -ne 'Start-Notentisch.bat' -and $_.Name -ne 'README.txt' } |
+# Copy application files from the repository root (EXE and launcher are generated separately)
+Get-ChildItem -Path $repoRoot -File |
+    Where-Object { $_.Extension -in @('.js', '.html', '.css') } |
     Copy-Item -Destination "$packageDir\" -Force
 
 Copy-Item (Join-Path $repoRoot 'styles.css') $packageDir -Force
@@ -202,6 +201,7 @@ foreach ($doc in $docsToCopy) {
 }
 
 $runtimeToolsToCopy = @(
+    "AutoInstaller.bat",
     "create_xml_from_pdfs.ps1",
     "extract_cards.ps1",
     "merge_audio_refs.ps1",
@@ -230,6 +230,8 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
     $false,
     [System.Text.Encoding]::UTF8
 )
+
+Remove-Item -Recurse -Force $packageDir
 
 Write-Host "  [OK] ZIP created" -ForegroundColor Green
 

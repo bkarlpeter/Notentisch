@@ -1,3 +1,4 @@
+
         :root {
             --card-stack-width: 260px;
             --stack-overlap: 20px;
@@ -866,11 +867,21 @@
             text-align: center;
             flex-shrink: 0;
             cursor: grab;
+            touch-action: none;
             display: block;
             position: relative;
             transform-origin: top center;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             margin-bottom: calc(-1 * (var(--stack-item-height) - var(--visible-zone)));
+        }
+
+        .touch-drag-ghost {
+            position: fixed;
+            z-index: 10000;
+            pointer-events: none;
+            margin: 0;
+            transform: rotate(2deg) scale(1.03);
+            opacity: 0.9;
         }
 
         .card-container.visible { display: block; }
@@ -952,3 +963,17 @@
         #Q2 { grid-column: 2; grid-row: 1; }
         #Q4 { grid-column: 1; grid-row: 2; }
         #Q3 { grid-column: 2; grid-row: 2; }
+
+ .nav-about {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 14px;
+  background: #2d2d2d;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #eee;
+  text-decoration: none;
+  cursor: pointer;
+}

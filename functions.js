@@ -237,8 +237,37 @@ function loadUserConfig() {
             dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, USER_CONFIG_DEFAULTS.dropGlowDurationMs),
             stackBatchOverlapCount: clampNumber(parsed.stackBatchOverlapCount, 0, 9, USER_CONFIG_DEFAULTS.stackBatchOverlapCount),
             audioReferenceTargetMs: clampNumber(parsed.audioReferenceTargetMs, 1500, 12000, USER_CONFIG_DEFAULTS.audioReferenceTargetMs),
+            audioRecordStartDelayMs: clampNumber(parsed.audioRecordStartDelayMs, 0, 3000, USER_CONFIG_DEFAULTS.audioRecordStartDelayMs || 0),
+            audioWaitAfterMatchMs: clampNumber(parsed.audioWaitAfterMatchMs, 4000, 8000, USER_CONFIG_DEFAULTS.audioWaitAfterMatchMs || 4000),
+            audioResetOnSilenceMs: (() => {
+                const value = Number(parsed.audioResetOnSilenceMs);
+                if (value === 800 || value === 1000 || value === 1500) return value;
+                const fallback = Number(USER_CONFIG_DEFAULTS.audioResetOnSilenceMs);
+                return (fallback === 800 || fallback === 1000 || fallback === 1500) ? fallback : 1500;
+            })(),
+            audioMatchStrictness: (() => {
+                const value = String(parsed.audioMatchStrictness || '').trim().toLowerCase();
+                if (value === 'locker' || value === 'normal' || value === 'streng') return value;
+                return (String(USER_CONFIG_DEFAULTS.audioMatchStrictness || '').trim().toLowerCase() === 'locker' || String(USER_CONFIG_DEFAULTS.audioMatchStrictness || '').trim().toLowerCase() === 'normal' || String(USER_CONFIG_DEFAULTS.audioMatchStrictness || '').trim().toLowerCase() === 'streng')
+                    ? String(USER_CONFIG_DEFAULTS.audioMatchStrictness).trim().toLowerCase()
+                    : 'normal';
+            })(),
+            audioMatchExceptionalModesEnabled: normalizeBoolean(parsed.audioMatchExceptionalModesEnabled, USER_CONFIG_DEFAULTS.audioMatchExceptionalModesEnabled),
+            audioReadyBlinkMs: clampNumber(parsed.audioReadyBlinkMs, 200, 3000, USER_CONFIG_DEFAULTS.audioReadyBlinkMs || 1000),
             replaceAudioByTitle: normalizeBoolean(parsed.replaceAudioByTitle, USER_CONFIG_DEFAULTS.replaceAudioByTitle),
             showAudioBadge: normalizeBoolean(parsed.showAudioBadge, USER_CONFIG_DEFAULTS.showAudioBadge),
+            pdfBaseDir: (() => {
+                const value = String(parsed.pdfBaseDir || '').trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+                if (value === 'Blätter' || value === 'Noten/Blätter' || value === 'Noten') return value;
+                const fallback = String(USER_CONFIG_DEFAULTS.pdfBaseDir || 'Blätter').trim();
+                return fallback === 'Blätter' || fallback === 'Noten/Blätter' || fallback === 'Noten' ? fallback : 'Blätter';
+            })(),
+            cardSharpness: (() => {
+                const value = String(parsed.cardSharpness || '').trim().toLowerCase();
+                if (value === 'normal' || value === 'scharf1' || value === 'scharf2') return value;
+                const fallback = String(USER_CONFIG_DEFAULTS.cardSharpness || 'normal').trim().toLowerCase();
+                return fallback === 'normal' || fallback === 'scharf1' || fallback === 'scharf2' ? fallback : 'normal';
+            })(),
             btnBaseColor: normalizeHexColor(parsed.btnBaseColor, USER_CONFIG_DEFAULTS.btnBaseColor),
             btnToggleColor1: normalizeHexColor(parsed.btnToggleColor1, USER_CONFIG_DEFAULTS.btnToggleColor1),
             btnToggleColor2: normalizeHexColor(parsed.btnToggleColor2, USER_CONFIG_DEFAULTS.btnToggleColor2)
@@ -365,6 +394,16 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     settings.centerSmoothScroll = userConfig.centerSmoothScroll;
     settings.useZoomSettingsOnDrop = userConfig.useZoomSettingsOnDrop;
     settings.dropGlowDurationMs = userConfig.dropGlowDurationMs;
+    settings.audioReferenceTargetMs = userConfig.audioReferenceTargetMs;
+    settings.audioRecordStartDelayMs = userConfig.audioRecordStartDelayMs;
+    settings.audioWaitAfterMatchMs = userConfig.audioWaitAfterMatchMs;
+    settings.audioResetOnSilenceMs = userConfig.audioResetOnSilenceMs;
+    settings.audioMatchStrictness = userConfig.audioMatchStrictness;
+    settings.audioMatchExceptionalModesEnabled = userConfig.audioMatchExceptionalModesEnabled;
+    settings.audioReadyBlinkMs = userConfig.audioReadyBlinkMs;
+    settings.replaceAudioByTitle = userConfig.replaceAudioByTitle;
+    settings.pdfBaseDir = userConfig.pdfBaseDir;
+    settings.cardSharpness = userConfig.cardSharpness;
     settings.showAudioBadge = userConfig.showAudioBadge;
     settings.layoutPreset = userConfig.layoutPreset;
     settings.showFullscreenButton = userConfig.showFullscreenButton;
@@ -674,18 +713,32 @@ function applyFullscreenButtonVisibility(visible) {
 async function applyDefaultFullscreenState() {
     if (document.fullscreenElement) {
         syncFullscreenButtonState();
-        return;
+        return true;
     }
 
     try {
         const root = document.documentElement;
         if (root && root.requestFullscreen) {
             await root.requestFullscreen();
+            syncFullscreenButtonState();
+            return !!document.fullscreenElement;
         }
     } catch (err) {
     }
 
     syncFullscreenButtonState();
+    return false;
+}
+
+function showFullscreenRestoreHint() {
+    const button = document.getElementById('fullscreenBtn');
+    if (button) {
+        button.title = 'Vollbild wiederherstellen (F11 / Klick)';
+        button.dataset.restoreRequired = 'true';
+    }
+    if (typeof setStatusText === 'function') {
+        setStatusText('Vollbild bitte mit F11 oder dem Vollbild-Button wiederherstellen.');
+    }
 }
 
 async function toggleFullscreenMode() {
@@ -702,6 +755,11 @@ async function toggleFullscreenMode() {
     }
 
     syncFullscreenButtonState();
+    const button = document.getElementById('fullscreenBtn');
+    if (button) {
+        delete button.dataset.restoreRequired;
+        button.title = 'Vollbild (F11 / Esc)';
+    }
 }
 
 async function requestShutdownAndExit() {
@@ -793,6 +851,16 @@ const settings = {
     centerSmoothScroll: initialUserConfig.centerSmoothScroll,
     useZoomSettingsOnDrop: initialUserConfig.useZoomSettingsOnDrop,
     dropGlowDurationMs: initialUserConfig.dropGlowDurationMs,
+    audioReferenceTargetMs: initialUserConfig.audioReferenceTargetMs,
+    audioRecordStartDelayMs: initialUserConfig.audioRecordStartDelayMs,
+    audioWaitAfterMatchMs: initialUserConfig.audioWaitAfterMatchMs,
+    audioResetOnSilenceMs: initialUserConfig.audioResetOnSilenceMs,
+    audioMatchStrictness: initialUserConfig.audioMatchStrictness,
+    audioMatchExceptionalModesEnabled: initialUserConfig.audioMatchExceptionalModesEnabled,
+    audioReadyBlinkMs: initialUserConfig.audioReadyBlinkMs,
+    replaceAudioByTitle: initialUserConfig.replaceAudioByTitle,
+    pdfBaseDir: initialUserConfig.pdfBaseDir,
+    cardSharpness: initialUserConfig.cardSharpness,
     showAudioBadge: initialUserConfig.showAudioBadge,
     layoutPreset: initialUserConfig.layoutPreset,
     showFullscreenButton: initialUserConfig.showFullscreenButton,
@@ -831,15 +899,19 @@ function initializeBoardUi() {
     const shouldRestoreFullscreenOnConfigReturn = (() => {
         if (!isConfigHistoryReturn) return false;
         try {
-            // Fallback: bei Config-Rückkehr standardmäßig wieder in Fullscreen gehen,
-            // auch wenn der Browser den vorherigen Zustand nicht eindeutig meldet.
-            return sessionStorage.getItem(BOARD_RETURN_FULLSCREEN_KEY) !== '0';
+            return sessionStorage.getItem(BOARD_RETURN_FULLSCREEN_KEY) === '1';
         } catch (err) {
             return false;
         }
     })();
 
-    if (settings.autoFullscreenOnStart && (!isConfigHistoryReturn || shouldRestoreFullscreenOnConfigReturn)) {
+    if (shouldRestoreFullscreenOnConfigReturn) {
+        setTimeout(() => {
+            applyDefaultFullscreenState().then((restored) => {
+                if (!restored) showFullscreenRestoreHint();
+            }).catch(() => showFullscreenRestoreHint());
+        }, 0);
+    } else if (settings.autoFullscreenOnStart && !isConfigHistoryReturn) {
         setTimeout(() => {
             safeRun(() => applyDefaultFullscreenState());
         }, 0);

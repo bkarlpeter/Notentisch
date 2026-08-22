@@ -966,6 +966,7 @@ function setStatusText(text) {
 // Render-/Stack-Logik wurde nach render.js ausgelagert.
 
 function setupDropListeners() {
+    setupTouchCardDragging();
     const dropTargets = ['Q1', 'Q2', 'Q3', 'Q4', 'CENTER'];
     dropTargets.forEach(id => {
         const el = document.getElementById(id);
@@ -1002,6 +1003,70 @@ function setupDropListeners() {
             el.dataset.centerClickBound = 'true';
         }
     });
+}
+
+function setupTouchCardDragging() {
+    if (document.documentElement.dataset.touchCardDragBound === 'true') return;
+    document.documentElement.dataset.touchCardDragBound = 'true';
+
+    let dragState = null;
+    const finishTouchDrag = (event, cancelled = false) => {
+        if (!dragState || event.pointerId !== dragState.pointerId) return;
+        const state = dragState;
+        dragState = null;
+        state.card.classList.remove('touch-dragging');
+        state.card.style.opacity = state.originalOpacity;
+        state.ghost?.remove();
+        if (cancelled) return;
+
+        const pointTarget = document.elementFromPoint(event.clientX, event.clientY);
+        const dropTarget = pointTarget?.closest?.('#CENTER, #Q1, #Q2, #Q3, #Q4');
+        if (!dropTarget) return;
+        drop({
+            currentTarget: dropTarget,
+            dataTransfer: { getData: () => state.card.id },
+            preventDefault() {},
+            stopPropagation() {}
+        });
+    };
+
+    document.addEventListener('pointerdown', (event) => {
+        if (!event.isPrimary || !['touch', 'pen'].includes(event.pointerType)) return;
+        const card = event.target.closest?.('.card-container[data-cardid]');
+        if (!card || card.classList.contains('in-center')) return;
+        dragState = {
+            card,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            originalOpacity: card.style.opacity,
+            ghost: null,
+            active: false
+        };
+    }, { passive: true });
+
+    document.addEventListener('pointermove', (event) => {
+        if (!dragState || event.pointerId !== dragState.pointerId) return;
+        const state = dragState;
+        const distance = Math.hypot(event.clientX - state.startX, event.clientY - state.startY);
+        if (!state.active && distance < 8) return;
+        if (!state.active) {
+            state.active = true;
+            state.card.classList.add('touch-dragging');
+            state.card.style.opacity = '0.35';
+            state.ghost = state.card.cloneNode(true);
+            state.ghost.classList.add('touch-drag-ghost');
+            state.ghost.style.width = state.card.getBoundingClientRect().width + 'px';
+            document.body.appendChild(state.ghost);
+        }
+        event.preventDefault();
+        const rect = state.card.getBoundingClientRect();
+        state.ghost.style.left = (event.clientX - (state.startX - rect.left)) + 'px';
+        state.ghost.style.top = (event.clientY - (state.startY - rect.top)) + 'px';
+    }, { passive: false });
+
+    document.addEventListener('pointerup', (event) => finishTouchDrag(event));
+    document.addEventListener('pointercancel', (event) => finishTouchDrag(event, true));
 }
 
 // ---------------------------------------------------------------------------

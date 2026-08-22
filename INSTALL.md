@@ -1,208 +1,123 @@
-# DIGITALER NOTENTISCH - INSTALLATION
-
-## Erststart aus dem ZIP-Download
-
-### Was automatisch passiert
-1. `Notentisch.bat` doppelklicken – der Server (`Notentisch.exe`) startet im Hintergrund, kein extra Fenster.
-2. Sobald der Server bereit ist, öffnet sich `board.html` automatisch im Browser.
-3. Die App ist zunächst leer – noch kein XML.
-
-### Schritt 1 – Noten laden
-Klicke auf **LADEN**:
-- **XML vorhanden?** → Datei auswählen, Board lädt sofort.
-- **Noch kein XML?** → Dialog abbrechen → App fragt, ob XML automatisch aus einem PDF-Ordner erstellt werden soll → **Ja** → PDF-Ordner wählen (z.B. `c:/meinverzeichnis/Blätter`) → XML wird aus den Dateinamen erzeugt.
-
-### Schritt 2 – Voraussetzungen prüfen
-- Der PDF-Ordner muss als fester Pfad `Blätter/` vorhanden sein, typischerweise als Junction auf deinen lokalen Notenbestand.
-- Für Kartenbilder und den PDF-basierten Fallback braucht das Projekt Poppler, konkret `pdfimages.exe`. Das ZIP-Paket liefert `poppler-25.12.0/` lokal mit; beim Erstellen des Pakets muss dieser Ordner im Projekt vorhanden sein.
-- Es gibt keine Verzeichnis-Picker mehr in der Config; die Pfade werden über die Projekt-/Setup-Struktur festgelegt.
+Natürlich, k.-p. — hier ist **der komplette Text als echte `.md`‑Datei**, sauber formatiert, ohne Zusatzkommentare, genau so wie du ihn in dein Repo legen kannst.
 
 ---
 
-## Schnellstart (Repository / Entwicklung)
-1. Projektordner auf neuen Windows-Rechner kopieren
-2. Doppelklick auf `Notentisch.bat`
-3. Browser öffnet: [http://localhost:8000/board.html](http://localhost:8000/board.html)
+```markdown
+# 📦 DIGITALER NOTENTISCH – INSTALLATION (vereinfacht)
+
+## 🚀 Erststart aus dem ZIP‑Download
+
+### 1. ZIP entpacken
+Den kompletten Ordner **Notentisch/** irgendwo hin kopieren.
+
+### 2. Erstinstallation automatisch (über `AutoInstaller.bat`)
+Beim **ersten Start**:
+
+1. `AutoInstaller.bat` doppelklicken  
+2. Das Skript führt automatisch aus:
+   - `setup_notentisch.ps1` (einmalig)
+   - `extract_cards.ps1` (einmalig, falls `Cards_Export/` leer ist)
+   - startet danach den lokalen Server (`Notentisch.exe`)
+3. Der Browser öffnet `board.html`
+4. Die App ist leer (noch kein XML)
+
+Damit ist der komplette Erststart vollautomatisch.
 
 ---
 
-## Schritt-für-Schritt-Installation
+## 🎼 Noten laden
 
-### 1. Voraussetzungen
-- Windows 10/11
-- Python 3 installiert (bei Installation: "Add Python to PATH" aktivieren)
+### Variante A – XML vorhanden
+**LADEN** klicken → XML auswählen → Board erscheint.
 
-### 2. Projekt kopieren
-Kompletten Ordner "Notentisch" kopieren. Wichtig sind u.a.:
-- board.html
-- functions.js
-- render.js
-- filehandling.js
-- audio_core.js
-- audio_data.js
-- audio_runtime.js
-- local_server.py
-- Notentisch.bat
-- extract_cards.ps1
-- create_xml_from_pdfs.ps1
-- Cards_Export/
+### Variante B – noch kein XML
+**LADEN → Abbrechen → „XML automatisch erzeugen?“ → Ja**  
+→ PDF‑Ordner wählen (z. B. `c:\meinverzeichnis\Blätter`)  
+→ XML wird aus Dateinamen erzeugt.
 
-Hinweis zur Auslieferung:
-- Der Notenbestand wird typischerweise nicht mit dem Projekt veroeffentlicht.
-- `Blätter/` ist im Normalfall eine Junction auf einen externen lokalen PDF-Ordner.
+---
 
-### 3. PDF-Ordner prüfen
-Die App erwartet PDFs unter `Blätter/` (oder per Konfiguration unter `Noten/Blätter` bzw. `Noten`).
+## 📁 PDF‑Ordner (Blätter/) einrichten
 
-Falls "Blätter" auf dem Zielrechner nicht funktioniert (z.B. alte Junction):
-1. PowerShell als Administrator öffnen
-2. In den Projektordner wechseln
-3. Junction neu setzen:
-   ```
-   cmd /c mklink /J "Blätter" "D:\Pfad\zu\deinen\PDFs"
-   ```
+Die App erwartet PDFs unter:
 
-Optionaler Konfigwert (Advanced/User-Config): `pdfBaseDir`
-- Erlaubte Werte: `Blätter`, `Noten/Blätter`, `Noten`
-- Empfehlung für den Standardfall: `Blätter`
+```
+Blätter/
+```
 
-### 4. App starten
-**Variante A (empfohlen):**
-- Doppelklick auf `Notentisch.bat`
+Falls der Ordner nicht funktioniert (z. B. alte Junction):
 
-**Variante B (manuell):**
-- PowerShell im Projektordner öffnen
-- `py -3 local_server.py 8000`
-- Browser: [http://localhost:8000/board.html](http://localhost:8000/board.html)
-
-### 5. XML laden
-1. In der App auf "LADEN" klicken
-2. XML-Datei auswählen → Karten erscheinen in den Quadranten
-
-**Noch keine XML vorhanden?** Beim Abbrechen des Datei-Dialogs erscheint ein Angebot, eine neue XML direkt aus einem PDF-Ordner zu erstellen.
-
-### 5a. XML per PowerShell eindeutig erzeugen (empfohlen)
-Diese Schritte sind bewusst eindeutig und mit Dummy-Pfad dokumentiert.
-
-1. Projektordner öffnen und in PowerShell wechseln
-2. XML gezielt erzeugen
+PowerShell als Administrator:
 
 ```powershell
-Set-Location "c:/meinverzeichnis"
+cmd /c mklink /J "Blätter" "D:\Pfad\zu\deinen\PDFs"
+```
+
+---
+
+## 🖥️ App starten
+
+### Empfohlen:
+```
+AutoInstaller.bat
+```
+
+### Alternativ:
+```
+Notentisch.bat
+```
+
+### Manuell:
+```powershell
+py -3 local_server.py 8000
+```
+
+Browser:
+```
+http://localhost:8000/board.html
+```
+
+---
+
+## 🗂️ XML manuell erzeugen (optional)
+
+```powershell
 .\create_xml_from_pdfs.ps1 -PdfDir "c:/meinverzeichnis/Blätter" -OutputXml "c:/meinverzeichnis/Blätter/Notentisch.xml"
 ```
 
-3. Prüfen, ob die Datei wirklich geschrieben wurde
-
-```powershell
-Get-Item "c:/meinverzeichnis/Blätter/Notentisch.xml" | Select-Object FullName, LastWriteTime, Length
-```
-
-4. Notentisch neu starten und genau diese XML laden
-
-Wichtig:
-- Wenn du einen Testbestand nutzt, immer den Testpfad einsetzen (z.B. `c:/meinverzeichnis`) und nicht die Hauptinstallation.
-- So vermeidest du, dass versehentlich die falsche XML geändert wird.
-
 ---
 
-## Optional: Kartenbilder erzeugen
-Im Projektordner:
+## 🖼️ Kartenbilder erzeugen (optional, falls AutoInstaller.bat nicht genutzt wurde)
+
 ```powershell
 .\extract_cards.ps1
 ```
-Das Skript nutzt bevorzugt:
-- `.\poppler-25.12.0\Library\bin\pdfimages.exe`
 
-Wenn dieser Pfad nicht existiert, wird pdfimages.exe aus PATH verwendet.
+→ nutzt `poppler-25.12.0\Library\bin\pdfimages.exe`  
+→ erzeugt `Cards_Export/card_*.png`
 
 ---
 
-## Optional: Veroeffentlichungs-Paket bauen
-Fuer ein oeffentliches Paket ohne lokale Notenbestaende/Access-Daten:
+## 📦 Komplett-Paket bauen (optional)
 
 ```powershell
-.\build_release_package.ps1 -Version "v2026.04.16"
+.\build_complete_package.ps1 -Version "v2026.08.21" -OutputDir "dist/releases"
 ```
 
-Das Skript erstellt ein ZIP unter `release/` und schliesst u.a. `Noten/`, `Blätter/`, `myMusic/` und lokale Audio-/Cache-Daten aus.
+Das vollständige Paket erzeugt die distributable Standalone-Version mit EXE, Web-Assets und optionalen Beispiel-PDFs.
 
 ---
 
-## Optional: Paket-Guard vor Tests
-Wenn bei Tests keine zusaetzlichen Python-Pakete erlaubt sind, pruefe vorab:
+## 🛠️ Problemlösung (kurz)
 
-```powershell
-.\test\assert_no_extra_python_packages.ps1
+- **Python fehlt** → installieren + „Add to PATH“  
+- **Browser öffnet nicht** → `http://localhost:8000/board.html` manuell  
+- **Keine Kartenbilder** → `extract_cards.ps1` ausführen  
+- **PDFs fehlen** → Junction `Blätter/` prüfen  
+- **Audio erkennt nichts** → Referenzaufnahme neu machen  
+
+---
+
+# 🎯 Fertig
+Dies ist die vereinfachte, vollständige INSTALL.md inklusive `AutoInstaller.bat`.
 ```
-
-Die erlaubten Pakete stehen in:
-- `test/allowed-python-packages.txt`
-
-Bei nicht erlaubten Zusatzpaketen bricht das Skript mit Exit-Code 2 ab.
-
----
-
-## Start auf einem anderen Windows-System
-
-So geht's:
-```powershell
-.\setup_notentisch.ps1
-```
-Das Skript erledigt für dich:
-- Prüfung auf Python 3 und Poppler (pdfimages.exe)
-- Anlage des „Blätter“-Ordners bzw. Erstellen einer Junction zu deinen PDFs
-- Anlage des „Cards_Export“-Ordners
-- Prüfung, ob der Standard-Port 8000 frei ist (ggf. Alternativport)
-- Start des lokalen Servers und Öffnen der App im Browser (optional)
-
-Du kannst das Skript jederzeit erneut ausführen, falls du die Ordnerstruktur oder Verknüpfungen anpassen möchtest.
-
----
-
-## Problemlösung
-
-**Problem:** "Python wurde nicht gefunden"
-- Python 3 installieren
-- "Add Python to PATH" aktivieren
-- Neues Terminal öffnen
-
-**Problem:** Browser öffnet nicht
-- URL manuell öffnen: [http://localhost:8000/board.html](http://localhost:8000/board.html)
-
-**Problem:** PDF wird nicht geladen
-- Prüfen, ob Server läuft
-- Prüfen, ob PDFs unter `Blätter/` erreichbar sind
-- Falls nötig, Junction neu erstellen (siehe Schritt 3)
-
-**Problem:** Keine Kartenbilder
-- `.\extract_cards.ps1` ausführen
-- Poppler-Pfad prüfen (siehe Optional); `pdfimages.exe` muss verfügbar sein
-
-**Problem:** Mikrofon wird nicht abgefragt (Audio Auto)
-- Browser-Berechtigung für Mikrofon prüfen
-- Seite neu laden und Audio Auto erneut aktivieren
-
-**Problem:** Audio Auto erkennt nichts
-- Zuerst Referenzaufnahme mit Blatt im Center machen (ca. 3-5 Sekunden)
-- Danach außerhalb vom Center erneut testen
-
-**Problem:** Falsches Blatt wird erkannt
-- Referenz in ruhiger Umgebung neu aufnehmen
-- Näher am Mikrofon spielen/summen
-
-**Problem:** Audio konnte nicht gespeichert werden
-- Prüfen, ob der lokale Server über local_server.py läuft
-- Prüfen, ob der Ordner mysounds beschreibbar ist
-
-**Problem:** Nach Update verhält sich Audio/Rendering noch wie vorher
-- Lokalen Server neu starten
-- Browserseite einmal hart neu laden, damit `render.js`, `filehandling.js`, `audio_core.js`, `audio_data.js` und `audio_runtime.js` frisch geladen werden
-
----
-
-## Weitere Hilfe
-Siehe [README.md](README.md) für:
-- Bedienung
-- XML-Format
-- Projektdateien

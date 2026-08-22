@@ -67,7 +67,7 @@ mysounds/musicprint_diagnostics.jsonl
 mysounds/musicprint_diag_report.txt
 
 # Local release packages
-release/
+dist/releases/
 
 # Personal local notes
 get users on github.txt

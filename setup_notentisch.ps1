@@ -96,8 +96,8 @@ if (-not $isAdmin) {
 
 Write-Host "=== Digitaler Notentisch - Ersteinrichtung ===" -ForegroundColor Cyan
 
-$port = 8000
 Push-Location $PSScriptRoot
+$setupCompleted = $true
 
 try {
     $pythonCmd = Resolve-PythonCommand
@@ -167,6 +167,7 @@ try {
         }
 
         if (-not (Test-Path $sourcePath)) {
+            $setupCompleted = $false
             Write-Host "Pfad nicht gefunden: $sourcePath" -ForegroundColor Red
             Write-Host "Bitte Ordner prüfen und Setup erneut starten." -ForegroundColor Yellow
         } else {
@@ -192,6 +193,8 @@ try {
     $desktop = [Environment]::GetFolderPath('Desktop')
     $shortcutPath = Join-Path $desktop 'Notentisch.lnk'
     $targetPath = Join-Path $PSScriptRoot 'Notentisch.vbs'
+    $icon = Join-Path $PSScriptRoot "zither2.jpg"
+
     $iconCandidates = @(
         (Join-Path $PSScriptRoot 'History\Zither2.ico'),
         (Join-Path $PSScriptRoot 'History\Notentisch.ico'),
@@ -213,9 +216,13 @@ try {
         Write-Host "Warnung: Notentisch.vbs nicht gefunden, keine Desktop-Verknüpfung erstellt." -ForegroundColor Yellow
     }
 
+    if ($setupCompleted) {
+        New-Item -ItemType File -Force -Path (Join-Path $PSScriptRoot '.setup_notentisch_done') | Out-Null
+    }
     Write-Host "Setup abgeschlossen." -ForegroundColor Green
     Write-Host "Start erfolgt ueber Notentisch.vbs / Notentisch.bat." -ForegroundColor Yellow
 }
 finally {
     Pop-Location
 }
+

@@ -12,36 +12,24 @@
 
 ## Installation & Schnellstart
 
-👉 Lies die ausführliche Installationsanleitung in [INSTALL.md](INSTALL.md) (inkl. Problemlösung und Setup-Hinweisen).
+👉 Für Details siehe die vollständige Anleitung in **INSTALL.md**.  
+👉 Für den Access/XML‑Austausch siehe **Zusammenarbeit Access-HTML.md**.
 
-👉 Für den Access/XML-Austausch siehe [Zusammenarbeit Access-HTML.md](Zusammenarbeit%20Access-HTML.md) (aktueller Stand in der Datei).
+### 🔧 Erststart aus dem ZIP‑Download
 
-### Erststart aus dem ZIP-Download
+1. ZIP herunterladen und entpacken  
+2. **AutoInstaller.bat** starten
+   - führt einmalig Setup und Card‑Extrakt aus  
+   - startet danach automatisch den Notentisch  
+3. Browser öffnet das Board  
+4. Auf **LADEN** klicken und eine vorhandene XML wählen  
+   - oder automatisch aus deinem PDF‑Ordner erzeugen lassen
 
-**Was beim ersten Start automatisch passiert:**
-1. `Start-Notentisch.bat` startet den lokalen Server (`Notentisch.exe`) im Hintergrund – kein extra Fenster.
-2. Sobald der Server bereit ist, öffnet sich `board.html` automatisch im Browser.
-3. Die App ist leer – XML, PDF-Zuordnungen und Cards sind noch nicht bekannt.
+### 🔁 Spätere Starts
 
-**Erststart-Ablauf (wenn XML/PDF/Cards noch unbekannt sind):**
-1. Das Board erscheint leer; es öffnet sich noch kein Dateidialog.
-2. Klick auf **LADEN** und wähle die vorhandene `Notentisch*.xml` aus.
-3. Die XML wird geladen, die Karten werden angezeigt und die Dateiauswahl wird im Browser gespeichert.
-4. Wenn noch keine XML existiert, zuerst den Blätterordner mit PDFs vorbereiten und eine XML erzeugen (siehe Abschnitt [XML aus PDF-Verzeichnis erstellen oder ergänzen](#xml-aus-pdf-verzeichnis-erstellen-oder-ergänzen)); danach erneut **LADEN** und die erzeugte XML wählen.
-5. Falls noch kein Blätterordner gesetzt ist, erscheint der Hinweis `Blätterordner einstellen` in der Statuszeile.
-6. Stelle den Blätterordner ein (Ordner mit den PDFs).
-7. Wenn XML und Blätterordner nicht zusammenpassen, erscheint eine Rückfrage:
-  - `OK`: XML trotzdem verwenden
-  - `Abbrechen`: andere XML wählen
-8. Öffne die Konfigurationsansicht. Falls noch keine Kartenbilder vorhanden sind, erstelle sie über den dokumentierten Card-Export-Flow.
-9. Kehre zum Board zurück und prüfe, ob Kartenvorschau und CENTER-PDF-Anzeige funktionieren.
-
-**Spätere Starts und XML-Wechsel:**
-1. Beim nächsten Boardstart wird die zuletzt gewählte XML automatisch geladen, solange die Browserberechtigung gültig ist.
-2. Falls der Browser erneut nach dem Dateizugriff fragt, bestätige den Zugriff einmalig.
-3. Ein Klick auf **LADEN** bei bereits geladenem Board öffnet ohne zusätzliche Meldung direkt die XML-Dateiauswahl.
-4. Eine neu gewählte XML ersetzt die bisherige Auswahl und wird für die nächsten Starts gespeichert.
-5. Wird die Dateiauswahl abgebrochen, bleibt die aktuelle XML geladen.
+- Starte einfach **Notentisch.bat**  
+- Die zuletzt verwendete XML wird automatisch geladen  
+- Über **LADEN** kannst du jederzeit eine andere XML auswählen
 
 **Prüf-Checkliste für Regressionstests (Erststart):**
 1. Ohne bekannte XML startet die App ohne Zwischendesign und ohne automatische XML-Ersatzdialoge.
@@ -89,6 +77,7 @@
 - [Funktionen](#funktionen)
 - [Start auf einem anderen Windows-System](#start-auf-einem-anderen-windows-system)
 - [XML aus PDF-Verzeichnis erstellen oder ergänzen](#xml-aus-pdf-verzeichnis-erstellen-oder-ergänzen)
+- [Desktop-Button erstellen](#desktop-button-erstellen)
 - [Card-Bilder generieren](#card-bilder-generieren)
 - [Bedienung](#bedienung)
 - [Preset-Verwaltung](#preset-verwaltung)
@@ -115,7 +104,7 @@ Um zu prüfen, ob das Projekt in deiner aktuellen Umgebung korrekt funktioniert,
 2. Starte im Projektordner einen lokalen Server:
 
   ```powershell
-  py -3 python/local_server.py 8000
+  py -3 local_server.py 8000
   ```
 
 3. Öffne im Browser die Seite:
@@ -196,7 +185,7 @@ Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. te
 
 - Shutdown-Test ohne Token: `POST /__shutdown__` ohne Auth-Header muss blockiert werden.
 - Shutdown-Test mit gueltigem Session-Token: `POST /__shutdown__` mit Header `X-Notentisch-Token` muss funktionieren.
-- Syntax-/Laufzeitcheck nach Anpassungen fuer `python/local_server.py` sowie der neuen Setup-Sicherheitslogik.
+- Syntax-/Laufzeitcheck nach Anpassungen fuer `local_server.py` sowie der neuen Setup-Sicherheitslogik.
 
 ### Testergebnisse
 
@@ -224,12 +213,12 @@ Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. te
 - CDN-Einbindung von PDF.js bleibt ein Supply-Chain-Risiko (bei kompromittiertem externen CDN).
 - Admin-Setup bleibt ein bewusstes Betriebsmodell; daher Setup-Skripte nur aus vertrauenswuerdiger Quelle ausfuehren.
 - Energieprofil-Aenderungen durch `Notentisch.bat` koennen bei hartem Abbruch temporär bestehen bleiben, bis erneut sauber beendet oder manuell zurueckgesetzt wird.
-## Distribution & Troubleshooting (v2026.07.15)
+## Distribution & Troubleshooting (v2026.08.21)
 
 ### Erkannte und behobene Bugs in der ZIP-Distribution
 
 **Bug 1: Doppeltes Terminal-Fenster beim Start**
-- **Ursache**: `Start-Notentisch.bat` startete das EXE mit `start "" Notentisch.exe` (neues Fenster) und endete mit `pause` (BAT-Fenster aktiv).
+- **Ursache**: Der frühere Launcher `Start-Notentisch.bat` startete das EXE mit `start "" Notentisch.exe` (neues Fenster) und endete mit `pause` (BAT-Fenster aktiv).
 - **Symptom**: User sah zwei geöffnete Fenster nach Ausführung.
 - **Behebung**: Start mit `start /B Notentisch.exe >nul 2>&1` (Hintergrund, kein neues Fenster) + Entfernung des finalen `pause` → nur kurz BAT-Fenster, schließt nach Browser-Öffnung automatisch.
 
@@ -239,15 +228,15 @@ Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. te
 - **Behebung**: `<script async src="...">` hinzugefügt → PDF-Library lädt parallel, Buttons reagieren sofort.
 
 **Bug 3: Fehlende oder alte JS-Dateien im ZIP**
-- **Ursache**: Build-Skript kopierte nur explizit aufgelistete Dateien statt aus dem vollständigen `dist/` Verzeichnis → neue JS-Module wurden übersehen.
-- **Behebung**: `build_complete_package.ps1` geändert: Alle App-Dateien werden aus `dist/` kopiert; neue Dateien sind automatisch enthalten.
+- **Ursache**: Das Build-Skript kopierte früher nur explizit aufgelistete Dateien aus dem `dist/` Verzeichnis.
+- **Behebung**: `build_complete_package.ps1` kopiert die aktuellen App-Dateien direkt aus dem Projektstamm; neue JS-Module werden automatisch enthalten.
 
 ### Download und Installation
 
-- **Publikation**: `docs/Notentisch-Complete-v2026.07.15.zip` (7.2 MB, PDF-frei)
-- **Separate Beispiel-PDFs**: `docs/Notentisch-Beispiel-PDFs-v2026.07.15.zip` (7.56 MB)
+- **Publikation**: `docs/Notentisch-Complete-v2026.08.21.zip` (22.52 MB, PDF-frei)
+- **Separate Beispiel-PDFs**: Für den aktuellen Build nicht erzeugt (`-SeparateSamplePdfCount 0`).
 - **Startoptionen**:
-  - Einfach: `Start-Notentisch.bat` doppelklicken (empfohlen)
+  - Einfach: `AutoInstaller.bat` doppelklicken (empfohlen)
   - Alternativ: `Notentisch.vbs` doppelklicken (VB-Wrapper mit Optional-Setup auf erstem Start)
 
 ### Bekannte Limitations und Workarounds
@@ -278,7 +267,7 @@ Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. te
 - **Blatt suchen** (`Suchen`-Button): Suchoverlay mit Texteingabe, zeigt Treffer mit Stapelzuordnung; Bestätigung per `Fertig` lädt das Blatt direkt in den CENTER
 
 ## Start auf einem anderen Windows-System
- so gehts: .\scripts\setup_notentisch.ps1
+ so gehts: .\setup_notentisch.ps1
 
   Das Skript erledigt für dich:
 
@@ -327,7 +316,7 @@ gesetzt werden.
 - oder im Projektordner:
 
 ```powershell
-py -3 python/local_server.py 8000
+py -3 local_server.py 8000
 ```
 
 Browser-URL:
@@ -380,13 +369,18 @@ Wichtig:
 - Nicht mit der Hauptinstallation verwechseln.
 
 ---
+### Desktop-Button erstellen
+
+Beim ersten Start fragt das Setup, ob ein Desktop-Button für Notentisch angelegt werden soll.
+Wenn du zustimmst, wird automatisch eine Verknüpfung mit eigenem Icon aus dem Ordner *images* erstellt.
+Der Button startet Notentisch direkt über die Datei *Notentisch.bat*.
 
 ## Card-Bilder generieren
 
-Mit `scripts/extract_cards.ps1` koennen Card-Vorschaubilder aus PDFs erzeugt werden:
+Mit `extract_cards.ps1` koennen Card-Vorschaubilder aus PDFs erzeugt werden:
 
 ```powershell
-.\scripts\extract_cards.ps1
+.\extract_cards.ps1
 ```
 
 Das Skript nutzt automatisch:
@@ -520,7 +514,7 @@ Stand der Implementierung: 26.03.2026 (Kurz-/Langdruck-Modus)
 ### Voraussetzungen
 
 - Browser mit `MediaRecorder` + Mikrofonfreigabe (Edge/Chrome/Firefox aktuell)
-- laufender lokaler Server (`python/local_server.py`)
+- laufender lokaler Server (`local_server.py`)
 - geladene XML
 - mindestens eine gespeicherte `AudioReferenz` für die zu suchenden Titel
 
@@ -660,7 +654,7 @@ Zusätzlich:
 - Problem: Treffer erscheint im Log, aber kein Blatt wird geladen.
   - Lösung: Prüfen, ob im Diagnose-Log `matching_blocked_low_confidence` steht; dann Strenge reduzieren (`Normal`/`Locker`) oder Referenz neu aufnehmen.
 - Problem: Audio kann nicht gespeichert werden.
-  - Lösung: Prüfen, ob `python/local_server.py` läuft und der Ordner `mysounds/` beschreibbar ist.
+  - Lösung: Prüfen, ob `local_server.py` läuft und der Ordner `mysounds/` beschreibbar ist.
 
 ### Center-/Zoom-Parameter (Basis fuer weitere Aenderungen)
 
@@ -787,10 +781,10 @@ die Blätter werden auf vier Felder rund um das Center verteilt ("Quadranten") e
 - `audio_core.js` - Audio Auto: Zustand, UI, Timing, Button-/Toast-Logik
 - `audio_data.js` - Audio Auto: XML-Felder `AudioReferenz`, Fingerprint-Helfer, Kandidatenaufbau
 - `audio_runtime.js` - Audio Auto: Aufnahme, Matching, Tick-Loop, Mode-Steuerung
-- `scripts/extract_cards.ps1` - Card-Bilder aus PDFs generieren (Poppler)
-- `Notentisch.bat` - Batch-Launcher fuer Windows (startet `python/local_server.py` + Browser; setzt waehrend der Session Energiespar-Timeouts auf `Nie` und restauriert danach)
+- `extract_cards.ps1` - Card-Bilder aus PDFs generieren (Poppler)
+- `Notentisch.bat` - Batch-Launcher fuer Windows (startet `local_server.py` + Browser; setzt waehrend der Session Energiespar-Timeouts auf `Nie` und restauriert danach)
 - `notentisch.vbs` - VB-Wrapper fuer unsichtbaren Start
-- `python/local_server.py` - lokaler HTTP-Server mit Shutdown-Endpoint (`/__shutdown__`) sowie Audio-Upload/-Delete (`/__audio_upload__`, `/__audio_delete__`)
+- `local_server.py` - lokaler HTTP-Server mit Shutdown-Endpoint (`/__shutdown__`) sowie Audio-Upload/-Delete (`/__audio_upload__`, `/__audio_delete__`)
 - `Cards_Export/` - Ordner fuer statische Card-Bilder (`card_*.png`)
 
 ## Test-Ordner
