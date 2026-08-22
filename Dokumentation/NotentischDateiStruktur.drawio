@@ -1,0 +1,91 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.5 Chrome/138.0.7204.251 Electron/37.6.1 Safari/537.36" version="28.2.5">
+  <diagram name="Seite-1" id="bIXMvqrPPeQi3f_krLqi">
+    <mxGraphModel dx="1090" dy="677" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="JOevsWpg8jBFd1JluUvy-1" value="Boardfiles" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#FFB366;strokeWidth=5;" parent="1" vertex="1">
+          <mxGeometry x="294" y="340" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-2" value="Html" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="270" y="390" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-3" value="js" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="334" y="410" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-4" value="css" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="294" y="430" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-5" value="Startup" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#FFB366;strokeWidth=5;" parent="1" vertex="1">
+          <mxGeometry x="480" y="300" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-6" value="AutoInstaller.bat" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="450" y="370" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-7" value="Helpers" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#FFB366;strokeWidth=5;" parent="1" vertex="1">
+          <mxGeometry x="570" y="165" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-8" value="Documentation" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#FFB366;strokeWidth=5;" parent="1" vertex="1">
+          <mxGeometry x="80" y="165" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-12" value="externals" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#FFB366;strokeWidth=5;" parent="1" vertex="1">
+          <mxGeometry x="130" y="60" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-13" value="Poppler" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="20" y="60" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-15" value="Test" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="640" y="215" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-17" value="Data" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#FFB366;strokeWidth=5;" parent="1" vertex="1">
+          <mxGeometry x="80" y="315" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-18" value="Blätter" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="50" y="385" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-19" value="mySounds" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="120" y="420" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-20" value="Noterntisch.xml" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="35" y="412.5" width="70" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-21" value="Werkstatt" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#FFB366;strokeWidth=5;" parent="1" vertex="1">
+          <mxGeometry x="314" y="30" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-22" value="Design images" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="334" y="90" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-23" value="Card_export" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="105" y="465" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-24" value="subpages" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#FFB366;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="284" y="460" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-25" value="Readme" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="560" y="225" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-26" value="notentisch.bat" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="500" y="400" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-27" value="notentisch.vbs" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="560" y="350" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-29" value="test" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#FFB366;strokeWidth=5;" parent="1" vertex="1">
+          <mxGeometry x="486" y="60" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-30" value="workflows" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="130" y="255" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-32" value="git pages" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#FFB366;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="20" y="220" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-33" value="Access" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="20" y="100" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JOevsWpg8jBFd1JluUvy-34" value="Board_files" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="40" y="450" width="100" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

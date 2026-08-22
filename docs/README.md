@@ -65,7 +65,7 @@ A: Im Notentisch-Projektverzeichnis. Externe PDFs können über "Blätter"-Verze
 
 Falls Probleme auftreten:
 1. Siehe Troubleshooting oben
-2. Kontakt zum Entwickler
+2. Kontakt zum Entwickler: drücke den email button im footer. Oder, falls du ein Konto bei github hast: drücke den github button und gib dein Anliegen unter "Issues" ein
 
 ## 📝 Lizenz
 

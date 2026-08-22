@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Spenden – Notentisch</title>
+<style>
+  body {
+    background:#1e1e1e;
+    color:#ddd;
+    font-family:sans-serif;
+    margin:0;
+    padding:40px 20px;
+  }
+
+  section {
+    max-width:700px;
+    margin:0 auto;
+    text-align:center;
+  }
+
+  h1 {
+    font-size:2rem;
+    margin-bottom:20px;
+  }
+
+  p {
+    font-size:1.1rem;
+    color:#ccc;
+    line-height:1.6;
+  }
+
+  /* Radiobutton Container */
+  .amounts {
+    margin:30px 0;
+    display:flex;
+    justify-content:center;
+    gap:20px;
+    flex-wrap:wrap;
+  }
+
+  .amounts label {
+    cursor:pointer;
+    background:#2d2d2d;
+    padding:15px 25px;
+    border-radius:8px;
+    border:1px solid #444;
+    color:#eee;
+    font-size:1.2rem;
+  }
+
+  /* Custom Amount */
+  .custom {
+    margin:20px 0;
+  }
+
+  .custom input {
+    padding:12px 15px;
+    width:200px;
+    border-radius:8px;
+    border:1px solid #444;
+    background:#2d2d2d;
+    color:#eee;
+    font-size:1rem;
+  }
+
+  /* PayPal Button */
+  .paypal-btn {
+    padding:12px 25px;
+    background:#0070ba;
+    border:none;
+    border-radius:8px;
+    color:white;
+    font-size:1.1rem;
+    cursor:pointer;
+    margin-top:20px;
+  }
+
+  /* Impressum Block */
+  .impressum {
+    margin-top:50px;
+    font-size:0.9rem;
+    color:#aaa;
+    text-align:left;
+    background:#2a2a2a;
+    padding:20px;
+    border-radius:8px;
+    border:1px solid #444;
+  }
+</style>
+
+<script>
+  function donate() {
+    const fixed = document.querySelector('input[name="amount"]:checked');
+    const custom = document.querySelector('input[name="custom_amount"]').value;
+
+    let amount = "";
+
+    if (custom && custom > 0) {
+      amount = custom;
+    } else if (fixed) {
+      amount = fixed.value;
+    } else {
+      alert("Bitte einen Betrag auswählen oder eingeben.");
+      return;
+    }
+
+    // PayPal.Me Weiterleitung
+    window.open("https://www.paypal.me/KarlPeterBlaser/" + amount, "_blank");
+  }
+</script>
+</head>
+
+<body>
+
+<section>
+  <h1>Unterstütze dieses Projekt</h1>
+
+  <p>
+    Wenn dir Notentisch hilft oder du es regelmäßig nutzt, freue ich mich über eine kleine Unterstützung.
+  </p>
+
+  <!-- Radiobuttons -->
+  <div class="amounts">
+    <label><input type="radio" name="amount" value="5"> 5 €</label>
+    <label><input type="radio" name="amount" value="10"> 10 €</label>
+    <label><input type="radio" name="amount" value="20"> 20 €</label>
+  </div>
+
+  <!-- Custom Amount -->
+  <div class="custom">
+    <input type="number" name="custom_amount" placeholder="Anderer Betrag">
+  </div>
+
+  <!-- PayPal Button -->
+  <button class="paypal-btn" onclick="donate()">Weiter zu PayPal</button>
+
+  <p style="margin-top:30px; font-size:0.9rem; color:#aaa;">
+    Danke für deine Unterstützung!
+  </p>
+
+  <!-- Impressum -->
+  <div class="impressum">
+    <strong>Impressum</strong><br><br>
+    Verantwortlich gemäß § 5 TMG / § 18 Abs. 2 MStV:<br>
+    K.-P. Blaser<br>
+    Drosselstr. 3<br>
+    83052 Bruckmühl<br>
+    Deutschland<br>
+    E-Mail: karl-peter.blaser@arcor.de<br><br>
+    Dieses Projekt ist eine nicht-kommerzielle private Webseite.<br>
+    Der Spendenlink dient ausschließlich der freiwilligen Unterstützung.
+  </div>
+
+</section>
+
+</body>
+</html>

@@ -36,10 +36,10 @@ Ziel:
 Akzeptanz:
 - Beide Dateien enthalten konsistente Aussage
 
-## 5. chore: Skript-Hinweis fuer Release-Paket in README verlinken
+## 5. chore: Skript-Hinweis fuer Komplett-Paket in README verlinken
 
 Ziel:
-- `build_release_package.ps1` in README aufnehmen und den Zweck kurz erklaeren.
+- `build_complete_package.ps1` in README aufnehmen und den Zweck kurz erklaeren.
 
 Akzeptanz:
 - README enthaelt Befehl und 1-2 Saetze Erklaerung

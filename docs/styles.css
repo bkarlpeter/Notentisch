@@ -200,3 +200,160 @@ footer {
   padding: 1rem;
   margin-top: 3rem;
 }
+/* Abstand unter dem fixierten NAV */
+body {
+  padding-top: 80px;
+}
+
+/* ---------------------------------------------
+   RESPONSIVE NAV
+--------------------------------------------- */
+@media (max-width: 700px) {
+
+  nav.fixed-nav div {
+    flex-wrap: wrap;              /* Links umbrechen */
+    gap: 6px;                     /* kleiner Abstand */
+  }
+
+  nav.fixed-nav a {
+    padding: 0.35rem 0.6rem;      /* etwas kompakter */
+    margin-right: 0;              /* kein rechter Rand */
+  }
+
+  #logo {
+    height: 32px;                 /* kleineres Logo */
+    margin-bottom: 6px;           /* Abstand zu den Links */
+  }
+
+  body {
+    padding-top: 110px;           /* mehr Platz unter dem NAV */
+  }
+}
+  /* Dark Footer */
+  footer {
+    margin-top:40px;
+    padding:30px 20px;
+    font-size:0.9em;
+    color:#ddd;
+    background:#1e1e1e;
+    border-top:2px solid #333;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:25px;
+  }
+
+  /* Footer Row: equal spacing */
+  .footer-row {
+    display:flex;
+    flex-direction:row;
+    justify-content:center;
+    align-items:center;
+    gap:30px;
+    flex-wrap:wrap;
+    width:100%;
+    max-width:900px;
+  }
+
+  /* GitHub Badge */
+  .github-badge {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:#ccc;
+    text-decoration:none;
+    font-size:0.95em;
+  }
+
+  .github-badge img {
+    height:26px;
+    width:26px;
+    transition:transform 0.2s ease;
+    filter:invert(90%);
+  }
+
+  .github-badge:hover img {
+    transform:scale(1.15);
+  }
+
+  .github-text {
+    opacity:0;
+    transition:opacity 0.2s ease;
+  }
+
+  .github-badge:hover .github-text {
+    opacity:1;
+  }
+
+  /* Smiley Donate Button */
+  .smiley-donate {
+    font-size:2rem;
+    text-decoration:none;
+    cursor:pointer;
+    transition:transform 0.2s ease;
+    color:#ffdd55;
+  }
+
+  .smiley-donate:hover {
+    transform:scale(1.25);
+  }
+
+  /* Accordion Buttons */
+  .acc-btn {
+    padding:10px 18px;
+    background:#2d2d2d;
+    color:#eee;
+    border:1px solid #444;
+    cursor:pointer;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    transition:background 0.2s ease, transform 0.2s ease;
+  }
+
+  .acc-btn:hover {
+    background:#3a3a3a;
+    transform:scale(1.05);
+  }
+
+  .acc-btn img {
+    height:18px;
+    width:18px;
+    filter:invert(90%);
+  }
+
+  /* Accordion Content */
+  .acc-content {
+    display:none;
+    margin-top:10px;
+    padding:15px;
+    border:1px solid #444;
+    background:#2a2a2a;
+    font-size:0.9em;
+    color:#ccc;
+    text-align:left;
+    max-width:650px;
+    border-radius:6px;
+  }
+  .smiley-donate {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+  }
+
+  .donate-text {
+    opacity: 0;
+    color: #ccc;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+    transition: opacity 0.2s ease;
+  }
+
+  .smiley-donate:hover .donate-text {
+    opacity: 1;
+  }
+
+
