@@ -203,7 +203,8 @@ try {
     )
     $iconPath = $iconCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
-    if (Test-Path $targetPath) {
+    $createDesktopShortcut = Read-YesNoChoice -Question "Soll ein Desktop-Button für Notentisch angelegt werden?"
+    if ($createDesktopShortcut -and (Test-Path $targetPath)) {
         $wsh = New-Object -ComObject WScript.Shell
         $shortcut = $wsh.CreateShortcut($shortcutPath)
         $shortcut.TargetPath = $targetPath
@@ -213,6 +214,8 @@ try {
         }
         $shortcut.Save()
         Write-Host "Desktop-Verknuepfung 'Notentisch' wurde erstellt." -ForegroundColor Green
+    } elseif (-not $createDesktopShortcut) {
+        Write-Host "Desktop-Verknuepfung wurde nicht erstellt." -ForegroundColor Yellow
     } else {
         Write-Host "Warnung: Notentisch.vbs nicht gefunden, keine Desktop-Verknüpfung erstellt." -ForegroundColor Yellow
     }
