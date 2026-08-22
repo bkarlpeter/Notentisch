@@ -28,6 +28,7 @@ $zipPath = Join-Path $releaseDir "$packageName.zip"
 $samplePdfPackageName = "Notentisch-Beispiel-PDFs-$Version"
 $samplePdfPackageDir = Join-Path $releaseDir $samplePdfPackageName
 $samplePdfZipPath = Join-Path $releaseDir "$samplePdfPackageName.zip"
+$docsLatestZipPath = Join-Path $repoRoot 'docs\Notentisch-Complete-latest.zip'
 $samplePdfFolderName = 'Bl' + [char]0x00E4 + 'tter'
 $popplerSourceDir = Join-Path $repoRoot 'poppler-25.12.0'
 
@@ -232,6 +233,7 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 )
 
 Remove-Item -Recurse -Force $packageDir
+Copy-Item -LiteralPath $zipPath -Destination $docsLatestZipPath -Force
 
 Write-Host "  [OK] ZIP created" -ForegroundColor Green
 
