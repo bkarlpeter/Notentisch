@@ -233,7 +233,7 @@ Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. te
 
 ### Download und Installation
 
-- **Publikation**: `docs/Notentisch-Complete-v2026.08.21.zip` (22.52 MB, PDF-frei)
+- **Publikation**: `docs/Notentisch-Complete-v2026.08.22.zip` (22.52 MB, PDF-frei)
 - **Separate Beispiel-PDFs**: Für den aktuellen Build nicht erzeugt (`-SeparateSamplePdfCount 0`).
 - **Startoptionen**:
   - Einfach: `AutoInstaller.bat` doppelklicken (empfohlen)

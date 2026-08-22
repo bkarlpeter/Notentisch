@@ -193,12 +193,13 @@ try {
     $desktop = [Environment]::GetFolderPath('Desktop')
     $shortcutPath = Join-Path $desktop 'Notentisch.lnk'
     $targetPath = Join-Path $PSScriptRoot 'Notentisch.vbs'
-    $icon = Join-Path $PSScriptRoot "zither2.jpg"
+    $exePath = Join-Path $PSScriptRoot 'Notentisch.exe'
 
     $iconCandidates = @(
         (Join-Path $PSScriptRoot 'History\Zither2.ico'),
         (Join-Path $PSScriptRoot 'History\Notentisch.ico'),
-        (Join-Path $PSScriptRoot 'History\zither2.ico')
+        (Join-Path $PSScriptRoot 'History\zither2.ico'),
+        $exePath
     )
     $iconPath = $iconCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
