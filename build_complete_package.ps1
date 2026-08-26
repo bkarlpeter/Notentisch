@@ -11,7 +11,7 @@
 #>
 
 param(
-    [string]$Version = "v2026.08.14",
+    [string]$Version = "v2026.08.26",
     [string]$OutputDir = "dist/releases",
     [int]$SamplePdfCount = 0,
     [int]$SeparateSamplePdfCount = 10

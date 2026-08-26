@@ -192,7 +192,7 @@ try {
 
     $desktop = [Environment]::GetFolderPath('Desktop')
     $shortcutPath = Join-Path $desktop 'Notentisch.lnk'
-    $targetPath = Join-Path $PSScriptRoot 'Notentisch.vbs'
+    $targetPath = Join-Path $PSScriptRoot 'Notentisch.bat'
     $exePath = Join-Path $PSScriptRoot 'Notentisch.exe'
 
     $iconCandidates = @(
@@ -217,7 +217,7 @@ try {
     } elseif (-not $createDesktopShortcut) {
         Write-Host "Desktop-Verknuepfung wurde nicht erstellt." -ForegroundColor Yellow
     } else {
-        Write-Host "Warnung: Notentisch.vbs nicht gefunden, keine Desktop-Verknüpfung erstellt." -ForegroundColor Yellow
+        Write-Host "Warnung: Notentisch.bat nicht gefunden, keine Desktop-Verknüpfung erstellt." -ForegroundColor Yellow
     }
 
     if ($setupCompleted) {

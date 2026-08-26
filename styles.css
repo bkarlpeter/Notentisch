@@ -8,6 +8,8 @@
             --quadrant-padding-bottom: 6px;
             --center-min-width: 680px;
             --center-max-width: 1400px;
+            --center-radius: 20px;
+            --center-inner-radius: var(--center-radius);
             --card-height: 250px;
             --stack-item-height: 268px;
             --visible-zone: 10px;
@@ -187,7 +189,7 @@
             width: calc(100vw - (2 * (var(--card-stack-width) - var(--stack-overlap))) - (2 * var(--center-gap)));
             height: calc(100vh - var(--control-bar-height) - var(--center-bottom-gap));
             background: #d4b896;
-            border-radius: 20px;
+            border-radius: var(--center-radius);
             z-index: 10;
             box-shadow: 0 0 50px rgba(0,0,0,0.9),
                         inset 0 0 30px rgba(0,0,0,0.2);
@@ -208,6 +210,7 @@
             flex: 1 1 auto;
             min-height: 0;
             background: #d4b896;
+            border-radius: var(--center-inner-radius);
             border: none;
             box-shadow: none;
             display: flex;
@@ -238,7 +241,10 @@
             gap: 10px;
             align-items: center;
             flex-wrap: nowrap;
-            overflow-x: auto;
+            width: 100%;
+            max-width: 100vw;
+            box-sizing: border-box;
+            overflow-x: hidden;
             overflow-y: hidden;
             min-height: var(--control-bar-height);
             padding: 10px;
@@ -288,12 +294,25 @@
 
         .btn-zoom {
             background: #555;
+            white-space: nowrap;
+            width: 70px;
+            min-width: 70px;
+            flex: 0 0 70px;
+        }
+
+        #wideBtn,
+        #alignBtn,
+        #saveCenterSettingsBtn {
+            width: 80px;
+            min-width: 80px;
+            flex: 0 0 80px;
+            white-space: nowrap;
         }
 
         .btn-config {
-            width: 34px;
+            width: 44px;
             height: 34px;
-            min-width: 34px;
+            min-width: 44px;
             padding: 0;
             border-radius: 6px;
             border: 1px solid #4d4d4d;
@@ -443,21 +462,28 @@
             background: linear-gradient(135deg, #8b5a2b, #b78652);
         }
 
+        #overviewBtn,
         #audioAssistBtn,
-        #textSearchBtn {
-            width: calc(10ch + 20px);
-            min-width: calc(10ch + 20px);
+        #textSearchBtn,
+        #commandStatus {
+            width: 70px;
+            min-width: 70px;
+            max-width: 70px;
+            flex: 0 0 70px;
             font-size: 12px;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         #audioSaveBtn {
             display: inline-flex;
             visibility: hidden;
             align-items: center;
-            width: 78px;
-            min-width: 78px;
-            padding: 0 8px;
+            width: 0;
+            min-width: 0;
+            padding: 0;
+            overflow: hidden;
             background: #3498db;
             border: none;
             border-radius: 4px;
@@ -470,17 +496,70 @@
 
         .toolbar-right {
             margin-left: auto;
-            display: inline-flex;
+            display: flex;
             align-items: center;
             gap: 10px;
-            flex: 0 0 auto;
+            flex: 1 1 auto;
+            flex-wrap: nowrap;
+            min-width: 0;
+            justify-content: flex-end;
+            background: #1a1a1a;
+        }
+
+        #toolbarSpacer {
+            width: 160px;
+            min-width: 24px;
+            flex: 1 1 160px;
+            min-height: 34px;
+            align-self: stretch;
+            background: rgba(255, 255, 255, 0.025);
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 1800px) and (min-width: 1281px) {
+            .control-bar {
+                gap: 6px;
+                padding: 6px;
+            }
+
+            .toolbar-right {
+                justify-content: flex-end;
+                gap: 6px;
+            }
+
+            .btn {
+                width: 84px;
+                font-size: 11px;
+            }
+
+            .btn-zoom {
+                width: 64px;
+                min-width: 64px;
+                flex-basis: 64px;
+            }
+
+            #wideBtn,
+            #alignBtn,
+            #saveCenterSettingsBtn {
+                width: 72px;
+                min-width: 72px;
+                flex-basis: 72px;
+            }
+
+            #overviewBtn,
+            #audioAssistBtn,
+            #textSearchBtn,
+            #commandStatus {
+                width: 70px;
+                min-width: 70px;
+                max-width: 70px;
+                flex-basis: 70px;
+                font-size: 11px;
+            }
         }
 
         #commandStatus {
             margin-left: 8px;
-            min-width: 180px;
-            max-width: 460px;
-            flex: 1 1 360px;
             height: 34px;
             display: inline-flex;
             align-items: center;
@@ -517,6 +596,24 @@
             white-space: nowrap;
         }
 
+        .btn-config,
+        #fullscreenBtn,
+        #endBtn {
+            flex: 0 0 auto;
+        }
+
+        #fullscreenBtn {
+            width: 40px;
+            min-width: 40px;
+        }
+
+        #endBtn {
+            width: 48px;
+            min-width: 48px;
+            padding-left: 6px;
+            padding-right: 6px;
+        }
+
         @media (max-width: 1500px) {
             .control-bar {
                 gap: 8px;
@@ -524,18 +621,26 @@
             }
 
             .btn {
-                width: 92px;
+                width: 84px;
                 font-size: 12px;
             }
 
-            #alignBtn {
-                width: 92px;
+            #wideBtn,
+            #alignBtn,
+            #saveCenterSettingsBtn {
+                width: 72px;
+                min-width: 72px;
+                flex-basis: 72px;
             }
 
+            #overviewBtn,
             #audioAssistBtn,
-            #textSearchBtn {
-                width: calc(9ch + 18px);
-                min-width: calc(9ch + 18px);
+            #textSearchBtn,
+            #commandStatus {
+                width: 70px;
+                min-width: 70px;
+                max-width: 70px;
+                flex-basis: 70px;
                 font-size: 11px;
             }
 
@@ -548,9 +653,8 @@
                 display: none;
             }
 
-            #commandStatus,
             .page-info {
-                max-width: 320px;
+                max-width: 140px;
                 font-size: 11px;
             }
         }
@@ -558,6 +662,22 @@
         @media (max-width: 1280px) {
             .control-bar {
                 gap: 6px;
+            }
+
+            .toolbar-right {
+                flex: 1 1 100%;
+                width: 100%;
+                margin-left: 0;
+                justify-content: flex-end;
+                flex-wrap: wrap;
+            }
+
+            #toolbarSpacer {
+                display: none;
+            }
+
+            .control-bar {
+                flex-wrap: wrap;
             }
 
             .btn {
@@ -570,13 +690,18 @@
             }
 
             #commandStatus {
-                min-width: 140px;
-                max-width: 220px;
-                flex-basis: 180px;
+                width: 76px;
+                min-width: 76px;
+                max-width: 76px;
+                flex-basis: 76px;
             }
 
-            #alignBtn {
-                width: 84px;
+            #wideBtn,
+            #alignBtn,
+            #saveCenterSettingsBtn {
+                width: 76px;
+                min-width: 76px;
+                flex-basis: 76px;
             }
 
             #modeToggleBtn,
@@ -594,10 +719,14 @@
                 -webkit-box-orient: vertical;
             }
 
+            #overviewBtn,
             #audioAssistBtn,
-            #textSearchBtn {
-                width: 76px;
-                min-width: 76px;
+            #textSearchBtn,
+            #commandStatus {
+                width: 68px;
+                min-width: 68px;
+                max-width: 68px;
+                flex-basis: 68px;
             }
 
             #saveDateHint {
@@ -653,15 +782,23 @@
                 gap: 4px;
             }
 
-            #alignBtn {
-                width: 76px;
+            #wideBtn,
+            #alignBtn,
+            #saveCenterSettingsBtn {
+                width: 72px;
+                min-width: 72px;
+                flex-basis: 72px;
             }
 
             #modeToggleBtn,
+            #overviewBtn,
             #audioAssistBtn,
-            #textSearchBtn {
-                width: 72px;
-                min-width: 72px;
+            #textSearchBtn,
+            #commandStatus {
+                width: 64px;
+                min-width: 64px;
+                max-width: 64px;
+                flex-basis: 64px;
             }
 
             #audioAssistStatus {
@@ -714,6 +851,41 @@
             cursor: pointer;
             font-size: 14px;
             line-height: 1;
+        }
+
+        .btn-width-normal {
+            width: 100px !important;
+            min-width: 100px !important;
+            max-width: 100px !important;
+            flex: 0 0 100px !important;
+        }
+
+        .btn-width-small {
+            width: 44px !important;
+            min-width: 44px !important;
+            max-width: 44px !important;
+            flex: 0 0 44px !important;
+            padding-left: 4px !important;
+            padding-right: 4px !important;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 1500px) {
+            .btn-width-normal {
+                width: 84px !important;
+                min-width: 84px !important;
+                max-width: 84px !important;
+                flex-basis: 84px !important;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .btn-width-normal {
+                width: 76px !important;
+                min-width: 76px !important;
+                max-width: 76px !important;
+                flex-basis: 76px !important;
+            }
         }
 
         /* --- SUCH-OVERLAY --- */

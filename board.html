@@ -6,10 +6,10 @@
     <title>Digitaler Notentisch - Projekt Notentisch</title>
 
     <link rel="stylesheet" href="quadrant-titles.css?v=20260510b">
-    <link rel="stylesheet" href="styles.css?v=20260821b">
-    <link rel="stylesheet" href="board-presets.css?v=20260502a">
+    <link rel="stylesheet" href="styles.css?v=20260826">
+    <link rel="stylesheet" href="board-presets.css?v=20260826">
 
-    <script src="board-presets.js?v=20260821b"></script>
+    <script src="board-presets.js?v=20260826"></script>
 
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
@@ -95,46 +95,48 @@
 
     <!-- CONTROL BAR -->
     <div class="control-bar">
-        <button class="btn" onclick="handleLoadButton()">LADEN</button>
+        <button class="btn btn-width-normal" onclick="handleLoadButton()">LADEN</button>
         <span class="separator">|</span>
-        <button class="btn" id="modeToggleBtn" onclick="togglePlayMode()">Spielen</button>
-        <button class="btn btn-small btn-zoom" id="zoomOutBtn" onclick="zoomOut()">ZOOM -</button>
-        <button class="btn btn-small btn-zoom" id="zoomInBtn" onclick="zoomIn()">ZOOM +</button>
+        <button class="btn btn-width-normal" id="modeToggleBtn" onclick="togglePlayMode()">Spielen</button>
+        <button class="btn btn-small btn-zoom" id="zoomOutBtn" onclick="zoomOut()">Blatt -</button>
+        <button class="btn btn-small btn-zoom" id="zoomInBtn" onclick="zoomIn()">Blatt +</button>
         <button class="btn btn-small btn-zoom" onclick="fitPdfWidth()">Breite</button>
         <button class="btn btn-small btn-zoom" onclick="fitPdfHeight()">Höhe</button>
         <span class="separator">|</span>
         
-        <button class="btn toggle" onclick="toggleWide()" id="wideBtn">Norm</button>
-        <button class="btn btn-small" onclick="toggleCenterAlign()" id="alignBtn">Links</button>
-        <button class="btn btn-small" onclick="toggleSaveCenterSettingsMode()" id="saveCenterSettingsBtn">Auto Zoom</button>
+        <button class="btn btn-width-normal toggle" onclick="toggleWide()" id="wideBtn">Norm</button>
+        <button class="btn btn-small btn-width-normal" onclick="toggleCenterAlign()" id="alignBtn">Links</button>
+        <button class="btn btn-small btn-width-normal" onclick="toggleSaveCenterSettingsMode()" id="saveCenterSettingsBtn">Align</button>
         <span class="separator">|</span>
         <button class="btn btn-small" onclick="previousPage()">&lt;</button>
         <span id="pageInfo" class="page-info">Seiten</span>
         <button class="btn btn-small" onclick="nextPage()">&gt;</button>
         <span class="separator">|</span>
-        <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)" class="hidden-file-input">
+        <input type="file" id="fileInput" accept=".xml" onchange="handleFile(event)" class="hidden-file-input" title="XML Datei wählen">
         <span id="commandStatus" title="Status">Bereit</span>
         <div class="toolbar-right">
-            <button class="btn" id="overviewBtn" onclick="toggleOverviewMode()">Übersicht</button>
-            <button class="btn" id="textSearchBtn" onclick="openSearchOverlay()" title="Blatt suchen">Textsuche</button>
-            <button class="btn" onclick="toggleAudioAssistMode(event)" id="audioAssistBtn" title="Kurz: Aus→Hören, Hören→Aus. Lang (in Hören): Aufnahme. In Aufnahme: Kurz=Aus.">Hören</button>
+            <button class="btn btn-width-normal" id="overviewBtn" onclick="toggleOverviewMode()">Übersicht</button>
+            <button class="btn btn-width-normal" id="textSearchBtn" onclick="openSearchOverlay()" title="Blatt suchen">Textsuche</button>
+            <button class="btn btn-width-normal" onclick="toggleAudioAssistMode(event)" id="audioAssistBtn" title="Kurz: Aus→Hören, Hören→Aus. Lang (in Hören): Aufnahme. In Aufnahme: Kurz=Aus.">Hören</button>
             <span id="audioSaveBtn" title="Auto-Speichern Status">Speichern</span>
-            <button class="btn btn-config" onclick="openConfigPage()" title="Staffelung">C</button>
-            <button class="btn btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreenMode()" title="Vollbild (F11 / Esc)">F11</button>
-            <button class="btn btn-end" id="endBtn" onclick="requestShutdownAndExit()" title="Server beenden und schließen">Ende</button>
+            <span id="toolbarSpacer" aria-hidden="true"></span>
+            <span class="separator">|</span>
+            <button class="btn btn-width-small btn-config" onclick="openConfigPage()" title="Staffelung">C</button>
+            <button class="btn btn-width-small btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreenMode()" title="Vollbild (F11 / Esc)">F11</button>
+            <button class="btn btn-width-small btn-end" id="endBtn" onclick="requestShutdownAndExit()" title="Server beenden und schließen">Ende</button>
         </div>
     </div>
 
 </div>
 
     <!-- SCRIPTS -->
-    <script src="center-config.js?v=20260412n"></script>
+    <script src="center-config.js?v=20260826"></script>
     <script src="render.js?v=20260811a"></script>
-    <script src="filehandling.js?v=20260821b"></script>
+    <script src="filehandling.js?v=20260826"></script>
     <script src="board-session-state.js?v=20260427b"></script>
-    <script src="functions.js?v=20260427a"></script>
+    <script src="functions.js?v=20260826"></script>
     <script src="center-view.js?v=20260811a"></script>
-    <script src="audio_core.js?v=20260605a"></script>
+    <script src="audio_core.js?v=20260826"></script>
     <script src="audio_data.js?v=20260427a"></script>
     <script src="audio_runtime.js?v=20260605a"></script>
 

@@ -149,6 +149,9 @@
         // Anzahl Seiten für Fit-Breite im 2:3-Preset (wenn nicht wide/full).
         centerFitMonitorPages: 3,
 
+        // Eckradius des Centers in Pixeln.
+        centerCornerRadius: 20,
+
         // Smooth-Scroll im Center aktivieren/deaktivieren.
         centerSmoothScroll: true,
 
@@ -235,6 +238,7 @@
             centerZoomHoldIntervalMs: clampNumber(parsed.centerZoomHoldIntervalMs, 30, 400, defaults.centerZoomHoldIntervalMs),
             centerCanvasExtraWidth: clampNumber(parsed.centerCanvasExtraWidth, 0, 40, defaults.centerCanvasExtraWidth),
             centerFitMonitorPages: clampNumber(parsed.centerFitMonitorPages, 1, 6, defaults.centerFitMonitorPages),
+            centerCornerRadius: clampNumber(parsed.centerCornerRadius, 0, 100, defaults.centerCornerRadius),
             centerSmoothScroll: normalizeBoolean(parsed.centerSmoothScroll, defaults.centerSmoothScroll),
             useZoomSettingsOnDrop: normalizeBoolean(parsed.useZoomSettingsOnDrop, defaults.useZoomSettingsOnDrop),
             dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, defaults.dropGlowDurationMs),

@@ -551,7 +551,11 @@ function updateAudioAssistUi() {
     if (saveBtn) {
         const saveTargetCardId = audioReadyToSaveState?.state?.cardId ? String(audioReadyToSaveState.state.cardId) : null;
         // BTN2 im Modus 2 immer sichtbar
-        saveBtn.style.visibility = audioAssistMode === 2 ? 'visible' : 'hidden';
+        const saveButtonVisible = audioAssistMode === 2;
+        saveBtn.style.visibility = saveButtonVisible ? 'visible' : 'hidden';
+        saveBtn.style.width = saveButtonVisible ? '78px' : '0';
+        saveBtn.style.minWidth = saveButtonVisible ? '78px' : '0';
+        saveBtn.style.padding = saveButtonVisible ? '0 8px' : '0';
         // GrÃƒÂ¼n: nach Auto-Speichern, solange Wartezeit lÃƒÂ¤uft. Blau: wenn Wartezeit vorbei.
         const inWaitTime = audioWaitAfterMatchUntil > 0 && Date.now() < audioWaitAfterMatchUntil;
         if (audioSaveWasConfirmed && inWaitTime) {

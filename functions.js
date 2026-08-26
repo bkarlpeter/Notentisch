@@ -33,6 +33,7 @@ const USER_CONFIG_DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS
         centerZoomHoldIntervalMs: 90,
         centerCanvasExtraWidth: 6,
         centerFitMonitorPages: 3,
+        centerCornerRadius: 20,
         centerSmoothScroll: true,
         useZoomSettingsOnDrop: true,
         dropGlowDurationMs: 1400,
@@ -232,6 +233,7 @@ function loadUserConfig() {
             centerZoomHoldIntervalMs: clampNumber(parsed.centerZoomHoldIntervalMs, 30, 400, USER_CONFIG_DEFAULTS.centerZoomHoldIntervalMs),
             centerCanvasExtraWidth: clampNumber(parsed.centerCanvasExtraWidth, 0, 40, USER_CONFIG_DEFAULTS.centerCanvasExtraWidth),
             centerFitMonitorPages: clampNumber(parsed.centerFitMonitorPages, 1, 6, USER_CONFIG_DEFAULTS.centerFitMonitorPages),
+            centerCornerRadius: clampNumber(parsed.centerCornerRadius, 0, 100, USER_CONFIG_DEFAULTS.centerCornerRadius),
             centerSmoothScroll: normalizeBoolean(parsed.centerSmoothScroll, USER_CONFIG_DEFAULTS.centerSmoothScroll),
             useZoomSettingsOnDrop: normalizeBoolean(parsed.useZoomSettingsOnDrop, USER_CONFIG_DEFAULTS.useZoomSettingsOnDrop),
             dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, USER_CONFIG_DEFAULTS.dropGlowDurationMs),
@@ -390,6 +392,7 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     settings.centerZoomHoldIntervalMs = userConfig.centerZoomHoldIntervalMs;
     settings.centerCanvasExtraWidth = userConfig.centerCanvasExtraWidth;
     document.documentElement.style.setProperty('--center-gap', userConfig.centerCanvasExtraWidth + 'px');
+    document.documentElement.style.setProperty('--center-radius', userConfig.centerCornerRadius + 'px');
     settings.centerFitMonitorPages = userConfig.centerFitMonitorPages;
     settings.centerSmoothScroll = userConfig.centerSmoothScroll;
     settings.useZoomSettingsOnDrop = userConfig.useZoomSettingsOnDrop;

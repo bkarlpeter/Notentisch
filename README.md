@@ -372,7 +372,7 @@ Wichtig:
 ### Desktop-Button erstellen
 
 Beim ersten Setup wird gefragt, ob ein Desktop-Button für Notentisch angelegt werden soll.
-Bei Zustimmung startet die Verknüpfung `Notentisch.vbs` unsichtbar und verwendet bevorzugt
+Bei Zustimmung startet die Verknüpfung `Notentisch.bat` und verwendet bevorzugt
 ein vorhandenes Notentisch-Icon, andernfalls das Icon von `Notentisch.exe`.
 
 ## Card-Bilder generieren

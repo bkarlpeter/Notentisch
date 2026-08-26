@@ -939,7 +939,9 @@ function updateSaveCenterSettingsButtonState() {
     const btn = document.getElementById('saveCenterSettingsBtn');
     if (!btn) return;
 
-    btn.style.background = saveCenterSettingsModeActive ? getToggleStepColor(1) : '';
+    btn.style.background = saveCenterSettingsModeActive
+        ? getToggleStepColor(1)
+        : 'var(--btn-base, #3498db)';
     btn.style.color = '#fff';
 }
 

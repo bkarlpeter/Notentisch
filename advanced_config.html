@@ -70,6 +70,7 @@
                 <div class="field"><label for="centerSmoothScroll">Smooth-Scroll</label><select id="centerSmoothScroll"><option value="show">Aktiv</option><option value="hide">Inaktiv</option></select></div>
                 <div class="field"><label for="pageInfoTone">Seitenanzeige Helligkeit</label><select id="pageInfoTone"><option value="dunkel">Dunkel</option><option value="normal">Normal</option><option value="hell">Hell</option></select></div>
                 <div class="field"><label for="autoFullscreenOnStart">Auto-Fullscreen</label><select id="autoFullscreenOnStart"><option value="show">Aktiv</option><option value="hide">Inaktiv</option></select></div>
+                <div class="field"><label for="centerCornerRadius">Außenradius Center (px)</label><input id="centerCornerRadius" type="number" min="0" max="100" step="1"></div>
             </div>
         </div>
 
@@ -137,7 +138,7 @@
         <div id="status"></div>
     </div>
 
-    <script src="center-config.js?v=20260412n"></script>
+    <script src="center-config.js?v=20260826"></script>
     <script>
         const USER_CONFIG_KEY = 'notentischUserConfig';
         const DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS } : {};
@@ -217,6 +218,7 @@
             document.getElementById('centerZoomHoldIntervalMs').value = clampNumber(config.centerZoomHoldIntervalMs, 30, 400, DEFAULTS.centerZoomHoldIntervalMs);
             document.getElementById('centerCanvasExtraWidth').value = clampNumber(config.centerCanvasExtraWidth, 0, 40, DEFAULTS.centerCanvasExtraWidth);
             document.getElementById('centerFitMonitorPages').value = clampNumber(config.centerFitMonitorPages, 1, 6, DEFAULTS.centerFitMonitorPages);
+            document.getElementById('centerCornerRadius').value = clampNumber(config.centerCornerRadius, 0, 100, DEFAULTS.centerCornerRadius);
             document.getElementById('centerSmoothScroll').value = normalizeBoolean(config.centerSmoothScroll, DEFAULTS.centerSmoothScroll) ? 'show' : 'hide';
             document.getElementById('pageInfoTone').value = normalizePageInfoTone(config.pageInfoTone);
             document.getElementById('autoFullscreenOnStart').value = normalizeBoolean(config.autoFullscreenOnStart, DEFAULTS.autoFullscreenOnStart) ? 'show' : 'hide';
@@ -261,6 +263,7 @@
                 centerZoomHoldIntervalMs: clampNumber(document.getElementById('centerZoomHoldIntervalMs').value, 30, 400, DEFAULTS.centerZoomHoldIntervalMs),
                 centerCanvasExtraWidth: clampNumber(document.getElementById('centerCanvasExtraWidth').value, 0, 40, DEFAULTS.centerCanvasExtraWidth),
                 centerFitMonitorPages: clampNumber(document.getElementById('centerFitMonitorPages').value, 1, 6, DEFAULTS.centerFitMonitorPages),
+                centerCornerRadius: clampNumber(document.getElementById('centerCornerRadius').value, 0, 100, DEFAULTS.centerCornerRadius),
                 centerSmoothScroll: normalizeBoolean(document.getElementById('centerSmoothScroll').value, DEFAULTS.centerSmoothScroll),
                 pageInfoTone: normalizePageInfoTone(document.getElementById('pageInfoTone').value),
                 autoFullscreenOnStart: normalizeBoolean(document.getElementById('autoFullscreenOnStart').value, DEFAULTS.autoFullscreenOnStart),
@@ -327,7 +330,7 @@
         bindColorInputs('btnToggleColor1Picker', 'btnToggleColor1Hex', 'swatchToggle1', DEFAULTS.btnToggleColor1 || '#27ae60');
         bindColorInputs('btnToggleColor2Picker', 'btnToggleColor2Hex', 'swatchToggle2', DEFAULTS.btnToggleColor2 || '#52be80');
 
-        ['centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerSmoothScroll', 'pageInfoTone', 'autoFullscreenOnStart', 'dropGlowDurationMs', 'stackBatchOverlapCount', 'audioReferenceTargetMs', 'audioRecordStartDelayMs', 'audioWaitAfterMatchMs', 'audioResetOnSilenceMs', 'audioMatchExceptionalModesEnabled', 'audioMatchStrictness', 'replaceAudioByTitle', 'pdfBaseDir', 'cardSharpness'].forEach((id) => {
+        ['centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerCornerRadius', 'centerSmoothScroll', 'pageInfoTone', 'autoFullscreenOnStart', 'dropGlowDurationMs', 'stackBatchOverlapCount', 'audioReferenceTargetMs', 'audioRecordStartDelayMs', 'audioWaitAfterMatchMs', 'audioResetOnSilenceMs', 'audioMatchExceptionalModesEnabled', 'audioMatchStrictness', 'replaceAudioByTitle', 'pdfBaseDir', 'cardSharpness'].forEach((id) => {
             const el = document.getElementById(id);
             el.addEventListener('input', () => {
                 saveWithStatus('Automatisch gespeichert.');
@@ -335,12 +338,20 @@
                     const value = clampNumber(el.value, 0, 40, DEFAULTS.centerCanvasExtraWidth);
                     document.documentElement.style.setProperty('--center-gap', value + 'px');
                 }
+                if (id === 'centerCornerRadius') {
+                    const value = clampNumber(el.value, 0, 100, DEFAULTS.centerCornerRadius);
+                    document.documentElement.style.setProperty('--center-radius', value + 'px');
+                }
             });
             el.addEventListener('change', () => {
                 saveWithStatus('Automatisch gespeichert.');
                 if (id === 'centerCanvasExtraWidth') {
                     const value = clampNumber(el.value, 0, 40, DEFAULTS.centerCanvasExtraWidth);
                     document.documentElement.style.setProperty('--center-gap', value + 'px');
+                }
+                if (id === 'centerCornerRadius') {
+                    const value = clampNumber(el.value, 0, 100, DEFAULTS.centerCornerRadius);
+                    document.documentElement.style.setProperty('--center-radius', value + 'px');
                 }
             });
         });
@@ -353,6 +364,7 @@
         applyToForm(loadConfig());
         const cfg = loadConfig();
         document.documentElement.style.setProperty('--center-gap', cfg.centerCanvasExtraWidth + 'px');
+        document.documentElement.style.setProperty('--center-radius', cfg.centerCornerRadius + 'px');
     </script>
 </body>
 </html>
