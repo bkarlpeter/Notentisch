@@ -18,7 +18,7 @@
             id: 'carved-a', label: 'Holzornament', builtin: true,
             description: 'Warmer Holzrahmen mit heller Center-Fläche.',
             preview: { board: '#17120d', quadrant: '#4d392b', center: '#f3e7d7', accent: '#9d7d59',
-                patternUrl: 'Werkstatt/stock-photo-wooden-carved-pattern-with-a-large-flower-in-the-middle-with-intersecting-broken-lines-with-2259941291.jpg' }
+                patternUrl: 'Werkstatt/stock-photo-seamless-d-wooden-carving-tile-with-islam-arabic-indian-ottoman-motifs-majolica-pottery-tile-2130251429.jpg' }
         },
         {
             id: 'carved-b', label: 'Stein/Marmor', builtin: true,

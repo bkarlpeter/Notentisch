@@ -8,7 +8,6 @@ let saveDateBlinkTimer = null;
 let saveWarnBlinkTimer = null;
 let hasUnsavedChanges = false;
 let isPlayMode = true;
-let saveCenterSettingsModeActive = false;
 let overviewModeActive = false;
 let overviewCenterRuntimeState = null;
 const OVERVIEW_MODE_STATE_KEY = 'notentischOverviewModeState';
@@ -128,7 +127,7 @@ function applyOverviewModeState() {
         btn.style.border = 'none';
     }
 
-    const centerModeControls = ['wideBtn', 'alignBtn', 'saveCenterSettingsBtn'];
+    const centerModeControls = ['wideBtn', 'alignBtn'];
     centerModeControls.forEach((id) => {
         const control = document.getElementById(id);
         if (control) {
@@ -251,7 +250,7 @@ function showCardInCenterById(cardId) {
     }
 
     const userConfig = getUserConfigForDropBehavior();
-    const shouldApplyStoredCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+    const shouldApplyStoredCenterView = !!userConfig.useZoomSettingsOnDrop;
 
     if (typeof discardCenterPendingScrollState === 'function') {
         discardCenterPendingScrollState();
@@ -657,6 +656,9 @@ async function pickWerkstattDir() {
 }
 
 function updateDirDisplay() {
+    const hint = document.getElementById('blaetterHint');
+    if (hint) hint.style.display = blaetterDirHandle ? 'none' : '';
+
     const blaetterEl = document.getElementById('blaetterDirDisplay');
     const cardsEl = document.getElementById('cardsExportDirDisplay');
     const werkstattEl = document.getElementById('werkstattDirDisplay');
@@ -933,25 +935,6 @@ function writeCenterSettingsToCardNode(cardId) {
     upsertCardChild('CenterAnsichtChanged', '1');
     markUnsavedChange();
     return true;
-}
-
-function updateSaveCenterSettingsButtonState() {
-    const btn = document.getElementById('saveCenterSettingsBtn');
-    if (!btn) return;
-
-    btn.style.background = saveCenterSettingsModeActive
-        ? getToggleStepColor(1)
-        : 'var(--btn-base, #3498db)';
-    btn.style.color = '#fff';
-}
-
-function toggleSaveCenterSettingsMode() {
-    saveCenterSettingsModeActive = !saveCenterSettingsModeActive;
-    try { localStorage.setItem('saveCenterSettingsModeActive', saveCenterSettingsModeActive ? '1' : '0'); } catch (e) {}
-    updateSaveCenterSettingsButtonState();
-    setStatusText(saveCenterSettingsModeActive
-        ? 'Save Zoom aktiv: automatische Übernahme/Speicherung.'
-        : 'Save Zoom aus: keine automatische Übernahme/Speicherung.');
 }
 
 function setStatusText(text) {
@@ -1344,7 +1327,7 @@ function executeSearchDrop(match) {
 
         // Center vorbereiten (wie bei Drop)
         const userConfig = getUserConfigForDropBehavior();
-        const shouldApplyStoredCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+        const shouldApplyStoredCenterView = !!userConfig.useZoomSettingsOnDrop;
         if (typeof discardCenterPendingScrollState === 'function') {
             discardCenterPendingScrollState();
         }
@@ -1483,7 +1466,6 @@ function clearCenterAfterCardExit() {
     if (typeof updateScrollButtons === 'function') {
         updateScrollButtons();
     }
-    updateSaveCenterSettingsButtonState();
 }
 
 function captureCenterVisualSnapshot() {
@@ -1777,7 +1759,7 @@ function drop(event) {
         }
         if (card.dataset.pdf) {
             const userConfig = getUserConfigForDropBehavior();
-            const shouldApplyStoredCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+            const shouldApplyStoredCenterView = !!userConfig.useZoomSettingsOnDrop;
             if (typeof discardCenterPendingScrollState === 'function') {
                 discardCenterPendingScrollState();
             }
@@ -1794,7 +1776,7 @@ function drop(event) {
         }
     } else if (isQuadrant) {
         const userConfig = getUserConfigForDropBehavior();
-        const shouldPersistCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+        const shouldPersistCenterView = !!userConfig.useZoomSettingsOnDrop;
         const cameFromCenter = card.classList.contains('in-center');
         if (cameFromCenter && shouldPersistCenterView) {
             writeCenterSettingsToCardNode(card.dataset.cardid);
@@ -2168,7 +2150,7 @@ function moveCardFromCenterTo(quadrantId) {
     const targetQuadrant = document.getElementById(quadrantId);
     if (card && targetQuadrant) {
         const userConfig = getUserConfigForDropBehavior();
-        const shouldPersistCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+        const shouldPersistCenterView = !!userConfig.useZoomSettingsOnDrop;
         placeCardAtTopOfQuadrant(targetQuadrant, card);
         normalizeCardStackStyle(card);
         if (!overviewModeActive) {
@@ -2255,14 +2237,6 @@ function saveDateNow() {
     console.log('Played date saved for card ' + cardId);
 }
 
-function restoreSaveCenterSettingsModeState() {
-    try {
-        const stored = localStorage.getItem('saveCenterSettingsModeActive');
-        if (stored === '1') saveCenterSettingsModeActive = true;
-    } catch (e) {}
-    updateSaveCenterSettingsButtonState();
-}
-
 function initializeBoardFilehandling() {
     const safeRun = (fn) => {
         try { fn(); } catch (err) {}
@@ -2298,7 +2272,6 @@ function initializeBoardFilehandling() {
     safeRun(() => applyModeButtonState());
     safeRun(() => restoreOverviewModeState());
     safeRun(() => restoreSafetyBackupIfAvailable());
-    safeRun(() => restoreSaveCenterSettingsModeState());
     safeRun(() => window.addEventListener('resize', handleViewportResize));
 
     // Bei History-/bfcache-Rueckkehr sicherstellen, dass die aktuelle Staffelung angewendet wird.

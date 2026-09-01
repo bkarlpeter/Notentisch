@@ -78,7 +78,6 @@ function clearCenterAfterCardExit() {
     if (typeof updateScrollButtons === 'function') {
         updateScrollButtons();
     }
-    updateSaveCenterSettingsButtonState();
 }
 
 function drop(event) {
@@ -107,7 +106,7 @@ function drop(event) {
         }
         if (card.dataset.pdf) {
             const userConfig = getUserConfigForDropBehavior();
-            const shouldApplyStoredCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+            const shouldApplyStoredCenterView = !!userConfig.useZoomSettingsOnDrop;
             if (typeof discardCenterPendingScrollState === 'function') {
                 discardCenterPendingScrollState();
             }
@@ -123,7 +122,7 @@ function drop(event) {
         }
     } else if (isQuadrant) {
         const userConfig = getUserConfigForDropBehavior();
-        const shouldPersistCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+        const shouldPersistCenterView = !!userConfig.useZoomSettingsOnDrop;
         const cameFromCenter = card.classList.contains('in-center');
         if (cameFromCenter && shouldPersistCenterView) {
             writeCenterSettingsToCardNode(card.dataset.cardid);

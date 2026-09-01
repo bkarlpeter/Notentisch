@@ -528,11 +528,11 @@ function updateAudioAssistUi() {
             btn.style.background = hasPendingRecordStart ? '#3498db' : '#c56a1b';
             btn.style.color = '#fff';
         } else if (audioAssistMode === 1) {
-            btn.textContent = 'Hören';
+            btn.textContent = BTN_LABELS.hoeren;
             btn.style.background = '#27ae60';
             btn.style.color = '#fff';
         } else {
-            btn.textContent = 'Tonsuche';
+            btn.textContent = BTN_LABELS.tonsuche;
             btn.style.background = '';
             btn.style.color = '';
         }

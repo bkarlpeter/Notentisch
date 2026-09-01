@@ -112,6 +112,16 @@ if (Test-Path $vbsPath) {
     Copy-Item $vbsPath "$packageDir\" -Force
 }
 
+$runtimeAssetsToCopy = @(
+    "Zither2.jpg"
+)
+foreach ($assetFile in $runtimeAssetsToCopy) {
+    $assetPath = Join-Path $repoRoot $assetFile
+    if (Test-Path $assetPath) {
+        Copy-Item $assetPath "$packageDir\" -Force
+    }
+}
+
 $samplePdfSourceDir = Join-Path $repoRoot $samplePdfFolderName
 $samplePdfs = @()
 if ($SamplePdfCount -gt 0) {

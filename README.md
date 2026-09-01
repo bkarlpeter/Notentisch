@@ -135,7 +135,7 @@ Highlights dieser stabilen Version:
 - Umschaltbare Center-Ausrichtung (`Links/Mitte/Rechts`) mit persistenter Speicherung
 - Feinere Zoomschritte + kontinuierlicher Zoom bei langem Tastendruck
 - Zoom-Fokus ist fest auf `links-oben` gesetzt (kein Fokus-Umschalter mehr)
-- `Auto Zoom` als Toggle (auto anwenden beim Drop ins Center + auto speichern beim Verlassen)
+- `Benutze Zoom-Settings beim Drop` als Config-Option (auto anwenden beim Drop ins Center + auto speichern beim Verlassen)
 - 3-stufige Helligkeit fuer die Seitenanzeige (`dunkel|normal|hell`) in Advanced
 - `Auto-Fullscreen beim Start` als schaltbare Advanced-Option
 - Kein erzwungener Stack-Neuaufbau beim Zurücklegen aus dem Center
@@ -146,7 +146,7 @@ Aktueller Stand (04.04.2026):
 - Rückkehr von `Config` stellt Stapel-Reihenfolge bevorzugt aus dem vorhandenen DOM wieder her.
 - Spielmodus (`Spielen`/`Sichten`) bleibt beim Rückweg erhalten.
 - Tonsuche-Button: Kurzdruck `Ton An -> Aus`, Langdruck in `Ton An -> Aufnahme`, in `Aufnahme -> Aus`.
-- Bekannte Einschränkung: Bei einigen Browser-/Fullscreen-Kombinationen kann der Fullscreen beim Wechsel `Board -> Config -> Zurück` trotzdem verlassen werden.
+- Fullscreen-Rückkehr: War das Board vor `Config` im Vollbild, wird `F11` beim Zurückkehren wiederhergestellt; falls der Browser blockiert, erfolgt ein Retry bei der nächsten Benutzeraktion.
 
 Aktueller Stand (15.04.2026):
 - Tonsuche-Fortschritt ist in allen Suchphasen sichtbar: `Sammeln` (grau), `Warten` (gruen), `Schwierig` (braun).
@@ -227,6 +227,11 @@ Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. te
 - **Symptom**: Buttons wie "Zurück zum Board", "Advanced", "Designs ✦" waren klickbar, aber nicht funktional (Listener nie gebunden).
 - **Behebung**: `<script async src="...">` hinzugefügt → PDF-Library lädt parallel, Buttons reagieren sofort.
 
+**Bug 4: `pdfjsLib is not defined` beim Board-Start**
+- **Ursache**: `board.html` lud PDF.js asynchron, griff aber direkt danach auf `pdfjsLib.GlobalWorkerOptions` zu. Bei langsamem CDN oder Offline-Start war `pdfjsLib` noch nicht vorhanden.
+- **Symptom**: Browser meldete `ReferenceError: pdfjsLib is not defined`; das Board selbst konnte sichtbar bleiben, PDF-Funktionen waren aber riskant.
+- **Behebung**: PDF.js-Worker wird im Board erst im `onload` des CDN-Skripts konfiguriert; `center-view.js` zeigt bei fehlendem PDF.js eine Center-Meldung statt eines JavaScript-Fehlers.
+
 **Bug 3: Fehlende oder alte JS-Dateien im ZIP**
 - **Ursache**: Das Build-Skript kopierte früher nur explizit aufgelistete Dateien aus dem `dist/` Verzeichnis.
 - **Behebung**: `build_complete_package.ps1` kopiert die aktuellen App-Dateien direkt aus dem Projektstamm; neue JS-Module werden automatisch enthalten.
@@ -237,7 +242,7 @@ Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. te
 - **Separate Beispiel-PDFs**: Für den aktuellen Build nicht erzeugt (`-SeparateSamplePdfCount 0`).
 - **Startoptionen**:
   - Einfach: `AutoInstaller.bat` doppelklicken (empfohlen)
-  - Alternativ: `Notentisch.vbs` doppelklicken (VB-Wrapper mit Optional-Setup auf erstem Start)
+  - Alternativ: `Notentisch.vbs` doppelklicken (VB-Wrapper; startet den Server ohne sichtbares Konsolenfenster)
 
 ### Bekannte Limitations und Workarounds
 
@@ -403,12 +408,12 @@ Das Skript nutzt automatisch:
   - Niedrigerer Wert: weniger Abstand, dadurch bei `Breite` groesserer Zoom
 - `Höhe`: setzt den Zoom auf den konfigurierten Startwert (`centerDefaultZoom`)
 - `WIDE / NORMAL`: vergroessert CENTER nach links; rechter Rand bleibt fix
-- CENTER-Ausrichtung: `Links/Mitte/Rechts` per Button, persistent ueber `centerAlign`
+- CENTER-Ausrichtung: `Links/Mitte/Rechts` per Button, persistent ueber `centerAlign`; gilt in `Norm`, `Weit` und `Full`
 - CENTER-Scroll: Schrittweite ueber `scrollStep`, Scroll-Verhalten ueber `centerSmoothScroll`
-- `Auto Zoom`: Toggle fuer blattbezogene Center-Werte (blau = aus, gruen = aktiv); **Zustand wird persistent gespeichert** und beim nächsten Start wiederhergestellt
-  - aktiv: Beim Drop ins CENTER werden gespeicherte `CenterAnsicht`-Werte angewendet
-  - aktiv: Beim Verlassen des CENTER (Drop/Klick nach Q1-Q4) werden aktuelle Center-Werte automatisch in XML gespeichert
-  - aus: Keine automatische Anwendung und keine automatische Speicherung von `CenterAnsicht`
+- `Benutze Zoom-Settings beim Drop` (Config): steuert blattbezogene Center-Werte
+  - `Ja`: Beim Drop ins CENTER werden gespeicherte `CenterAnsicht`-Werte angewendet
+  - `Ja`: Beim Verlassen des CENTER (Drop/Klick nach Q1-Q4) werden aktuelle Center-Werte automatisch in XML gespeichert
+  - `Nein`: Keine automatische Anwendung und keine automatische Speicherung von `CenterAnsicht`
 - `Textsuche`: öffnet ein Suchoverlay zur Volltextsuche über alle Blatttitel
   - Treffer zeigen Titel und Stapelzuordnung
   - Treffer anklicken → Bestätigungsmeldung erscheint
@@ -662,7 +667,7 @@ Zusätzlich:
 - Persistiert wird in `localStorage` unter `notentischUserConfig`.
 - Bearbeitung erfolgt in `config.html` (inkl. Advanced-Felder fuer Center/Zoom).
 - Laufzeitnutzung erfolgt in `center-view.js` und `functions.js`.
-- `useZoomSettingsOnDrop` (bool): XML-`CenterAnsicht` beim Drop ins CENTER anwenden (`true`/`false`, Default `true`).
+- `useZoomSettingsOnDrop` (bool): XML-`CenterAnsicht` beim Drop ins CENTER anwenden und beim Verlassen automatisch speichern (`true`/`false`, Default `true`).
 - `dropGlowDurationMs` (integer): Dauer des Nachglüh-Rahmens nach Ablage in Quadrant (Millisekunden, Default `1400`).
 - `pageInfoTone` (`dunkel|normal|hell`): Helligkeitsstufe fuer die Seitenanzeige in der Leiste (Advanced).
 - `autoFullscreenOnStart` (bool): Fordert beim Start automatisch Vollbild an (Advanced, Default `true`).
@@ -674,7 +679,7 @@ Zusätzlich:
 
 ### CenterAnsicht je Blatt (XML)
 
-- `Auto Zoom` (wenn aktiv) schreibt pro Blatt in `<CenterAnsicht>` beim Verlassen des CENTER:
+- `Benutze Zoom-Settings beim Drop` schreibt bei `Ja` pro Blatt in `<CenterAnsicht>` beim Verlassen des CENTER:
   - `<Zoom>` (decimal)
   - `<Align>` (`left|middle|right`)
   - `<ZoomFokus>` (`left-top`, fest)
@@ -775,15 +780,18 @@ die Blätter werden auf vier Felder rund um das Center verteilt ("Quadranten") e
 ## Projektdateien
 
 - `board.html` - UI, Layout, Styles
-- `functions.js` - PDF-Anzeige, Zoom, Seiten-/Scroll-Navigation, Pfadaufloesung
+- `functions.js` - PDF-Anzeige, Zoom, Seiten-/Scroll-Navigation, Pfadaufloesung  
+  ↳ **`BTN_LABELS`**: alle Buttonbeschriftungen der Bedienleiste an einer Stelle.
+  ↳ **`BTN_HELP_TEXTS`**: alle statischen Button-Hilfetexte der Bedienleiste an einer Stelle.
+- `center-view.js` - CENTER-PDF-Anzeige, Zoom, Seiten-/Scroll-Navigation, Wide-Modi, Alignment und PDF.js-Fehlerfallback
 - `render.js` - Karten-Rendering, Stack-/Offset-Logik, Vorschau-Bildaufbau, Render-API (`window.NotentischRender`)
 - `filehandling.js` - XML I/O, Drag & Drop, Suche, Statusspeicherung, Board-/Center-Workflow
 - `audio_core.js` - Audio Auto: Zustand, UI, Timing, Button-/Toast-Logik
 - `audio_data.js` - Audio Auto: XML-Felder `AudioReferenz`, Fingerprint-Helfer, Kandidatenaufbau
 - `audio_runtime.js` - Audio Auto: Aufnahme, Matching, Tick-Loop, Mode-Steuerung
 - `extract_cards.ps1` - Card-Bilder aus PDFs generieren (Poppler)
-- `Notentisch.bat` - Batch-Launcher fuer Windows (startet `local_server.py` + Browser; setzt waehrend der Session Energiespar-Timeouts auf `Nie` und restauriert danach)
-- `notentisch.vbs` - VB-Wrapper fuer unsichtbaren Start
+- `Notentisch.bat` - Batch-Launcher fuer Windows (startet `local_server.py` im eigenen Launcher-Prozess + Browser; setzt waehrend der Session Energiespar-Timeouts auf `Nie` und restauriert danach)
+- `Notentisch.vbs` - VB-Wrapper fuer unsichtbaren Start ohne zweites Server-Konsolenfenster
 - `local_server.py` - lokaler HTTP-Server mit Shutdown-Endpoint (`/__shutdown__`) sowie Audio-Upload/-Delete (`/__audio_upload__`, `/__audio_delete__`)
 - `Cards_Export/` - Ordner fuer statische Card-Bilder (`card_*.png`)
 

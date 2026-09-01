@@ -1,3 +1,86 @@
+// Alle sichtbaren Beschriftungen der Bedienleiste an einer Stelle.
+const BTN_LABELS = {
+    laden:            'Laden',
+    spielen:          'Spielen',
+    blattMinus:       'Blatt -',
+    blattPlus:        'Blatt +',
+    breite:           'Breite',
+    hoehe:            'Höhe',
+    // wideBtn-Zustände
+    norm:             'Norm',
+    weit:             'Weit',
+    full:             'Full',
+    // alignBtn-Zustände
+    links:            'Links',
+    mitte:            'Mitte',
+    rechts:           'Rechts',
+    uebersicht:       'Übersicht',
+    textsuche:        'Textsuche',
+    hoeren:           'Hören',
+    tonsuche:         'Tonsuche',
+    konfig:           'Conf',
+    vollbild:         'F11',
+    ende:             'Ende',
+};
+
+// Alle statischen Button-Hilfetexte der Bedienleiste an einer Stelle.
+const BTN_HELP_TEXTS = {
+    laden:            'XML/Blätter laden',
+    spielen:          'Spielmodus umschalten',
+    blattMinus:       'Blatt kleiner zoomen',
+    blattPlus:        'Blatt größer zoomen',
+    breite:           'Blatt auf Breite einpassen',
+    hoehe:            'Blatt auf Höhe einpassen',
+    normWeitFull:     'Center-Ansicht: Norm, Weit oder Full',
+    linksMitteRechts: 'Ausrichtung: Links, Mitte oder Rechts',
+    seiteZurueck:     'Vorherige Seite',
+    seiteWeiter:      'Nächste Seite',
+    uebersicht:       'Übersicht ein- oder ausschalten',
+    textsuche:        'Blatt suchen',
+    audioAssist:      'Kurz: Aus -> Hören, Hören -> Aus. Lang in Hören: Aufnahme. In Aufnahme: Kurz = Aus.',
+    konfig:           'Einstellungen öffnen',
+    vollbild:         'Vollbild umschalten (F11 / Esc)',
+    ende:             'Server beenden und schließen',
+};
+
+function initButtonLabels() {
+    const set = (id, label) => { const el = document.getElementById(id); if (el) el.textContent = label; };
+    set('ladenBtn',            BTN_LABELS.laden);
+    set('modeToggleBtn',       BTN_LABELS.spielen);
+    set('zoomOutBtn',          BTN_LABELS.blattMinus);
+    set('zoomInBtn',           BTN_LABELS.blattPlus);
+    set('breiteBtn',           BTN_LABELS.breite);
+    set('hoeheBtn',            BTN_LABELS.hoehe);
+    set('wideBtn',             BTN_LABELS.norm);
+    set('alignBtn',            BTN_LABELS.links);
+    set('overviewBtn',         BTN_LABELS.uebersicht);
+    set('textSearchBtn',       BTN_LABELS.textsuche);
+    set('audioAssistBtn',      BTN_LABELS.hoeren);
+    set('configBtn',           BTN_LABELS.konfig);
+    set('fullscreenBtn',       BTN_LABELS.vollbild);
+    set('endBtn',              BTN_LABELS.ende);
+}
+
+function initButtonHelpTexts() {
+    const set = (id, helpText) => { const el = document.getElementById(id); if (el) el.title = helpText; };
+    set('ladenBtn',              BTN_HELP_TEXTS.laden);
+    set('modeToggleBtn',         BTN_HELP_TEXTS.spielen);
+    set('zoomOutBtn',            BTN_HELP_TEXTS.blattMinus);
+    set('zoomInBtn',             BTN_HELP_TEXTS.blattPlus);
+    set('breiteBtn',             BTN_HELP_TEXTS.breite);
+    set('hoeheBtn',              BTN_HELP_TEXTS.hoehe);
+    set('wideBtn',               BTN_HELP_TEXTS.normWeitFull);
+    set('alignBtn',              BTN_HELP_TEXTS.linksMitteRechts);
+    set('prevPageBtn',           BTN_HELP_TEXTS.seiteZurueck);
+    set('nextPageBtn',           BTN_HELP_TEXTS.seiteWeiter);
+    set('overviewBtn',           BTN_HELP_TEXTS.uebersicht);
+    set('textSearchBtn',         BTN_HELP_TEXTS.textsuche);
+    set('audioAssistBtn',        BTN_HELP_TEXTS.audioAssist);
+    set('configBtn',             BTN_HELP_TEXTS.konfig);
+    set('fullscreenBtn',         BTN_HELP_TEXTS.vollbild);
+    set('endBtn',                BTN_HELP_TEXTS.ende);
+}
+
 const USER_CONFIG_KEY = 'notentischUserConfig';
 const BOARD_SESSION_STATE_KEY = 'notentischBoardSessionState';
 const BOARD_SESSION_FALLBACK_KEY = 'notentischBoardSessionStateFallback';
@@ -6,6 +89,7 @@ const BOARD_DOM_SNAPSHOT_KEY = 'notentischBoardDomSnapshot';
 const BOARD_HISTORY_RETURN_KEY = 'notentischReturnToBoardViaHistory';
 const BOARD_PENDING_CONFIG_RETURN_KEY = 'notentischPendingConfigReturn';
 const BOARD_RETURN_FULLSCREEN_KEY = 'notentischReturnFullscreen';
+let fullscreenRestoreRetryInstalled = false;
 let shutdownSessionToken = null;
 const USER_CONFIG_DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS
     ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS }
@@ -740,8 +824,66 @@ function showFullscreenRestoreHint() {
         button.dataset.restoreRequired = 'true';
     }
     if (typeof setStatusText === 'function') {
-        setStatusText('Vollbild bitte mit F11 oder dem Vollbild-Button wiederherstellen.');
+        setStatusText('Vollbild wird beim nächsten Klick oder Tastendruck wiederhergestellt.');
     }
+}
+
+function clearFullscreenRestoreState() {
+    try {
+        sessionStorage.removeItem(BOARD_RETURN_FULLSCREEN_KEY);
+    } catch (err) {
+    }
+
+    const button = document.getElementById('fullscreenBtn');
+    if (button) {
+        delete button.dataset.restoreRequired;
+        button.title = (typeof BTN_HELP_TEXTS !== 'undefined' && BTN_HELP_TEXTS.vollbild)
+            ? BTN_HELP_TEXTS.vollbild
+            : 'Vollbild (F11 / Esc)';
+    }
+}
+
+function installFullscreenRestoreRetry() {
+    if (fullscreenRestoreRetryInstalled || document.fullscreenElement) return;
+    fullscreenRestoreRetryInstalled = true;
+
+    const retry = () => {
+        fullscreenRestoreRetryInstalled = false;
+        removeRetryListeners();
+        applyDefaultFullscreenState().then((restored) => {
+            if (restored) {
+                clearFullscreenRestoreState();
+            } else {
+                showFullscreenRestoreHint();
+                installFullscreenRestoreRetry();
+            }
+        }).catch(() => {
+            showFullscreenRestoreHint();
+            installFullscreenRestoreRetry();
+        });
+    };
+
+    function removeRetryListeners() {
+        document.removeEventListener('pointerdown', retry, true);
+        document.removeEventListener('keydown', retry, true);
+    }
+
+    document.addEventListener('pointerdown', retry, true);
+    document.addEventListener('keydown', retry, true);
+}
+
+function restoreFullscreenAfterConfigReturn() {
+    applyDefaultFullscreenState().then((restored) => {
+        if (restored) {
+            clearFullscreenRestoreState();
+        } else {
+            showFullscreenRestoreHint();
+            installFullscreenRestoreRetry();
+        }
+    }).catch(() => {
+        showFullscreenRestoreHint();
+        installFullscreenRestoreRetry();
+    });
 }
 
 async function toggleFullscreenMode() {
@@ -760,8 +902,7 @@ async function toggleFullscreenMode() {
     syncFullscreenButtonState();
     const button = document.getElementById('fullscreenBtn');
     if (button) {
-        delete button.dataset.restoreRequired;
-        button.title = 'Vollbild (F11 / Esc)';
+        clearFullscreenRestoreState();
     }
 }
 
@@ -883,6 +1024,8 @@ function initializeBoardUi() {
         try { fn(); } catch (err) {}
     };
 
+    safeRun(() => initButtonLabels());
+    safeRun(() => initButtonHelpTexts());
     safeRun(() => applyUserConfigAndRefresh(false));
     safeRun(() => syncFullscreenButtonState());
     safeRun(() => {
@@ -910,9 +1053,7 @@ function initializeBoardUi() {
 
     if (shouldRestoreFullscreenOnConfigReturn) {
         setTimeout(() => {
-            applyDefaultFullscreenState().then((restored) => {
-                if (!restored) showFullscreenRestoreHint();
-            }).catch(() => showFullscreenRestoreHint());
+            restoreFullscreenAfterConfigReturn();
         }, 0);
     } else if (settings.autoFullscreenOnStart && !isConfigHistoryReturn) {
         setTimeout(() => {
@@ -923,7 +1064,6 @@ function initializeBoardUi() {
     if (isConfigHistoryReturn) {
         try {
             sessionStorage.removeItem(BOARD_HISTORY_RETURN_KEY);
-            sessionStorage.removeItem(BOARD_RETURN_FULLSCREEN_KEY);
         } catch (err) {
         }
     }

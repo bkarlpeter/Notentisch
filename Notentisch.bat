@@ -44,12 +44,12 @@ if not defined PY_CMD (
 pushd "%WEBROOT%"
 
 REM === Aktuelle Energie-Werte merken und Restore-Skript vorbereiten ===
-for /f "tokens=3" %%G in ('powercfg /getactivescheme') do set "ACTIVE_SCHEME=%%G"
+for /f "tokens=4" %%G in ('powercfg /getactivescheme 2^>nul') do set "ACTIVE_SCHEME=%%G"
 
-for /f "delims=" %%V in ('powershell -NoProfile -Command "$line=(powercfg /query \"%ACTIVE_SCHEME%\" \"%SUB_VIDEO%\" \"%VIDEOIDLE%\" ^| Select-String \"Current AC Power Setting Index\" ^| Select-Object -First 1).ToString(); if($line){$line.Split(':')[-1].Trim()}"') do set "VIDEO_AC=%%V"
-for /f "delims=" %%V in ('powershell -NoProfile -Command "$line=(powercfg /query \"%ACTIVE_SCHEME%\" \"%SUB_VIDEO%\" \"%VIDEOIDLE%\" ^| Select-String \"Current DC Power Setting Index\" ^| Select-Object -First 1).ToString(); if($line){$line.Split(':')[-1].Trim()}"') do set "VIDEO_DC=%%V"
-for /f "delims=" %%V in ('powershell -NoProfile -Command "$line=(powercfg /query \"%ACTIVE_SCHEME%\" \"%SUB_SLEEP%\" \"%STANDBYIDLE%\" ^| Select-String \"Current AC Power Setting Index\" ^| Select-Object -First 1).ToString(); if($line){$line.Split(':')[-1].Trim()}"') do set "STANDBY_AC=%%V"
-for /f "delims=" %%V in ('powershell -NoProfile -Command "$line=(powercfg /query \"%ACTIVE_SCHEME%\" \"%SUB_SLEEP%\" \"%STANDBYIDLE%\" ^| Select-String \"Current DC Power Setting Index\" ^| Select-Object -First 1).ToString(); if($line){$line.Split(':')[-1].Trim()}"') do set "STANDBY_DC=%%V"
+for /f "delims=" %%V in ('powershell -NoProfile -Command "foreach($line in (powercfg /query '%ACTIVE_SCHEME%' '%SUB_VIDEO%' '%VIDEOIDLE%')){ if($line -match 'Current AC Power Setting Index' -or $line -match 'Wechselstromeinstellung'){ $line.Split(':')[-1].Trim(); break } }" 2^>nul') do set "VIDEO_AC=%%V"
+for /f "delims=" %%V in ('powershell -NoProfile -Command "foreach($line in (powercfg /query '%ACTIVE_SCHEME%' '%SUB_VIDEO%' '%VIDEOIDLE%')){ if($line -match 'Current DC Power Setting Index' -or $line -match 'Gleichstromeinstellung'){ $line.Split(':')[-1].Trim(); break } }" 2^>nul') do set "VIDEO_DC=%%V"
+for /f "delims=" %%V in ('powershell -NoProfile -Command "foreach($line in (powercfg /query '%ACTIVE_SCHEME%' '%SUB_SLEEP%' '%STANDBYIDLE%')){ if($line -match 'Current AC Power Setting Index' -or $line -match 'Wechselstromeinstellung'){ $line.Split(':')[-1].Trim(); break } }" 2^>nul') do set "STANDBY_AC=%%V"
+for /f "delims=" %%V in ('powershell -NoProfile -Command "foreach($line in (powercfg /query '%ACTIVE_SCHEME%' '%SUB_SLEEP%' '%STANDBYIDLE%')){ if($line -match 'Current DC Power Setting Index' -or $line -match 'Gleichstromeinstellung'){ $line.Split(':')[-1].Trim(); break } }" 2^>nul') do set "STANDBY_DC=%%V"
 
 if defined ACTIVE_SCHEME if defined VIDEO_AC if defined VIDEO_DC if defined STANDBY_AC if defined STANDBY_DC (
     set "POWER_RESTORE_CMD=%TEMP%\notentisch_restore_power_%RANDOM%%RANDOM%.cmd"
@@ -65,23 +65,19 @@ if defined ACTIVE_SCHEME if defined VIDEO_AC if defined VIDEO_DC if defined STAN
 )
 
 REM === Energiesparen/Bildschirmabschaltung deaktivieren (AC + Akku) ===
-powercfg /x monitor-timeout-ac 0 >nul 2>&1
-powercfg /x monitor-timeout-dc 0 >nul 2>&1
-powercfg /x standby-timeout-ac 0 >nul 2>&1
-powercfg /x standby-timeout-dc 0 >nul 2>&1
+powercfg /change monitor-timeout-ac 0 >nul 2>&1
+powercfg /change monitor-timeout-dc 0 >nul 2>&1
+powercfg /change standby-timeout-ac 0 >nul 2>&1
+powercfg /change standby-timeout-dc 0 >nul 2>&1
 
 echo Starte lokalen Server auf http://localhost:%PORT% ...
-if defined POWER_RESTORE_CMD (
-    start "" cmd /c ""%PY_CMD%" %PY_ARGS% local_server.py %PORT% & call "%POWER_RESTORE_CMD%""
-) else (
-    start "" cmd /c ""%PY_CMD%" %PY_ARGS% local_server.py %PORT%"
-)
-
-timeout /t 2 /nobreak
-start "" "http://localhost:%PORT%/%ENTRY%"
+powershell -NoProfile -WindowStyle Hidden -Command "Start-Process 'http://localhost:%PORT%/%ENTRY%'" >nul 2>&1
 
 echo.
 echo Digitaler Notentisch laeuft!
 echo URL: http://localhost:%PORT%/%ENTRY%
 echo.
+
+"%PY_CMD%" %PY_ARGS% local_server.py %PORT%
+if defined POWER_RESTORE_CMD call "%POWER_RESTORE_CMD%"
 popd

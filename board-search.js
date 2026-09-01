@@ -197,7 +197,7 @@ function executeSearchDrop(match) {
 
     // Center vorbereiten (wie bei Drop)
     const userConfig = getUserConfigForDropBehavior();
-    const shouldApplyStoredCenterView = !!(saveCenterSettingsModeActive || userConfig.useZoomSettingsOnDrop);
+    const shouldApplyStoredCenterView = !!userConfig.useZoomSettingsOnDrop;
     if (typeof discardCenterPendingScrollState === 'function') {
         discardCenterPendingScrollState();
     }

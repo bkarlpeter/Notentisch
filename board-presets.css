@@ -25,7 +25,7 @@ body[data-board-preset="classic"] #center-content::before {
 }
 
 body[data-board-preset="carved-a"] {
-    --pattern-wood-url: url("Werkstatt/stock-photo-wooden-carved-pattern-with-a-large-flower-in-the-middle-with-intersecting-broken-lines-with-2259941291.jpg");
+    --pattern-wood-url: url("Werkstatt/stock-photo-seamless-d-wooden-carving-tile-with-islam-arabic-indian-ottoman-motifs-majolica-pottery-tile-2130251429.jpg");
     --center-frame-width: max(calc((var(--card-stack-width) - 190px) / 4), 12px);
     --center-inner-radius: max(0px, calc(var(--center-radius) - var(--center-frame-width)));
     --center-overlay-alpha: 0.2;

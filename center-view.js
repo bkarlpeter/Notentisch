@@ -101,6 +101,15 @@ function getFocusAnchorPoint(mode, hostMetrics) {
     return { x: 0, y: 0 };
 }
 
+function getAlignedScrollLeft(container) {
+    if (!container) return 0;
+    const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+    if (maxScrollLeft <= 0) return 0;
+    if (centerHorizontalAlign === 'right') return maxScrollLeft;
+    if (centerHorizontalAlign === 'middle') return Math.round(maxScrollLeft / 2);
+    return 0;
+}
+
 function applyFocusAnchorByMode(container, smooth = false) {
     if (!container) return;
 
@@ -115,14 +124,22 @@ function applyFocusAnchorByMode(container, smooth = false) {
     } else if (focusMode === 'center') {
         targetLeft = Math.round(maxScrollLeft / 2);
         targetTop = Math.round(maxScrollTop / 2);
+    } else {
+        targetLeft = getAlignedScrollLeft(container);
     }
 
     const behavior = smooth ? 'smooth' : 'auto';
-    container.scrollTo({
-        top: Math.max(0, Math.min(maxScrollTop, targetTop)),
-        left: Math.max(0, Math.min(maxScrollLeft, targetLeft)),
-        behavior
-    });
+    const nextTop = Math.max(0, Math.min(maxScrollTop, targetTop));
+    const nextLeft = Math.max(0, Math.min(maxScrollLeft, targetLeft));
+    if (smooth) {
+        container.scrollTo({ top: nextTop, left: nextLeft, behavior });
+    } else {
+        const previousScrollBehavior = container.style.scrollBehavior;
+        container.style.scrollBehavior = 'auto';
+        container.scrollTop = nextTop;
+        container.scrollLeft = nextLeft;
+        container.style.scrollBehavior = previousScrollBehavior;
+    }
 }
 
 function applyLiveZoomPreview() {
@@ -358,13 +375,13 @@ function applyCenterHorizontalAlign(smooth = false, keepPosition = false) {
 
     if (button) {
         if (isRight) {
-            button.textContent = 'Rechts';
+            button.textContent = BTN_LABELS.rechts;
             button.style.background = getToggleStepColor(2);
         } else if (isMiddle) {
-            button.textContent = 'Mitte';
+            button.textContent = BTN_LABELS.mitte;
             button.style.background = getToggleStepColor(1);
         } else {
-            button.textContent = 'Links';
+            button.textContent = BTN_LABELS.links;
             button.style.background = '';
         }
     }
@@ -591,13 +608,13 @@ function toggleWide() {
     if (center.classList.contains('full')) {
         center.classList.remove('full');
         resetCenterSizing();
-        btn.textContent = 'Norm';
+        btn.textContent = BTN_LABELS.norm;
         btn.style.background = '';
         btn.classList.remove('full-state');
     } else if (center.classList.contains('wide')) {
         center.classList.remove('wide');
         center.classList.add('full');
-        btn.textContent = 'Full';
+        btn.textContent = BTN_LABELS.full;
         btn.style.background = getToggleStepColor(2);
         btn.classList.add('full-state');
         center.style.left = '10px';
@@ -616,7 +633,7 @@ function toggleWide() {
         center.classList.remove('wide');
         center.classList.remove('full');
         center.classList.add('wide');
-        btn.textContent = 'Weit';
+        btn.textContent = BTN_LABELS.weit;
         btn.style.background = getToggleStepColor(1);
         btn.classList.remove('full-state');
         center.style.right = 'auto';
@@ -641,15 +658,15 @@ function syncWideButtonState() {
     if (!center || !btn) return;
 
     if (center.classList.contains('full')) {
-        btn.textContent = 'Full';
+        btn.textContent = BTN_LABELS.full;
         btn.style.background = getToggleStepColor(2);
         btn.classList.add('full-state');
     } else if (center.classList.contains('wide')) {
-        btn.textContent = 'Weit';
+        btn.textContent = BTN_LABELS.weit;
         btn.style.background = getToggleStepColor(1);
         btn.classList.remove('full-state');
     } else {
-        btn.textContent = 'Norm';
+        btn.textContent = BTN_LABELS.norm;
         btn.style.background = '';
         btn.classList.remove('full-state');
     }
@@ -736,6 +753,17 @@ function showPdfPages(pdfPath, options = {}) {
     }
 
     function tryLoadPdf() {
+        if (typeof pdfjsLib === 'undefined') {
+            const centerContainer = document.getElementById('center-content');
+            if (centerContainer) {
+                centerContainer.innerHTML = '<div style="text-align:center;padding:20px;">' +
+                    '<p>PDF.js ist noch nicht geladen</p>' +
+                    '<p style="font-size:11px;color:#999;">Bitte Internet/CDN-Verbindung prüfen oder Seite neu laden.</p>' +
+                    '</div>';
+            }
+            return;
+        }
+
         if (pathIndex >= paths.length) {
             const centerContainer = document.getElementById('center-content');
             if (centerContainer) {
