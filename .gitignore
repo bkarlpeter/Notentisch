@@ -23,6 +23,7 @@ __pycache__/
 
 # Export/Generated
 Cards_Export/
+titleLines/
 
 # PowerShell
 *.ps1.user

@@ -477,7 +477,9 @@
 			const paddingBottom = parseFloat(style.paddingBottom) || 0;
 			return Math.max(1, q.clientHeight - paddingTop - paddingBottom);
 		});
-		const usableHeight = Math.min(...usableHeights);
+		const plausibleHeights = usableHeights.filter((h) => h > 40);
+		if (!plausibleHeights.length) return;
+		const usableHeight = Math.min(...plausibleHeights);
 
 		// Gleich große Staffelabschnitte: nutzbare Höhe in N Abschnitte teilen.
 		let visibleZone = usableHeight / Math.max(1, stackCount);

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -20,6 +20,8 @@
 
         .field { border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 10px; background: rgba(0,0,0,0.22); display: flex; flex-direction: column; gap: 8px; }
         .field-full { grid-column: 1 / -1; }
+        .field-control-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .field-control-row.three { grid-template-columns: 1fr 1fr 1fr; }
         label { font-weight: 600; font-size: 13px; }
         input[type="number"], select { width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px; border: 1px solid #3a3a3a; background: #111; color: #fff; }
         input[type="color"] { width: 56px; height: 40px; border-radius: 6px; border: 1px solid #3a3a3a; background: #111; padding: 2px; cursor: pointer; }
@@ -158,6 +160,14 @@
                 <div class="field"><label for="zoomStep">Zoom-Stufe (0.02 - 0.5)</label><input id="zoomStep" type="number" min="0.02" max="0.5" step="0.01"></div>
                 <div class="field"><label for="scrollStep">Scroll-Schritt in Pixel (60 - 800)</label><input id="scrollStep" type="number" min="60" max="800" step="10"></div>
                 <div class="field"><label for="staffelungInput">Staffelung (1-12)</label><input id="staffelungInput" type="number" min="1" max="12" value="6"></div>
+                <div class="field">
+                    <label for="pdfPageGapPx">Abstand / Überlappung zwischen Notenseiten (-20 bis 20 px)</label>
+                    <div class="field-control-row three">
+                        <input id="pdfPageGapPx" type="number" min="-20" max="20" step="1">
+                        <button id="pdfPageGapDefaultBtn" type="button" class="secondary">Default</button>
+                        <button id="pdfPageOverlapTopBtn" type="button" class="secondary" title="Bei Überlappung: welche Seite oben liegt"></button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -177,7 +187,7 @@
             window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
     </script>
-    <script src="center-config.js?v=20260412n"></script>
+    <script src="center-config.js?v=20261019b"></script>
     <script src="board-presets.js?v=20260901"></script>
     <script>
         const USER_CONFIG_KEY = 'notentischUserConfig';
@@ -226,6 +236,17 @@
 
         function normalizeScrollStep(value) {
             return clampNumber(value, 60, 800, DEFAULTS.scrollStep);
+        }
+
+        function setOverlapTopButton(value) {
+            const btn = document.getElementById('pdfPageOverlapTopBtn');
+            const side = value === 'left' ? 'left' : 'right';
+            btn.dataset.value = side;
+            btn.textContent = side === 'left' ? 'Links oben' : 'Rechts oben';
+        }
+
+        function normalizePdfPageGapPx(value) {
+            return clampNumber(value, -20, 20, DEFAULTS.pdfPageGapPx);
         }
 
         function normalizeCenterAlign(value) {
@@ -348,6 +369,8 @@
             document.getElementById('tintStrength').value = normalizeTintStrength(config.tintStrength);
             document.getElementById('zoomStep').value = normalizeZoomStep(config.zoomStep);
             document.getElementById('scrollStep').value = normalizeScrollStep(config.scrollStep);
+            document.getElementById('pdfPageGapPx').value = normalizePdfPageGapPx(config.pdfPageGapPx);
+            setOverlapTopButton(config.pdfPageOverlapTop);
             document.getElementById('showFullscreenButton').value = normalizeBoolean(config.showFullscreenButton, DEFAULTS.showFullscreenButton) ? 'show' : 'hide';
             document.getElementById('showAudioBadge').value = normalizeBoolean(config.showAudioBadge, DEFAULTS.showAudioBadge) ? 'show' : 'hide';
             document.getElementById('boardPreset').value = normalizeBoardPresetValue(config.boardPreset);
@@ -371,6 +394,8 @@
                 tintStrength: normalizeTintStrength(document.getElementById('tintStrength').value),
                 zoomStep: normalizeZoomStep(document.getElementById('zoomStep').value),
                 scrollStep: normalizeScrollStep(document.getElementById('scrollStep').value),
+                pdfPageGapPx: normalizePdfPageGapPx(document.getElementById('pdfPageGapPx').value),
+                pdfPageOverlapTop: document.getElementById('pdfPageOverlapTopBtn').dataset.value === 'left' ? 'left' : 'right',
                 showFullscreenButton: normalizeBoolean(document.getElementById('showFullscreenButton').value, DEFAULTS.showFullscreenButton),
                 showAudioBadge: normalizeBoolean(document.getElementById('showAudioBadge').value, DEFAULTS.showAudioBadge),
                 boardPreset: normalizeBoardPresetValue(document.getElementById('boardPreset').value),
@@ -746,11 +771,22 @@
             saveFromFormWithStatus('Automatisch gespeichert.');
         });
 
-        ['pdfSharpness', 'paperTintPercent', 'paperTintColor', 'tintMethod', 'tintStrength', 'zoomStep', 'scrollStep', 'showFullscreenButton', 'showAudioBadge', 'boardPreset', 'useZoomSettingsOnDrop'].forEach((id) => {
+        ['pdfSharpness', 'paperTintPercent', 'paperTintColor', 'tintMethod', 'tintStrength', 'zoomStep', 'scrollStep', 'pdfPageGapPx', 'showFullscreenButton', 'showAudioBadge', 'boardPreset', 'useZoomSettingsOnDrop'].forEach((id) => {
             const el = document.getElementById(id);
             if (!el) return;
             el.addEventListener('input', () => saveFromFormWithStatus('Automatisch gespeichert.'));
             el.addEventListener('change', () => saveFromFormWithStatus('Automatisch gespeichert.'));
+        });
+
+        document.getElementById('pdfPageOverlapTopBtn').addEventListener('click', () => {
+            const btn = document.getElementById('pdfPageOverlapTopBtn');
+            setOverlapTopButton(btn.dataset.value === 'left' ? 'right' : 'left');
+            saveFromFormWithStatus('Überlappung umgeschaltet.');
+        });
+
+        document.getElementById('pdfPageGapDefaultBtn').addEventListener('click', () => {
+            document.getElementById('pdfPageGapPx').value = DEFAULTS.pdfPageGapPx;
+            saveFromFormWithStatus('Standardwert eingestellt.');
         });
 
         document.getElementById('boardPreset').addEventListener('input', () => {
@@ -808,7 +844,7 @@
             staffelungInput.addEventListener('blur', saveStackCount);
         }
         
-        document.getElementById('advancedBtn').addEventListener('click', () => { window.location.assign('advanced_config.html?v=20260429c'); });
+        document.getElementById('advancedBtn').addEventListener('click', () => { window.location.assign('advanced_config.html?v=20261019b'); });
         document.getElementById('managePresetsBtn').addEventListener('click', () => { window.location.assign('presets.html?v=20260429c'); });
         function goBackToBoard() {
             window.location.replace('board.html?v=20260429c');

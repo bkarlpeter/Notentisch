@@ -1,4 +1,36 @@
+# Digitaler Notentisch
+
+Interaktive Notenverwaltung mit 4 Quadranten, Drag & Drop, PDF-Viewer und XML-Import/Export.
+
+## Inhaltsverzeichnis
+
+- [Einblick](#einblick)
+- [Installation & Schnellstart](#installation--schnellstart)
+- [Projekt-Funktions-Check (Test der Umgebung)](#projekt-funktions-check-test-der-umgebung)
+- [Aktuelle stabile Version](#aktuelle-stabile-version)
+- [Sicherheitscheck (Stand: 16.03.2026)](#sicherheitscheck-stand-16032026)
+- [Distribution & Troubleshooting (v2026.08.21)](#distribution--troubleshooting-v20260821)
+- [Funktionen](#funktionen)
+- [Start auf einem anderen Windows-System](#start-auf-einem-anderen-windows-system)
+- [XML aus PDF-Verzeichnis erstellen oder ergänzen](#xml-aus-pdf-verzeichnis-erstellen-oder-ergänzen)
+- [Card-Bilder generieren](#card-bilder-generieren)
+- [TitleLine-Bilder generieren](#titleline-bilder-generieren)
+- [Bedienung](#bedienung)
+- [Preset-Verwaltung](#preset-verwaltung)
+- [Algorithmen](#algorithmen)
+- [Audio Auto (Mikrofon)](#audio-auto-mikrofon)
+- [Audio Auto Troubleshooting](#audio-auto-troubleshooting)
+- [Use Cases](#use-cases)
+- [Dateiformat (XML)](#dateiformat-xml)
+- [Projektdateien](#projektdateien)
+- [Test-Ordner](#test-ordner)
+- [Anhang: XML-Gesamtdarstellung](#anhang-xml-gesamtdarstellung)
+
+---
+
 ## Einblick
+
+Zweck dieses Kapitels: Ein erster visueller Eindruck vor der Installation. Die Screenshots zeigen das Board (Startansicht mit den vier Quadranten und dem CENTER) sowie die Konfigurations- und Advanced-Seite, damit du schnell einschätzen kannst, was der Notentisch kann und wie er aussieht.
 
 <p align="center">
   <img src="Dokumentation/screenshots/Board0.jpg" alt="Notentisch Startansicht" width="100%" />
@@ -68,32 +100,6 @@
 
 > Die App arbeitet ohne Verzeichnis-Picker im Config-Dialog. Der Pfad zu `Blätter/` wird über die Projekt-/Setup-Struktur festgelegt.
 
-## Inhaltsverzeichnis
-
-- [Projekt-Funktions-Check (Test der Umgebung)](#projekt-funktions-check-test-der-umgebung)
-- [Digitaler Notentisch](#digitaler-notentisch)
-- [Aktuelle stabile Version](#aktuelle-stabile-version)
-- [Sicherheitscheck (Stand: 16.03.2026)](#sicherheitscheck-stand-16032026)
-- [Funktionen](#funktionen)
-- [Start auf einem anderen Windows-System](#start-auf-einem-anderen-windows-system)
-- [XML aus PDF-Verzeichnis erstellen oder ergänzen](#xml-aus-pdf-verzeichnis-erstellen-oder-ergänzen)
-- [Desktop-Button erstellen](#desktop-button-erstellen)
-- [Card-Bilder generieren](#card-bilder-generieren)
-- [Bedienung](#bedienung)
-- [Preset-Verwaltung](#preset-verwaltung)
-- [Algorithmen](#algorithmen)
-- [Audio Auto (Mikrofon)](#audio-auto-mikrofon)
-- [Audio Auto Troubleshooting](#audio-auto-troubleshooting)
-- [Center-/Zoom-Parameter (Basis fuer weitere Aenderungen)](#center-zoom-parameter-basis-fuer-weitere-aenderungen)
-- [CenterAnsicht je Blatt (XML)](#centeransicht-je-blatt-xml)
-- [Speichern](#speichern)
-- [Access-Board-Sync (Normalfall)](#access-board-sync-normalfall)
-- [Verzeichnisse (Ton/XML)](#verzeichnisse-tonxml)
-- [Use Cases](#use-cases)
-- [Dateiformat (XML)](#dateiformat-xml)
-- [Projektdateien](#projektdateien)
-- [Test-Ordner](#test-ordner)
-
 ---
 
 ## Projekt-Funktions-Check (Test der Umgebung)
@@ -121,9 +127,6 @@ Um zu prüfen, ob das Projekt in deiner aktuellen Umgebung korrekt funktioniert,
   ```
 
 Wenn alle Schritte erfolgreich sind, ist das Projekt in deiner Umgebung funktionsfähig. Bei Problemen siehe Abschnitt "PROBLEMLOESUNG" in INSTALL.txt oder im README.
-# Digitaler Notentisch
-
-Interaktive Notenverwaltung mit 4 Quadranten, Drag & Drop, PDF-Viewer und XML-Import/Export.
 
 ## Aktuelle stabile Version
 
@@ -167,7 +170,15 @@ Aktueller Stand (06.06.2026):
 - Bei unsicherem Treffer/Korrekturlauf wird
  der Kandidatenstatus als `1/3`, `2/3`, `3/3` mit Hinweis `Kurzdruck Hören` angezeigt.
 - Wenn der Suchlauf mit `timeout_no_match` endet, startet ebenfalls der Top-Kandidaten-Korrekturlauf (statt sofortigem Abbruch).
-- Pflegehinweis fuer die Entwicklung: Aenderungen immer in Source und in `dist/` spiegeln (Verzeichnis für die Appweitergabe).
+- Pflegehinweis fuer die Entwicklung: `dist/releases/` enthaelt die Release-ZIPs (`Notentisch-Complete-vJJJJ.MM.TT.zip`, erzeugt mit `build_complete_package.ps1`). Es muss immer mindestens ein aktueller Release enthalten sein; aeltere Releases duerfen geloescht werden. Nach funktionalen Aenderungen einen neuen Release bauen.
+
+Aktueller Stand (19.10.2026):
+- Mehrseitige PDFs: Der Abstand zwischen den Seiten ist einstellbar (`pdfPageGapPx`, Default `2`, Bereich `-20` bis `20`). Negative Werte erzeugen absichtlich eine Überlappung. Einstellung auf der Config-Seite unter `Center & Navigation`, inkl. `Default`-Button und Umschalter `Rechts oben` / `Links oben` (`pdfPageOverlapTop`): legt fest, ob bei Überlappung die rechte oder die linke Seite oben liegt. Der Umschalter wird pro Blatt in der XML gespeichert (`<PdfPageOverlapTop>`, `left`/`right`) und beim Einlegen wieder angewendet. Bei einer Änderung während der Config-Seite wird der neue Overlap-Wert nach der Rückkehr sofort auf das offene Blatt angewendet und dort gespeichert; ohne Änderung wird der vorherige Laufzeitwert zusammen mit Zoom und Position aus dem Snapshot wiederhergestellt.
+- Der Seitenabstand wird pro Blatt in der XML gespeichert (`<PdfPageGapPx>`). Beim Einlegen wird der Blattwert in die Config übernommen (falls vorhanden), beim Verlassen des Blatts wird die Config auf den Default zurückgesetzt.
+- **Ende** speichert nicht mehr selbst: Die Center-Einstellungen (Zoom, Ausrichtung, Fokus, Position, Seitenabstand, Overlap) werden bereits beim Zurücklegen des Blatts (Drop) in die XML gespeichert. Ende beendet nur den Server und schließt die Ansicht. Kann der Server nicht beendet werden, bleibt die App geöffnet.
+- Tonsequenzen: Mit `Advanced > Alte Sequenz = Beibehalten` können pro Blatt mehrere Einspielungen gespeichert werden; jede wird beim Matching einzeln verglichen (auch Passagen aus der Mitte eines Stücks).
+- XML: `Notentisch.xml` ist der Master; Konflikt-/Zusatzdateien (z. B. `-Vivobook`, `-PetersBoard`) werden nach `Noten/history/` verschoben. Vollständige Feldübersicht im Anhang „XML-Gesamtdarstellung“.
+- README: Inhaltsverzeichnis steht jetzt am Anfang und enthält alle Kapitel; Beatfinder-Anhang entfernt.
 
 Details siehe [CHANGELOG.md](CHANGELOG.md).
 
@@ -265,7 +276,7 @@ Diese Zusammenfassung dokumentiert den durchgefuehrten Sicherheitscheck inkl. te
 - Quadranten-`▲▼` zum Blättern, wenn mehr Karten vorhanden sind als sichtbar
 - CENTER-Bereich zeigt PDF (2 Seiten), inkl. `/`-Scroll und Zoom
 - Drag & Drop zwischen Quadranten und CENTER
-- Doppelklick im CENTER verschiebt die aktive Karte nach Q3 (weitere siehe use case)
+- Doppelklick im CENTER verschiebt die aktive Karte in das in `Advanced > Karten & Stapel > Doppelklick-Ziel aus dem Center` gewählte Q1–Q4 (Default: Q2 / Wiederholen)
 - XML laden/speichern im Browser
 - PDF-Pfad-Fallbacks fuer gemischte Pfadangaben (inkl. Windows-Pfade mit `#`-Trenner)
 - Kartenbild-Fallback: wenn kein `Cards_Export/card_*.png` existiert, wird ein Thumbnail aus Seite 1 der PDF erzeugt
@@ -393,6 +404,22 @@ Das Skript nutzt automatisch:
 1. die lokale Poppler-Version in `poppler-25.12.0/Library/bin/pdfimages.exe` (falls vorhanden),
 2. sonst `pdfimages.exe` aus dem `PATH`.
 
+## TitleLine-Bilder generieren
+
+Mit `extract_title_lines.ps1` wird für jede PDF ein PNG des oberen Seitenstreifens erzeugt. Standardmäßig ist der Ausschnitt 8 cm hoch und wird in `titleLines/` gespeichert:
+
+```powershell
+.\extract_title_lines.ps1
+```
+
+Optional lassen sich PDF-Ordner, Zielordner, Ausschnitthöhe und Auflösung angeben:
+
+```powershell
+.\extract_title_lines.ps1 -PdfFolder "Blätter" -OutputFolder "titleLines" -HeightCm 8 -Resolution 300
+```
+
+Das Skript nutzt `pdftoppm.exe` aus `poppler-25.12.0/Library/bin/` oder alternativ aus dem `PATH`. Bereits vorhandene gleichnamige PNGs werden überschrieben. Die Ausschnitthöhe wird bei der gewählten DPI auf ganze Pixel gerundet.
+
 ## Bedienung
 
 - `LADEN`: XML auswaehlen
@@ -407,13 +434,14 @@ Das Skript nutzt automatisch:
   - Hoeherer Wert: mehr Abstand, dadurch bei `Breite` kleinerer Zoom
   - Niedrigerer Wert: weniger Abstand, dadurch bei `Breite` groesserer Zoom
 - `Höhe`: setzt den Zoom auf den konfigurierten Startwert (`centerDefaultZoom`)
+- Seitenwechsel: zeigt die nächste Seitengruppe ohne eine bereits angezeigte Seite zu wiederholen; den Seitenabstand stellst du unter `Center & Navigation` ein
 - `WIDE / NORMAL`: vergroessert CENTER nach links; rechter Rand bleibt fix
-- CENTER-Ausrichtung: `Links/Mitte/Rechts` per Button, persistent ueber `centerAlign`; gilt in `Norm`, `Weit` und `Full`
+- CENTER-Ausrichtung: `Links/Mitte/Rechts` per Button; die aktuelle Ausrichtung wird je Blatt und Ansichtsmodus gespeichert. Fehlt ein gespeicherter Wert, gilt `Mitte` (auch wenn das Anwenden gespeicherter Ansichten deaktiviert ist).
 - CENTER-Scroll: Schrittweite ueber `scrollStep`, Scroll-Verhalten ueber `centerSmoothScroll`
 - `Benutze Zoom-Settings beim Drop` (Config): steuert blattbezogene Center-Werte
-  - `Ja`: Beim Drop ins CENTER werden gespeicherte `CenterAnsicht`-Werte angewendet
+  - `Ja`: Beim Drop ins CENTER werden gespeicherte `CenterAnsicht`-Werte angewendet; fehlt `Align`, gilt `Mitte`
   - `Ja`: Beim Verlassen des CENTER (Drop/Klick nach Q1-Q4) werden aktuelle Center-Werte automatisch in XML gespeichert
-  - `Nein`: Keine automatische Anwendung und keine automatische Speicherung von `CenterAnsicht`
+  - `Nein`: Gespeicherte `CenterAnsicht` wird beim Drop ins CENTER nicht automatisch angewendet; beim Zurücklegen in einen Stapel werden die aktuellen Center-Werte trotzdem in der XML gespeichert.
 - `Textsuche`: öffnet ein Suchoverlay zur Volltextsuche über alle Blatttitel
   - Treffer zeigen Titel und Stapelzuordnung
   - Treffer anklicken → Bestätigungsmeldung erscheint
@@ -442,6 +470,7 @@ Das Skript nutzt automatisch:
   - Karten werden je Quadrant alphabetisch angezeigt
   - Stapel-`▲▼` sind in diesem Modus ausgeblendet
   - Doppelklick auf Karte: Karte im CENTER oeffnen, Modus bleibt aktiv
+  - Doppelklick im CENTER legt die aktive Karte in den in Advanced eingestellten Ziel-Quadranten zurück
   - Klick auf Q1-Q4 mit aktiver CENTER-Karte: Karte wird in den gewaehlten Quadranten zurueckgelegt
 - `Ende`: beendet den lokalen Server und schliesst die Ansicht
 - Karte ins CENTER ziehen: PDF anzeigen
@@ -488,6 +517,17 @@ Dieses Kapitel beschreibt die wichtigsten Algorithmen rund um Tonsuche und Aufna
 - **No-Signal-Abbruch**: Wenn laenger kein verwertbares Signal mehr ankommt, wird die Tonsuche beendet, statt stale Kandidaten weiter zu bewerten.
 
 Kurz gesagt: Die Suche soll schnell reagieren, aber erst dann ausloesen, wenn ein Kandidat wirklich stabil vorne liegt.
+
+**Mehrere Einspielungen und Passagen aus der Mitte**
+
+- Bei `Advanced > Alte Sequenz = Beibehalten` hat ein Blatt mehrere Referenzen (`<AudioReferenz>`). `collectAudioReferenceCandidates()` liest alle ein.
+- `evaluateAudioMatching()` vergleicht das Live-Signal mit jeder Referenz einzeln und nimmt pro Blatt den besten Wert. Eine Referenz, die nur eine Passage aus der Mitte des Stuecks enthaelt, kann das Blatt daher allein erkennen.
+- Die Aufnahme ist nicht an den Stueckanfang gebunden: Sie nimmt auf, was ab dem Start des Einspielens gespielt wird.
+
+Einschraenkungen (aus dem Code abgeleitet, nicht mit echtem Ton getestet):
+- Der Fingerprint ist ein ueber die Zeit gemitteltes Klangspektrum ohne Melodie-/Zeitverlauf. Passagen mit aehnlichem Klang (z. B. gleiche Tonart/Harmonie) koennen verwechselt werden.
+- Das Live-Signal wird in Fenstern von ca. 450 ms (`AUDIO_MATCH_EVAL_INTERVAL_MS`) ausgewertet, die Referenz ist ueber die ganze Aufnahme gemittelt. Kurze, charakteristische Passagen passen daher besser als lange, wechselhafte.
+- Bei unsicherer Erkennung koennte der Vergleich mit zeitlichen Teilfenstern pro Referenz verbessert werden (noch nicht umgesetzt).
 
 ### Aufnahme-Flow
 
@@ -608,11 +648,19 @@ Im jeweiligen `<NotenTisch>`-Eintrag wird ein optionaler Block ergänzt:
   <MimeType>audio/webm;codecs=opus</MimeType>
   <Fingerprint>0.12,0.34,...</Fingerprint>
   <ErfasstAm>2026-03-17T12:00:00.000Z</ErfasstAm>
+  <FrameCount>42</FrameCount>
+  <TargetFrameCount>48</TargetFrameCount>
 </AudioReferenz>
 ```
 
+Felder:
+- `Datei`: relativer Pfad der Audiodatei in `mysounds/`.
+- `Fingerprint`: gemittelter, normierter Frequenzband-Vektor der Aufnahme.
+- `FrameCount` / `TargetFrameCount`: Anzahl verwertbarer Musik-Frames und angestrebte Anzahl; daraus wird die Referenzqualität (Audio-Marker gut/prüfen) abgeleitet.
+
 Zusätzlich:
-- Mehrere `<AudioReferenz>`-Blöcke pro Titel sind möglich (abhängig von `Advanced > Alte Sequenz bei Neuaufnahme`).
+- Mehrere `<AudioReferenz>`-Blöcke pro Blatt sind möglich (abhängig von `Advanced > Alte Sequenz`: `Beibehalten` hängt jede Neuaufnahme als eigenen Block an, `Löschen` ersetzt alle).
+- Jeder Block wird beim Matching einzeln mit dem Live-Signal verglichen; pro Blatt zählt der beste Wert.
 - Karten mit Referenz können optional einen gelben Audio-Marker zeigen (`showAudioBadge`).
 
 ### Technische Grenzen / Hinweise
@@ -672,6 +720,7 @@ Zusätzlich:
 - `pageInfoTone` (`dunkel|normal|hell`): Helligkeitsstufe fuer die Seitenanzeige in der Leiste (Advanced).
 - `autoFullscreenOnStart` (bool): Fordert beim Start automatisch Vollbild an (Advanced, Default `true`).
 - `centerZoomFocus`: ist systemseitig fest auf `left-top` normalisiert (kein Umschalter in Advanced).
+- `pdfPageGapPx` (integer): Abstand oder Überlappung zwischen nebeneinander dargestellten PDF-Seiten in Pixeln (`-20..20`, Default `2`; Einstellung unter `Center & Navigation`).
 - `stackBatchOverlapCount` (integer): Überlappung zwischen zwei Stapel-Batches in den Quadranten (`0..9`, Default `2`).
 - `audioReferenceTargetMs` (integer): Ziel-Dauer der Audio-Referenzaufnahme in Millisekunden (`1500..12000`, Default `5000`).
 - `replaceAudioByTitle` (bool): Verhalten bei Neuaufnahme pro Titel (`true` = alte Sequenz löschen, `false` = alte Sequenz beibehalten).
@@ -686,6 +735,7 @@ Zusätzlich:
   - `<PosRelX>` (decimal 0..1)
   - `<PosRelY>` (decimal 0..1)
 - Zusätzlich wird `<CenterAnsichtChanged>1</CenterAnsichtChanged>` gesetzt für Access-Übernahmefilter.
+- Der Seitenabstand wird unabhängig von `useZoomSettingsOnDrop` pro Blatt als `<PdfPageGapPx>` am Noten-Eintrag gespeichert und beim Öffnen wieder angewendet; fehlt der Wert, gilt der Standardwert. Beim Einlegen wird der Konfigurationswert auf den Blattwert gesetzt, beim Verlassen wieder auf den Standardwert. Ältere Werte innerhalb einer `CenterAnsicht` werden weiter gelesen.
 
 ### Speichern
 
@@ -700,6 +750,10 @@ Zusätzlich:
   2. Board laedt und bearbeitet diese Datei.
   3. Board speichert zurueck nach `Notentisch.xml`.
   4. Access importiert/synchronisiert aus `Notentisch.xml`.
+- Im frischen Access-Export enthaltene Datensaetze werden mit `ImBoard=1` ausgegeben.
+- War ein Blatt in der bisherigen XML aktiv, fehlt aber im neuen Access-Export, bleibt es mit `ImBoard=0` in der XML erhalten und wird im Board ausgeblendet statt geloescht.
+- `AudioReferenz`- und Center-Ansichtsdaten bleiben fuer archivierte Blaetter erhalten. Wird dasselbe Blatt mit derselben `NotID` spaeter erneut exportiert, wird es wieder aktiv und diese Daten werden uebernommen. Eine neue `NotID` gilt als neuer Datensatz und wird nicht automatisch mit alten Referenzen verknuepft.
+- Fuer den Access-Export muss der Datensatz einen gueltigen PDF-Link im Feld `Speicherort` haben. Dass eine PDF-Datei im Ordner liegt, verknuepft sie nicht automatisch mit einem Access-Datensatz.
 - Aktivierung des Sync: nur durch die aktuell fuehrende Instanz (eine Person/Geraet), direkt vor dem Access-Import und nach abgeschlossenem Speichern im Board.
 - Parallelbetrieb vermeiden: waehrend des Sync keine gleichzeitige Schreibbearbeitung auf zweitem Geraet (z. B. Tablet), sonst kann OneDrive Konfliktdateien erzeugen.
 - Testbearbeitung auf dem Vivobook gilt als Sonderfall: diese Stande werden nur auf ausdrueckliche Rueckfrage in die Hauptdatei uebernommen.
@@ -734,7 +788,7 @@ Zusätzlich:
 
 ### Usecase 2: Noten suchen mit Tonsuche
 
-1. User schaltet `Tonsuche` auf `Ton Rec`
+1. User schaltet `Tonsuche` auf `Hören`
 2. User spielt 3-6 Sekunden ein, dabei sieht er die Fortschrittsanzeige:
   - Grün heißt: Es wird noch gesammelt oder gewartet.
   - Braun heißt: Die Suche ist schwierig bzw. unsicher, die Anzeige schaltet auf `search-difficult`.
@@ -742,7 +796,7 @@ Zusätzlich:
 3. Wenn das anfangs gesammelte Material später stabil genug wird, wird aus demselben Lauf der richtige Treffer ausgelöst und das passende Blatt automatisch in den CENTER gezogen.
 
 ### Usecase 3: Ton aufnehmen für ein Blatt
-User stellAufnahme ein.
+User stellt Hören-> Aufnahme ein.
 
 1. **user spielt ein, und nach Aufnahme weiter (Blatt bleibt im CENTER)**
   - Nach dem automatischen Aufnahme-Stopp startet keine sofortige Neuaufnahme.
@@ -754,8 +808,10 @@ User stellAufnahme ein.
   - Die Aufnahme für das neue Blatt startet direkt.
   - Die vorherige Sperre der alten Karte wird dabei aufgehoben.
 
-Hinweis zur einstellung der tonsammlung auf Advanced:
-- Die Einstellung auf Advanced `Alte Sequenz bei Neuaufnahme` steuert, ob pro Titel die aufnahme die alte ersetzt (`Löschen`) oder alle Einspielungen dafür gesammelt (`Beibehalten`) werden.
+Hinweis zur einstellung der Tonsammlung auf Advanced:
+- Die Einstellung auf Advanced `Alte Sequenz` steuert, was bei einer Neuaufnahme mit den bisherigen Aufnahmen des Titels passiert:
+  - `Löschen` (Default): Alle bisherigen Aufnahmen des Titels (XML-`AudioReferenz`-Einträge und Audiodateien in `mysounds/`) werden entfernt. Pro Titel bleibt nur die neueste Aufnahme.
+  - `Beibehalten`: Jede Neuaufnahme wird als zusätzlicher `AudioReferenz`-Eintrag mit eigener Audiodatei angehängt. Pro Blatt können so mehrere verschiedene Einspielungen gespeichert sein; alle fließen in die Erkennung ein.
 
 ## Dateiformat (XML)
 Eine XML Datei muss vorliegen, die z.B mit Access exportiert wurde und einen Satz an Notenblättern enthält.
@@ -783,7 +839,7 @@ die Blätter werden auf vier Felder rund um das Center verteilt ("Quadranten") e
 - `functions.js` - PDF-Anzeige, Zoom, Seiten-/Scroll-Navigation, Pfadaufloesung  
   ↳ **`BTN_LABELS`**: alle Buttonbeschriftungen der Bedienleiste an einer Stelle.
   ↳ **`BTN_HELP_TEXTS`**: alle statischen Button-Hilfetexte der Bedienleiste an einer Stelle.
-- `center-view.js` - CENTER-PDF-Anzeige, Zoom, Seiten-/Scroll-Navigation, Wide-Modi, Alignment und PDF.js-Fehlerfallback
+    ↳ **`MSG_TEXTS`**: Hinweis-/Statusmeldungen (Center „1x klicken“ nach Conf-Rückkehr, Aufnahme-Status zu „Alte Sequenz“).- `center-view.js` - CENTER-PDF-Anzeige, Zoom, Seiten-/Scroll-Navigation, Wide-Modi, Alignment und PDF.js-Fehlerfallback
 - `render.js` - Karten-Rendering, Stack-/Offset-Logik, Vorschau-Bildaufbau, Render-API (`window.NotentischRender`)
 - `filehandling.js` - XML I/O, Drag & Drop, Suche, Statusspeicherung, Board-/Center-Workflow
 - `audio_core.js` - Audio Auto: Zustand, UI, Timing, Button-/Toast-Logik
@@ -830,25 +886,85 @@ Du kannst eigene Tests ergänzen, um Funktionen und Module automatisch zu überp
 
 ---
 
-## Anhang: Beatfinder – Funktionsbeschreibung
+## Anhang: XML-Gesamtdarstellung
 
-**Eingabe:** Mikrofon-Stream (Web Audio API, FFT-Größe 2048)
+Die XML (`Noten/Notentisch.xml`) ist die einzige Datenquelle des Boards. Sie stammt ursprünglich aus dem Access-Export (Namespace `od:`) und wird vom Board ergänzt und zurückgeschrieben.
 
-**1. Bass-Energie messen (alle 20 ms)**
-Aus dem FFT werden nur die Bins 1–12 (≈ 0–280 Hz) ausgewertet – dort liegt der Kick/Bass, der den Takt dominiert.
+### Aufbau
 
-**2. Onset-Erkennung (Spectral Flux)**
-Differenz zur vorherigen Messung (half-wave rectifiziert). Liegt der Wert über `Mittelwert × 1,5` → Onset erkannt = ein Schlag.
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<dataroot xmlns:od="urn:schemas-microsoft-com:officedata" generated="2026-10-02T21:54:26">
+  <NotenTisch>
+    <NotID>23</NotID>
+    <Arbeitsstatus>gelernt</Arbeitsstatus>
+    <Titel>Drunter und drüber</Titel>
+    <zuletztgespielt>2026-10-09</zuletztgespielt>
+    <Speicherort>Drunter und drüber.pdf#C:\...\Noten\Blätter\Drunter und drüber.pdf#</Speicherort>
+    <ImBoard>1</ImBoard>
 
-**3. BPM-Berechnung**
-Abstände zwischen aufeinanderfolgenden Onsets werden gesammelt. Nach 4 Schlägen wird der **Median** der Intervalle gebildet → BPM = 60.000 / Intervall ms. Nur Werte im Bereich 40–210 BPM werden akzeptiert.
+    <AudioReferenz>                      <!-- 0..n -->
+      <Datei>mysounds/sound_....webm</Datei>
+      <MimeType>audio/webm;codecs=opus</MimeType>
+      <Fingerprint>0.64,0.72,...</Fingerprint>
+      <ErfasstAm>2026-04-21T10:29:23.591Z</ErfasstAm>
+      <FrameCount>34</FrameCount>
+      <TargetFrameCount>34</TargetFrameCount>
+    </AudioReferenz>
 
-**4. Beat-Lock & Metronom**
-Sobald BPM stabil ist, startet ein `setInterval` im erkannten Takt-Intervall. Jeder Tick ruft `flashBeatButton()` auf.
+    <CenterAnsicht>                      <!-- optional -->
+      <Zoom>1.148</Zoom>
+      <Align>right</Align>
+      <ZoomFokus>left-top</ZoomFokus>
+      <PosRelX>1.0000</PosRelX>
+      <PosRelY>0.0000</PosRelY>
+      <ViewportWidth>1920</ViewportWidth>
+      <ViewportHeight>1080</ViewportHeight>
+      <ScreenWidth>1920</ScreenWidth>
+      <ScreenHeight>1080</ScreenHeight>
+    </CenterAnsicht>
+    <CenterAnsichtWeit/>                 <!-- optional, gleicher Aufbau, Wide-Modus -->
+    <CenterAnsichtFull/>                 <!-- optional, gleicher Aufbau, Full-Modus -->
+    <CenterAnsichtChanged>1</CenterAnsichtChanged>
+    <PdfPageGapPx>-5</PdfPageGapPx>      <!-- optional -->
+  </NotenTisch>
+</dataroot>
+```
 
-**5. Abweichungsanzeige**
-Bei jedem neuen Onset wird verglichen: liegt er innerhalb des erwarteten Fensters (`nextExpectedBeatAt ± Schwelle`)? → **grün**. Außerhalb → **rot**.
+Wurzel ist `<dataroot>`; jedes Blatt ist ein `<NotenTisch>`-Eintrag (zusätzlich wird `<Notentisch>` akzeptiert).
 
-**Konfiguration:** Schwellwert in % (Standard 5 %) → Advanced Settings (`beatDeviationThresholdPct`).
+### Felder je `<NotenTisch>`
 
-**Stopp:** Beim Verlassen des Centers oder Deaktivieren des Toggle-Buttons wird der Stream geschlossen und alles zurückgesetzt.
+| Feld | Herkunft | Pflicht | Bedeutung |
+|---|---|---|---|
+| `NotID` | Access | ja | Eindeutige ID. Gleiche ID = gleiches Blatt; neue ID = neuer Datensatz. |
+| `Arbeitsstatus` | Access / Board | ja | `zurückgestellt` (Q1), `wiederholen` (Q2), `geübt` (Q3), `gelernt` (Q4). Das Board ändert den Wert beim Verschieben in einen Quadranten. |
+| `Titel` | Access | ja | Anzeigename; auch Schlüssel für „Alte Sequenz“ (Audio pro Titel). |
+| `zuletztgespielt` | Access / Board | nein | Datum. Das Board schreibt `JJJJ-MM-TT`; ältere Einträge können `TT.MM.JJJJ` enthalten. Wird bei Bedarf angelegt, darf leer sein. |
+| `Speicherort` | Access | ja | `Anzeigename#Pfad#` (Access-Hyperlinkformat). Pfad relativ zum Blätter-Ordner oder absolut. Ohne gültigen PDF-Link kein Board-Eintrag. |
+| `ImBoard` | Board | ja | `1` = im aktuellen Export vorhanden und sichtbar, `0` = archiviert (ausgeblendet, Daten bleiben erhalten). |
+| `AudioReferenz` | Board | nein | Tonprint einer Einspielung, mehrfach möglich. Details siehe Abschnitt „Was gespeichert wird (XML)“. |
+| `CenterAnsicht`, `CenterAnsichtWeit`, `CenterAnsichtFull` | Board | nein | Zoom/Ausrichtung/Position je Anzeigemodus (`CenterAnsicht` = Norm, `Weit`, `Full`). Beim Einlegen/Zurücklegen wird der Eintrag des gerade aktiven Modus gelesen bzw. geschrieben; fehlt er, bleibt der Standard-Zoom. |
+| `CenterAnsichtChanged` | Board | nein | `1` = Center-Werte geändert, zur Übernahme in Access vorgemerkt. |
+| `PdfPageGapPx` | Board | nein | Abstand (negativ = Überlappung, −20…20) zwischen Seiten mehrseitiger PDFs. Fehlt der Wert, gilt der Default aus der Config. |
+| `PdfPageOverlapTop` | Board | nein | Bei Überlappung oben liegende Seite (`left` oder `right`, Default `right`). |
+
+Felder der Center-Ansicht:
+- `Zoom`: Zoomfaktor.
+- `Align`: horizontale Ausrichtung (`left`, `middle`, `right`). Fehlt der Wert, gilt `middle`.
+- `ZoomFokus`: Zoom-Anker (z. B. `left-top`).
+- `PosRelX` / `PosRelY`: relative Scroll-Position 0…1.
+- `ViewportWidth/Height`, `ScreenWidth/Height`: Fenster- und Bildschirmgröße zum Zeitpunkt der Speicherung.
+
+### Wer schreibt was
+
+- **Access → XML:** `NotID`, `Arbeitsstatus`, `Titel`, `zuletztgespielt`, `Speicherort`.
+- **Board → XML:** `ImBoard`, `Arbeitsstatus` und `zuletztgespielt` (bei Statusänderung), `AudioReferenz`, `CenterAnsicht*`, `CenterAnsichtChanged`, `PdfPageGapPx`.
+- **Neue PDFs ohne Eintrag** (Import aus Ordner): neuer Eintrag mit neuer `NotID`, Status `zurückgestellt`, leerem `zuletztgespielt`, `Speicherort` = `Titel#Datei.pdf#` und `ImBoard=1`.
+
+### Regeln
+
+- Master für den Austausch ist ausschließlich `Noten/Notentisch.xml` (siehe „Access-Board-Sync“).
+- Blätter, die im neuen Export fehlen, bleiben mit `ImBoard=0` samt Audio- und Ansichtsdaten erhalten.
+- Unbekannte Felder werden beim Speichern nicht entfernt.
+- Audiodateien liegen außerhalb der XML in `mysounds/`; die XML enthält nur den Pfad und den Fingerprint.

@@ -1,4 +1,4 @@
-﻿let audioAssistMode = 0; // 0=aus, 1=hÃƒÂ¶ren/suchen, 2=aufnehmen+suchen
+let audioAssistMode = 0; // 0=aus, 1=hÃƒÂ¶ren/suchen, 2=aufnehmen+suchen
 let audioAssistDirection = 1; // 1=aufwÃƒÂ¤rts (0Ã¢â€ â€™1Ã¢â€ â€™2), -1=abwÃƒÂ¤rts (2Ã¢â€ â€™1Ã¢â€ â€™0)
 let audioAssistMonitorTimer = null;
 let audioAssistBusy = false;
@@ -173,7 +173,8 @@ function showAudioStatus(message, durationMs) {
     audioStatusResetTimer = setTimeout(() => {
         audioStatusResetTimer = null;
         if (statusEl.textContent === text) {
-            statusEl.textContent = 'Bereit';
+            const modeText = (typeof getAudioModeStatusText === 'function') ? getAudioModeStatusText() : '';
+            statusEl.textContent = modeText || 'Bereit';
             statusEl.title = 'Status';
         }
     }, Math.max(1200, dur));

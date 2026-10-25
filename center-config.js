@@ -146,6 +146,12 @@
         // Zusätzlicher horizontaler Platzbedarf je gerenderter Seite (Rahmen/Margin).
         centerCanvasExtraWidth: 6,
 
+        // Abstand zwischen nebeneinander dargestellten PDF-Seiten in Pixeln.
+        pdfPageGapPx: 2,
+
+        // Bei Überlappung: 'right' = rechte Seite liegt über der linken, 'left' = linke über der rechten.
+        pdfPageOverlapTop: 'right',
+
         // Anzahl Seiten für Fit-Breite im 2:3-Preset (wenn nicht wide/full).
         centerFitMonitorPages: 3,
 
@@ -163,6 +169,9 @@
 
         // Überlappung zwischen zwei Stapel-Batches (Anzahl Karten).
         stackBatchOverlapCount: 2,
+
+        // Ziel-Quadrant beim Doppelklick im Center.
+        doubleClickReturnQuadrant: 'Q2',
 
         // Ziel-Dauer einer Audio-Referenzaufnahme in Millisekunden.
         audioReferenceTargetMs: 5000,
@@ -237,12 +246,17 @@
             centerZoomHoldDelayMs: clampNumber(parsed.centerZoomHoldDelayMs, 80, 1000, defaults.centerZoomHoldDelayMs),
             centerZoomHoldIntervalMs: clampNumber(parsed.centerZoomHoldIntervalMs, 30, 400, defaults.centerZoomHoldIntervalMs),
             centerCanvasExtraWidth: clampNumber(parsed.centerCanvasExtraWidth, 0, 40, defaults.centerCanvasExtraWidth),
+            pdfPageGapPx: clampNumber(parsed.pdfPageGapPx, -20, 20, defaults.pdfPageGapPx),
+            pdfPageOverlapTop: parsed.pdfPageOverlapTop === 'left' ? 'left' : 'right',
             centerFitMonitorPages: clampNumber(parsed.centerFitMonitorPages, 1, 6, defaults.centerFitMonitorPages),
             centerCornerRadius: clampNumber(parsed.centerCornerRadius, 0, 100, defaults.centerCornerRadius),
             centerSmoothScroll: normalizeBoolean(parsed.centerSmoothScroll, defaults.centerSmoothScroll),
             useZoomSettingsOnDrop: normalizeBoolean(parsed.useZoomSettingsOnDrop, defaults.useZoomSettingsOnDrop),
             dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, defaults.dropGlowDurationMs),
             stackBatchOverlapCount: clampNumber(parsed.stackBatchOverlapCount, 0, 9, defaults.stackBatchOverlapCount),
+            doubleClickReturnQuadrant: ['Q1', 'Q2', 'Q3', 'Q4'].includes(String(parsed.doubleClickReturnQuadrant || '').toUpperCase())
+                ? String(parsed.doubleClickReturnQuadrant).toUpperCase()
+                : defaults.doubleClickReturnQuadrant,
             audioReferenceTargetMs: clampNumber(parsed.audioReferenceTargetMs, 1500, 12000, defaults.audioReferenceTargetMs),
             audioRecordStartDelayMs: clampNumber(parsed.audioRecordStartDelayMs, 0, 3000, defaults.audioRecordStartDelayMs),
             audioWaitAfterMatchMs: clampNumber(parsed.audioWaitAfterMatchMs, 4000, 8000, defaults.audioWaitAfterMatchMs),

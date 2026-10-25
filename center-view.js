@@ -1,7 +1,9 @@
 let currentPdfDoc = null;
 let currentPdfPath = '';
+let currentPdfLoadState = 'idle';
 let currentPageOffset = 0;
 let totalPages = 0;
+let pageOffsetHistory = [];
 let currentZoom = settings.defaultZoom;
 let currentRenderToken = 0;
 let zoomRenderTimer = null;
@@ -31,8 +33,11 @@ function getRelativeScrollPosition(container) {
     if (!container) return { x: 0, y: 0 };
     const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
     const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+    // Passt das Blatt ohne Scrollen, steht die Position für die Ausrichtung (rechts = Anschlag rechts),
+    // damit sie bei späterem Überlauf (anderer Zoom/Fenster) wieder am richtigen Rand beginnt.
+    const alignX = centerHorizontalAlign === 'right' ? 1 : (centerHorizontalAlign === 'middle' ? 0.5 : 0);
     return {
-        x: maxScrollLeft > 0 ? clampRelative(container.scrollLeft / maxScrollLeft) : 0,
+        x: maxScrollLeft > 1 ? clampRelative(container.scrollLeft / maxScrollLeft) : alignX,
         y: maxScrollTop > 0 ? clampRelative(container.scrollTop / maxScrollTop) : 0
     };
 }
@@ -152,6 +157,15 @@ function applyLiveZoomPreview() {
     host.style.transform = 'scale(' + scale + ')';
 }
 
+// Höhe ohne horizontalen Scrollbalken: sonst ändert der Balken die Basishöhe und der Zoom pendelt zwischen zwei Werten.
+function getStableCenterHeight(container) {
+    if (!container) return 0;
+    const style = window.getComputedStyle(container);
+    const borders = (parseFloat(style.borderTopWidth) || 0) + (parseFloat(style.borderBottomWidth) || 0);
+    const barHeight = Math.max(0, container.offsetHeight - borders - container.clientHeight);
+    return container.clientHeight + barHeight;
+}
+
 function getCurrentCenterViewSettings() {
     const container = document.getElementById('center-content');
     const relativePosition = getRelativeScrollPosition(container);
@@ -161,6 +175,7 @@ function getCurrentCenterViewSettings() {
     const screenHeight = Number(window.screen?.height || 0);
     return {
         zoom: currentZoom,
+        pdfPageGapPx: settings.pdfPageGapPx,
         align: centerHorizontalAlign,
         zoomFocus: normalizeCenterZoomFocusMode(settings.centerZoomFocus),
         posRelX: relativePosition.x,
@@ -187,6 +202,8 @@ function getCurrentCenterRuntimeState() {
         pdfPath: currentPdfPath,
         pageOffset: currentPageOffset,
         zoom: viewSettings.zoom,
+        pdfPageGapPx: viewSettings.pdfPageGapPx,
+        pdfPageOverlapTop: settings.pdfPageOverlapTop,
         align: viewSettings.align,
         zoomFocus: viewSettings.zoomFocus,
         posRelX: viewSettings.posRelX,
@@ -257,6 +274,17 @@ function applyCenterViewSettings(viewSettings, options = {}) {
     const preserveConfiguredFocus = !!options.preserveConfiguredFocus;
     if (!viewSettings || typeof viewSettings !== 'object') return;
 
+    if (viewSettings.pdfPageGapPx !== null
+        && viewSettings.pdfPageGapPx !== undefined
+        && viewSettings.pdfPageGapPx !== ''
+        && Number.isFinite(Number(viewSettings.pdfPageGapPx))) {
+        settings.pdfPageGapPx = Math.max(-20, Math.min(20, Number(viewSettings.pdfPageGapPx)));
+    }
+
+    if (viewSettings.pdfPageOverlapTop === 'left' || viewSettings.pdfPageOverlapTop === 'right') {
+        settings.pdfPageOverlapTop = viewSettings.pdfPageOverlapTop;
+    }
+
     if (viewSettings.align) {
         setCenterHorizontalAlign(viewSettings.align);
     }
@@ -272,14 +300,12 @@ function applyCenterViewSettings(viewSettings, options = {}) {
 
     const hasRelativePosition = Number.isFinite(Number(viewSettings.posRelX)) || Number.isFinite(Number(viewSettings.posRelY));
     if (hasRelativePosition) {
-        const normalizedAlign = normalizeCenterAlign(viewSettings.align || centerHorizontalAlign);
-        const normalizedFocus = normalizeCenterZoomFocusMode(viewSettings.zoomFocus || settings.centerZoomFocus);
-        let normalizedX = clampRelative(viewSettings.posRelX);
-        if ((normalizedAlign === 'middle' || normalizedFocus === 'center') && normalizedX <= 0.001) {
-            normalizedX = 0.5;
-        }
+        // 0 heißt bei rechts/Mitte meist "kein Scrollbereich beim Speichern" (alte Daten), nicht "ganz links".
+        const alignForPos = normalizeCenterAlign(viewSettings.align || centerHorizontalAlign);
+        let posX = clampRelative(viewSettings.posRelX);
+        if (posX <= 0.001) posX = alignForPos === 'right' ? 1 : (alignForPos === 'middle' ? 0.5 : 0);
         pendingRelativeScrollPosition = {
-            x: normalizedX,
+            x: posX,
             y: clampRelative(viewSettings.posRelY)
         };
     }
@@ -356,22 +382,14 @@ function applyCenterHorizontalAlign(smooth = false, keepPosition = false) {
 
     const isRight = centerHorizontalAlign === 'right';
     const isMiddle = centerHorizontalAlign === 'middle';
-    const desiredJustify = isRight ? 'flex-end' : (isMiddle ? 'center' : 'flex-start');
-
-    // Wenn der Inhalt breiter als der Viewport ist, führt center/right in Flex-Containern
-    // zu abgeschnittenem linken Überstand, der nicht zurückgescrollt werden kann.
-    // Dann erzwingen wir flex-start und lassen Alignment nur wirken, wenn es passt.
+    // Auto-Margins statt justify-content: bei Überbreite fällt der Inhalt automatisch auf "links" zurück,
+    // ohne abgeschnittenen Überstand und ohne fehleranfällige Breitenprüfung.
+    container.style.justifyContent = 'flex-start';
     const host = getCenterPagesHost();
-    let effectiveJustify = desiredJustify;
     if (host) {
-        const hostWidth = Math.max(host.scrollWidth || 0, host.offsetWidth || 0, host.clientWidth || 0);
-        const viewportWidth = Math.max(0, container.clientWidth || 0);
-        if (hostWidth > (viewportWidth + 1)) {
-            effectiveJustify = 'flex-start';
-        }
+        host.style.marginLeft = (isRight || isMiddle) ? 'auto' : '0';
+        host.style.marginRight = isMiddle ? 'auto' : '0';
     }
-
-    container.style.justifyContent = effectiveJustify;
 
     if (button) {
         if (isRight) {
@@ -416,21 +434,31 @@ function alignCenterTopLeft(smooth = false) {
     applyFocusAnchorByMode(container, smooth);
 }
 
-function queueZoomRender() {
+function queueZoomRender(options = {}) {
     if (!currentPdfDoc) return;
     if (zoomRenderTimer) clearTimeout(zoomRenderTimer);
 
     const centerContainer = document.getElementById('center-content');
     // Aktuelle relative Scrollposition sichern, damit nach dem Re-Render
     // dieselbe Stelle sichtbar bleibt (statt auf left-top zu springen).
-    const relPos = getRelativeScrollPosition(centerContainer);
-    pendingRelativeScrollPosition = { x: relPos.x, y: relPos.y };
+    // Eine noch nicht angewendete (z. B. aus Config wiederhergestellte) Position bleibt bei Resize erhalten.
+    if (!(options.keepPendingPosition && pendingRelativeScrollPosition)) {
+        const relPos = getRelativeScrollPosition(centerContainer);
+        pendingRelativeScrollPosition = { x: relPos.x, y: relPos.y };
+    }
     nextRenderViewAnchor = null;
 
     zoomRenderTimer = setTimeout(() => {
         renderPdfPages();
         zoomRenderTimer = null;
     }, settings.centerZoomDebounceMs);
+}
+
+function preserveCenterViewPosition() {
+    const centerContainer = document.getElementById('center-content');
+    if (!centerContainer) return;
+    pendingRelativeScrollPosition = getRelativeScrollPosition(centerContainer);
+    nextRenderViewAnchor = null;
 }
 
 function stepZoom(deltaStep) {
@@ -535,7 +563,7 @@ function fitPdfWidth() {
     if (!centerContainer) return;
 
     const maxWidth = centerContainer.clientWidth;
-    const centerHeight = centerContainer.clientHeight;
+    const centerHeight = getStableCenterHeight(centerContainer);
     const isExpanded = !!(center && (center.classList.contains('wide') || center.classList.contains('full')));
     const useConfiguredMonitorPages = settings.layoutPreset === 'monitor-2x3' && !isExpanded;
     const lastPageToFit = useConfiguredMonitorPages
@@ -559,7 +587,8 @@ function fitPdfWidth() {
 
         // centerCanvasExtraWidth steuert jetzt den Grid-Gap außerhalb des Centers,
         // daher keine zusätzliche Breitenreduktion pro Seite mehr im PDF-Fit.
-        const availableForPdf = Math.max(1, maxWidth);
+        const pageGaps = settings.pdfPageGapPx * Math.max(0, pages.length - 1);
+        const availableForPdf = Math.max(1, maxWidth - pageGaps);
         const zoom = availableForPdf / totalUnitWidth;
         setZoom(zoom, true);
     });
@@ -588,10 +617,26 @@ function scrollPdf(direction) {
     container.scrollTo({ top: targetTop, left: container.scrollLeft, behavior });
 }
 
+function applyStoredCenterViewForActiveMode() {
+    if (typeof activeCenterCardId === 'undefined' || activeCenterCardId === null) return false;
+    if (typeof applyCenterSettingsFromXml !== 'function') return false;
+    return !!applyCenterSettingsFromXml(activeCenterCardId, getCenterDisplayMode());
+}
+
 function toggleWide() {
     const center = document.getElementById('CENTER');
     const btn = document.getElementById('wideBtn');
     if (!center || !btn) return;
+
+    const oldMode = getCenterDisplayMode();
+    if (currentPdfDoc) {
+        // Zoom/Position des bisherigen Weitenzustands sichern, bevor die Karte gewechselt wird.
+        if (typeof writeCenterSettingsToCardNode === 'function'
+            && typeof activeCenterCardId !== 'undefined' && activeCenterCardId !== null) {
+            writeCenterSettingsToCardNode(activeCenterCardId, oldMode);
+        }
+        preserveCenterViewPosition();
+    }
 
     function resetCenterSizing() {
         center.style.right = '';
@@ -648,6 +693,9 @@ function toggleWide() {
     }
 
     if (currentPdfDoc) {
+        // Für den neuen Weitenzustand gespeicherte Ansicht laden, sonst bleibt die
+        // aus preserveCenterViewPosition() übernommene Position als Fallback erhalten.
+        applyStoredCenterViewForActiveMode();
         renderPdfPages();
     }
 }
@@ -693,10 +741,14 @@ function showPdfPages(pdfPath, options = {}) {
     const uniqueFileNames = [...new Set(baseCandidates)];
 
     currentPdfPath = normalizedActual;
+    currentPdfDoc = null;
+    currentPdfLoadState = 'loading';
+    currentRenderToken++;
     const requestedOffset = Number.isFinite(Number(options.pageOffset))
         ? Math.max(0, Math.floor(Number(options.pageOffset)))
         : 0;
     currentPageOffset = requestedOffset;
+    pageOffsetHistory = [];
 
     function encodePath(p) {
         if (!p) return '';
@@ -739,6 +791,7 @@ function showPdfPages(pdfPath, options = {}) {
                     const pdf = await pdfjsLib.getDocument(blobUrl).promise;
                     URL.revokeObjectURL(blobUrl);
                     currentPdfDoc = pdf;
+                    currentPdfLoadState = 'loaded';
                     totalPages = pdf.numPages;
                     currentPageOffset = Math.min(currentPageOffset, Math.max(0, totalPages - 1));
                     renderPdfPages();
@@ -755,18 +808,20 @@ function showPdfPages(pdfPath, options = {}) {
     function tryLoadPdf() {
         if (typeof pdfjsLib === 'undefined') {
             const centerContainer = document.getElementById('center-content');
-            if (centerContainer) {
+            if (centerContainer && !centerContainer.querySelector('#center-pages-host img')) {
                 centerContainer.innerHTML = '<div style="text-align:center;padding:20px;">' +
                     '<p>PDF.js ist noch nicht geladen</p>' +
                     '<p style="font-size:11px;color:#999;">Bitte Internet/CDN-Verbindung prüfen oder Seite neu laden.</p>' +
                     '</div>';
             }
+                currentPdfLoadState = 'failed';
             return;
         }
 
         if (pathIndex >= paths.length) {
+            currentPdfLoadState = 'failed';
             const centerContainer = document.getElementById('center-content');
-            if (centerContainer) {
+            if (centerContainer && !centerContainer.querySelector('#center-pages-host img')) {
                 const hasHandle = !!window.blaetterDirHandle;
                 centerContainer.innerHTML = '<div style="text-align:center;padding:20px;">' +
                     '<p>PDF nicht erreichbar</p>' +
@@ -786,6 +841,7 @@ function showPdfPages(pdfPath, options = {}) {
         pdfjsLib.getDocument(serverPath).promise.then(pdf => {
             console.log('PDF geladen von:', serverPath);
             currentPdfDoc = pdf;
+            currentPdfLoadState = 'loaded';
             totalPages = pdf.numPages;
             currentPageOffset = Math.min(currentPageOffset, Math.max(0, totalPages - 1));
             renderPdfPages();
@@ -797,7 +853,10 @@ function showPdfPages(pdfPath, options = {}) {
         });
     }
 
-    tryLoadFromDirectHandle().then(ok => { if (!ok) tryLoadPdf(); });
+    tryLoadFromDirectHandle().then(ok => { if (!ok) tryLoadPdf(); }).catch(() => {
+        currentPdfLoadState = 'failed';
+        tryLoadPdf();
+    });
 }
 
 function selectPdfManually() {
@@ -819,8 +878,10 @@ function selectPdfManually() {
         try {
             const arrayBuffer = await file.arrayBuffer();
             currentPdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            currentPdfLoadState = 'loaded';
             totalPages = currentPdfDoc.numPages;
             currentPageOffset = 0;
+            pageOffsetHistory = [];
             renderPdfPages();
         } catch (err) {
             if (centerContainer) {
@@ -840,6 +901,12 @@ function renderPdfPages() {
     const centerContainer = document.getElementById('center-content');
     if (!centerContainer || !currentPdfDoc) return;
 
+    // Während Vollbild-Wechsel kann die Höhe kurz 0 sein -> später erneut versuchen statt leeres Blatt.
+    if (getStableCenterHeight(centerContainer) < 50) {
+        setTimeout(() => { if (currentPdfDoc) renderPdfPages(); }, 120);
+        return;
+    }
+
     currentRenderToken++;
     const token = currentRenderToken;
     const renderAnchor = nextRenderViewAnchor;
@@ -851,6 +918,7 @@ function renderPdfPages() {
     pagesHost.id = 'center-pages-host-next';
     pagesHost.style.display = 'flex';
     pagesHost.style.alignItems = 'flex-start';
+    pagesHost.style.gap = Math.max(0, settings.pdfPageGapPx) + 'px';
     pagesHost.style.flex = '0 0 auto';
     pagesHost.style.width = 'max-content';
     pagesHost.style.position = 'relative';
@@ -894,7 +962,7 @@ function renderPdfPages() {
             if (token !== currentRenderToken) return;
 
             const viewport = page.getViewport({ scale: 1.0 });
-            const baseScale = centerContainer.clientHeight / viewport.height;
+            const baseScale = getStableCenterHeight(centerContainer) / viewport.height;
             const finalScale = baseScale * currentZoom;
             const scaledViewport = page.getViewport({ scale: finalScale });
             const canvas = document.createElement('canvas');
@@ -906,9 +974,15 @@ function renderPdfPages() {
             canvas.style.width = Math.floor(scaledViewport.width) + 'px';
             canvas.style.height = Math.floor(scaledViewport.height) + 'px';
             canvas.style.boxSizing = 'border-box';
+            canvas.style.flex = '0 0 auto';
+            canvas.style.marginLeft = pageNum > currentPageOffset + 1
+                ? Math.min(0, settings.pdfPageGapPx) + 'px'
+                : '0px';
             canvas.style.border = '1px solid #555';
             canvas.style.borderRadius = '4px';
             canvas.style.marginTop = '2px';
+            canvas.style.position = 'relative';
+            canvas.style.zIndex = String(settings.pdfPageOverlapTop === 'left' ? 1000 - pageNum : pageNum);
             canvas.style.marginBottom = '2px';
 
             const renderContext = {
@@ -944,8 +1018,11 @@ function updatePageInfo(renderedPages) {
 }
 
 function previousPage() {
-    if (currentPageOffset > 0) {
-        currentPageOffset = Math.max(0, currentPageOffset - 1);
+    if (pageOffsetHistory.length > 0 || currentPageOffset > 0) {
+        preserveCenterViewPosition();
+        currentPageOffset = pageOffsetHistory.length > 0
+            ? pageOffsetHistory.pop()
+            : Math.max(0, currentPageOffset - 1);
         renderPdfPages();
     }
 }
@@ -967,17 +1044,18 @@ function nextPage() {
 
         currentPdfDoc.getPage(pageNum).then(page => {
             const viewport = page.getViewport({ scale: 1.0 });
-            const baseScale = centerContainer.clientHeight / viewport.height;
+            const baseScale = getStableCenterHeight(centerContainer) / viewport.height;
             const finalScale = baseScale * currentZoom;
             const scaledViewport = page.getViewport({ scale: finalScale });
             const occupiedWidth = scaledViewport.width;
 
-            if (totalWidth + occupiedWidth > maxWidth && visiblePages > 0) {
+            const pageGap = visiblePages > 0 ? settings.pdfPageGapPx : 0;
+            if (totalWidth + pageGap + occupiedWidth > maxWidth && visiblePages > 0) {
                 cb(visiblePages);
                 return;
             }
 
-            totalWidth += occupiedWidth;
+            totalWidth += pageGap + occupiedWidth;
             visiblePages++;
             pageNum++;
             countVisiblePages(cb);
@@ -986,7 +1064,9 @@ function nextPage() {
 
     countVisiblePages((pages) => {
         if (currentPageOffset + pages < totalPages) {
-            currentPageOffset += 1;
+            preserveCenterViewPosition();
+            pageOffsetHistory.push(currentPageOffset);
+            currentPageOffset += pages;
             renderPdfPages();
         }
     });
@@ -1005,11 +1085,45 @@ function updateCenterFilenameLabel(path) {
 
 function initializeCenterView() {
     const userConfig = loadUserConfig();
-    setCenterHorizontalAlign(userConfig.centerAlign);
-    currentZoom = userConfig.centerDefaultZoom;
-    renderedZoom = currentZoom;
+    // Wurde der Center-Zustand schon aus der Config-Rückkehr wiederhergestellt (läuft evtl. vor dieser Init),
+    // dürfen Zoom und Ausrichtung nicht auf Defaults zurückgesetzt werden.
+    if (!currentPdfPath) {
+        setCenterHorizontalAlign(userConfig.centerAlign);
+        currentZoom = userConfig.centerDefaultZoom;
+        renderedZoom = currentZoom;
+    }
     settings.centerZoomFocus = normalizeCenterZoomFocusMode(userConfig.centerZoomFocus);
     syncWideButtonState();
     applyCenterHorizontalAlign(false);
     bindContinuousZoomButtons();
+    bindCenterResizeRerender();
+}
+
+// Fenster-/Vollbild-Wechsel ändert die Center-Höhe; Zoom ist relativ zur Höhe, daher neu rendern.
+function bindCenterResizeRerender() {
+    const container = document.getElementById('center-content');
+    if (!container || container.dataset.resizeBound === '1') return;
+    container.dataset.resizeBound = '1';
+    let lastHeight = getStableCenterHeight(container);
+    let timer = null;
+    const check = () => {
+        const h = getStableCenterHeight(container);
+        if (h <= 0 || Math.abs(h - lastHeight) < 2) return;
+        lastHeight = h;
+        if (currentPdfDoc) queueZoomRender({ keepPendingPosition: true });
+    };
+    const schedule = () => {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(check, 150);
+    };
+    // Breiter Modus nutzt feste Pixelbreite; bei Vollbild/Fenstergröße neu berechnen.
+    const refitDisplayMode = () => {
+        if (getCenterDisplayMode() === 'wide') applyCenterDisplayMode('wide');
+        schedule();
+    };
+    if (typeof ResizeObserver === 'function') {
+        new ResizeObserver(schedule).observe(container);
+    }
+    window.addEventListener('resize', refitDisplayMode);
+    document.addEventListener('fullscreenchange', refitDisplayMode);
 }

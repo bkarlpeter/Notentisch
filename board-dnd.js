@@ -65,6 +65,7 @@ function clearCenterAfterCardExit() {
     if (typeof currentPdfPath !== 'undefined') currentPdfPath = '';
     if (typeof totalPages !== 'undefined') totalPages = 0;
     if (typeof currentPageOffset !== 'undefined') currentPageOffset = 0;
+    resetPdfPageGapConfigAfterCardExit();
     if (typeof discardCenterPendingScrollState === 'function') {
         discardCenterPendingScrollState();
     }
@@ -113,18 +114,15 @@ function drop(event) {
             card.classList.add('in-center');
             lastCardIdFromCenter = card.dataset.cardid;
             activeCenterCardId = card.dataset.cardid;
-            if (shouldApplyStoredCenterView) {
-                applyCenterSettingsFromXml(card.dataset.cardid);
-            }
+            applyCenterSettingsFromXml(card.dataset.cardid, undefined, { applyView: shouldApplyStoredCenterView });
             showPdfPages(card.dataset.pdf);
             setSaveDateState(false, getModeHintText());
             console.log('Moved to center, lastCardIdFromCenter = ' + lastCardIdFromCenter);
         }
     } else if (isQuadrant) {
         const userConfig = getUserConfigForDropBehavior();
-        const shouldPersistCenterView = !!userConfig.useZoomSettingsOnDrop;
         const cameFromCenter = card.classList.contains('in-center');
-        if (cameFromCenter && shouldPersistCenterView) {
+        if (cameFromCenter) {
             writeCenterSettingsToCardNode(card.dataset.cardid);
         }
         placeCardAtTopOfQuadrant(event.currentTarget, card);

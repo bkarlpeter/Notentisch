@@ -16,7 +16,9 @@
         .group-title { margin: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #6aa8d0; }
         .group-body { background: linear-gradient(160deg, #1f2e3a 0%, #121d26 100%); border-radius: 8px; padding: 12px; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
         .group-body.cols-2 { grid-template-columns: repeat(2, 1fr); }
-        @media (max-width: 560px) { .group-body, .group-body.cols-2 { grid-template-columns: 1fr; } }
+        .group-body.cols-3 { grid-template-columns: repeat(3, 1fr); }
+        @media (max-width: 680px) { .group-body.cols-2, .group-body.cols-3 { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 460px) { .group-body, .group-body.cols-2, .group-body.cols-3 { grid-template-columns: 1fr; } }
 
         .field { border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 10px; background: rgba(0,0,0,0.22); display: flex; flex-direction: column; gap: 8px; }
         label { font-weight: 600; font-size: 13px; }
@@ -77,11 +79,12 @@
         <!-- GRUPPE: Karten & Stapel -->
         <div class="group">
             <div class="group-header"><h2 class="group-title">Karten &amp; Stapel</h2></div>
-            <div class="group-body cols-2">
+            <div class="group-body cols-3">
                 <div class="field"><label for="dropGlowDurationMs">Nachglühen bei Ablage (ms)</label><input id="dropGlowDurationMs" type="number" min="0" max="10000" step="50"></div>
                 <div class="field"><label for="stackBatchOverlapCount">Stapel-Überlappung je Batch</label><input id="stackBatchOverlapCount" type="number" min="0" max="9" step="1"></div>
                 <div class="field"><label for="cardSharpness">Karten-Schärfe</label><select id="cardSharpness"><option value="normal">Norm</option><option value="scharf1">Scharf1</option><option value="scharf2">Scharf2</option></select></div>
                 <div class="field"><label for="pdfBaseDir">PDF-Basisordner</label><select id="pdfBaseDir"><option value="Blätter">Blätter (Standard)</option><option value="Noten/Blätter">Noten/Blätter</option><option value="Noten">Noten</option></select></div>
+                <div class="field"><label for="doubleClickReturnQuadrant">Doppelklick-Ziel aus dem Center</label><select id="doubleClickReturnQuadrant"><option value="Q1">Q1 – Zurückgestellt</option><option value="Q2">Q2 – Wiederholen</option><option value="Q3">Q3 – Geübt</option><option value="Q4">Q4 – Gelernt</option></select></div>
             </div>
         </div>
 
@@ -138,7 +141,7 @@
         <div id="status"></div>
     </div>
 
-    <script src="center-config.js?v=20260826"></script>
+    <script src="center-config.js?v=20261019b"></script>
     <script>
         const USER_CONFIG_KEY = 'notentischUserConfig';
         const DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS } : {};
@@ -188,6 +191,12 @@
             return DEFAULTS.cardSharpness || 'normal';
         }
 
+        function normalizeDoubleClickReturnQuadrant(value) {
+            const input = String(value || '').trim().toUpperCase();
+            if (input === 'Q1' || input === 'Q2' || input === 'Q3' || input === 'Q4') return input;
+            return DEFAULTS.doubleClickReturnQuadrant || 'Q2';
+        }
+
         function normalizePdfBaseDir(value) {
             const input = String(value || '').trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
             if (input === 'Blätter' || input === 'Noten/Blätter' || input === 'Noten') return input;
@@ -224,6 +233,7 @@
             document.getElementById('autoFullscreenOnStart').value = normalizeBoolean(config.autoFullscreenOnStart, DEFAULTS.autoFullscreenOnStart) ? 'show' : 'hide';
             document.getElementById('dropGlowDurationMs').value = clampNumber(config.dropGlowDurationMs, 0, 10000, DEFAULTS.dropGlowDurationMs);
             document.getElementById('stackBatchOverlapCount').value = clampNumber(config.stackBatchOverlapCount, 0, 9, DEFAULTS.stackBatchOverlapCount ?? 2);
+            document.getElementById('doubleClickReturnQuadrant').value = normalizeDoubleClickReturnQuadrant(config.doubleClickReturnQuadrant);
             document.getElementById('audioReferenceTargetMs').value = clampNumber(config.audioReferenceTargetMs, 1500, 12000, DEFAULTS.audioReferenceTargetMs ?? 5000);
             document.getElementById('audioRecordStartDelayMs').value = clampNumber(config.audioRecordStartDelayMs, 0, 3000, DEFAULTS.audioRecordStartDelayMs ?? 0);
             document.getElementById('audioWaitAfterMatchMs').value = clampNumber(config.audioWaitAfterMatchMs, 4000, 8000, DEFAULTS.audioWaitAfterMatchMs ?? 4000);
@@ -269,6 +279,7 @@
                 autoFullscreenOnStart: normalizeBoolean(document.getElementById('autoFullscreenOnStart').value, DEFAULTS.autoFullscreenOnStart),
                 dropGlowDurationMs: clampNumber(document.getElementById('dropGlowDurationMs').value, 0, 10000, DEFAULTS.dropGlowDurationMs),
                 stackBatchOverlapCount: clampNumber(document.getElementById('stackBatchOverlapCount').value, 0, 9, DEFAULTS.stackBatchOverlapCount ?? 2),
+                doubleClickReturnQuadrant: normalizeDoubleClickReturnQuadrant(document.getElementById('doubleClickReturnQuadrant').value),
                 audioReferenceTargetMs: clampNumber(document.getElementById('audioReferenceTargetMs').value, 1500, 12000, DEFAULTS.audioReferenceTargetMs ?? 5000),
                 audioRecordStartDelayMs: clampNumber(document.getElementById('audioRecordStartDelayMs').value, 0, 3000, DEFAULTS.audioRecordStartDelayMs ?? 0),
                 audioWaitAfterMatchMs: clampNumber(document.getElementById('audioWaitAfterMatchMs').value, 4000, 8000, DEFAULTS.audioWaitAfterMatchMs ?? 4000),
@@ -330,7 +341,7 @@
         bindColorInputs('btnToggleColor1Picker', 'btnToggleColor1Hex', 'swatchToggle1', DEFAULTS.btnToggleColor1 || '#27ae60');
         bindColorInputs('btnToggleColor2Picker', 'btnToggleColor2Hex', 'swatchToggle2', DEFAULTS.btnToggleColor2 || '#52be80');
 
-        ['centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerCornerRadius', 'centerSmoothScroll', 'pageInfoTone', 'autoFullscreenOnStart', 'dropGlowDurationMs', 'stackBatchOverlapCount', 'audioReferenceTargetMs', 'audioRecordStartDelayMs', 'audioWaitAfterMatchMs', 'audioResetOnSilenceMs', 'audioMatchExceptionalModesEnabled', 'audioMatchStrictness', 'replaceAudioByTitle', 'pdfBaseDir', 'cardSharpness'].forEach((id) => {
+        ['centerDefaultZoom', 'centerMinZoom', 'centerMaxZoom', 'centerZoomDebounceMs', 'centerZoomHoldEnabled', 'centerZoomHoldDelayMs', 'centerZoomHoldIntervalMs', 'centerCanvasExtraWidth', 'centerFitMonitorPages', 'centerCornerRadius', 'centerSmoothScroll', 'pageInfoTone', 'autoFullscreenOnStart', 'dropGlowDurationMs', 'stackBatchOverlapCount', 'doubleClickReturnQuadrant', 'audioReferenceTargetMs', 'audioRecordStartDelayMs', 'audioWaitAfterMatchMs', 'audioResetOnSilenceMs', 'audioMatchExceptionalModesEnabled', 'audioMatchStrictness', 'replaceAudioByTitle', 'pdfBaseDir', 'cardSharpness'].forEach((id) => {
             const el = document.getElementById(id);
             el.addEventListener('input', () => {
                 saveWithStatus('Automatisch gespeichert.');

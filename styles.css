@@ -1165,3 +1165,13 @@
   text-decoration: none;
   cursor: pointer;
 }
+
+        /* Statusfeld: Meldungen aus MSG_TEXTS (max. ca. 26 Zeichen) muessen auch bei schmalen Fenstern komplett passen */
+        @media (max-width: 1500px) {
+            #commandStatus {
+                width: 175px;
+                min-width: 175px;
+                max-width: 175px;
+                flex-basis: 175px;
+            }
+        }

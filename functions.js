@@ -43,6 +43,14 @@ const BTN_HELP_TEXTS = {
     ende:             'Server beenden und schließen',
 };
 
+// Hinweis- und Statusmeldungen an einer Stelle.
+const MSG_TEXTS = {
+    centerRueckkehrKlick:  '1x click für full screen',
+    aufnahmeAltLoeschen:   'alte Sequenz überschreiben',
+    aufnahmeAltBehalten:   'neue Sequenz hinzufügen',
+    aufnahmeSchlecht:      'Zu wenig Musik erkannt',
+    };
+
 function initButtonLabels() {
     const set = (id, label) => { const el = document.getElementById(id); if (el) el.textContent = label; };
     set('ladenBtn',            BTN_LABELS.laden);
@@ -90,6 +98,7 @@ const BOARD_HISTORY_RETURN_KEY = 'notentischReturnToBoardViaHistory';
 const BOARD_PENDING_CONFIG_RETURN_KEY = 'notentischPendingConfigReturn';
 const BOARD_RETURN_FULLSCREEN_KEY = 'notentischReturnFullscreen';
 let fullscreenRestoreRetryInstalled = false;
+let manualFullscreenExit = false;
 let shutdownSessionToken = null;
 const USER_CONFIG_DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS
     ? { ...window.NOTENTISCH_USER_CONFIG_DEFAULTS }
@@ -116,12 +125,16 @@ const USER_CONFIG_DEFAULTS = window.NOTENTISCH_USER_CONFIG_DEFAULTS
         centerZoomHoldDelayMs: 320,
         centerZoomHoldIntervalMs: 90,
         centerCanvasExtraWidth: 6,
+        pdfPageGapPx: 2,
+        pdfPageOverlapTop: 'right',
+        configuredPdfPageGapPx: initialUserConfig.pdfPageGapPx,
         centerFitMonitorPages: 3,
         centerCornerRadius: 20,
         centerSmoothScroll: true,
         useZoomSettingsOnDrop: true,
         dropGlowDurationMs: 1400,
         stackBatchOverlapCount: 2,
+        doubleClickReturnQuadrant: 'Q2',
         audioReferenceTargetMs: 5000,
         replaceAudioByTitle: true,
         showAudioBadge: true
@@ -316,12 +329,17 @@ function loadUserConfig() {
             centerZoomHoldDelayMs: clampNumber(parsed.centerZoomHoldDelayMs, 80, 1000, USER_CONFIG_DEFAULTS.centerZoomHoldDelayMs),
             centerZoomHoldIntervalMs: clampNumber(parsed.centerZoomHoldIntervalMs, 30, 400, USER_CONFIG_DEFAULTS.centerZoomHoldIntervalMs),
             centerCanvasExtraWidth: clampNumber(parsed.centerCanvasExtraWidth, 0, 40, USER_CONFIG_DEFAULTS.centerCanvasExtraWidth),
+            pdfPageGapPx: clampNumber(parsed.pdfPageGapPx, -20, 20, USER_CONFIG_DEFAULTS.pdfPageGapPx),
+            pdfPageOverlapTop: parsed.pdfPageOverlapTop === 'left' ? 'left' : 'right',
             centerFitMonitorPages: clampNumber(parsed.centerFitMonitorPages, 1, 6, USER_CONFIG_DEFAULTS.centerFitMonitorPages),
             centerCornerRadius: clampNumber(parsed.centerCornerRadius, 0, 100, USER_CONFIG_DEFAULTS.centerCornerRadius),
             centerSmoothScroll: normalizeBoolean(parsed.centerSmoothScroll, USER_CONFIG_DEFAULTS.centerSmoothScroll),
             useZoomSettingsOnDrop: normalizeBoolean(parsed.useZoomSettingsOnDrop, USER_CONFIG_DEFAULTS.useZoomSettingsOnDrop),
             dropGlowDurationMs: clampNumber(parsed.dropGlowDurationMs, 0, 10000, USER_CONFIG_DEFAULTS.dropGlowDurationMs),
             stackBatchOverlapCount: clampNumber(parsed.stackBatchOverlapCount, 0, 9, USER_CONFIG_DEFAULTS.stackBatchOverlapCount),
+            doubleClickReturnQuadrant: ['Q1', 'Q2', 'Q3', 'Q4'].includes(String(parsed.doubleClickReturnQuadrant || '').toUpperCase())
+                ? String(parsed.doubleClickReturnQuadrant).toUpperCase()
+                : USER_CONFIG_DEFAULTS.doubleClickReturnQuadrant,
             audioReferenceTargetMs: clampNumber(parsed.audioReferenceTargetMs, 1500, 12000, USER_CONFIG_DEFAULTS.audioReferenceTargetMs),
             audioRecordStartDelayMs: clampNumber(parsed.audioRecordStartDelayMs, 0, 3000, USER_CONFIG_DEFAULTS.audioRecordStartDelayMs || 0),
             audioWaitAfterMatchMs: clampNumber(parsed.audioWaitAfterMatchMs, 4000, 8000, USER_CONFIG_DEFAULTS.audioWaitAfterMatchMs || 4000),
@@ -361,6 +379,26 @@ function loadUserConfig() {
     } catch (err) {
         return { ...USER_CONFIG_DEFAULTS };
     }
+}
+
+function setPdfPageGapConfigValue(value) {
+    const fallback = USER_CONFIG_DEFAULTS.pdfPageGapPx;
+    const pageGap = value === null || value === undefined || value === ''
+        ? fallback
+        : clampNumber(value, -20, 20, fallback);
+    const userConfig = loadUserConfig();
+    userConfig.pdfPageGapPx = pageGap;
+    localStorage.setItem(USER_CONFIG_KEY, JSON.stringify(userConfig));
+    settings.configuredPdfPageGapPx = pageGap;
+    settings.pdfPageGapPx = pageGap;
+}
+
+function setPdfPageOverlapConfigValue(value) {
+    const side = value === 'left' ? 'left' : (value === 'right' ? 'right' : USER_CONFIG_DEFAULTS.pdfPageOverlapTop);
+    const userConfig = loadUserConfig();
+    userConfig.pdfPageOverlapTop = side;
+    localStorage.setItem(USER_CONFIG_KEY, JSON.stringify(userConfig));
+    settings.pdfPageOverlapTop = side;
 }
 
 function applyLayoutPreset(preset) {
@@ -475,6 +513,9 @@ function applyUserConfigAndRefresh(shouldRerender = true) {
     settings.centerZoomHoldDelayMs = userConfig.centerZoomHoldDelayMs;
     settings.centerZoomHoldIntervalMs = userConfig.centerZoomHoldIntervalMs;
     settings.centerCanvasExtraWidth = userConfig.centerCanvasExtraWidth;
+    settings.configuredPdfPageGapPx = userConfig.pdfPageGapPx;
+    settings.pdfPageGapPx = userConfig.pdfPageGapPx;
+    settings.pdfPageOverlapTop = userConfig.pdfPageOverlapTop;
     document.documentElement.style.setProperty('--center-gap', userConfig.centerCanvasExtraWidth + 'px');
     document.documentElement.style.setProperty('--center-radius', userConfig.centerCornerRadius + 'px');
     settings.centerFitMonitorPages = userConfig.centerFitMonitorPages;
@@ -539,9 +580,20 @@ function openConfigPage() {
     let state = null;
     let cardLayoutSnapshot = null;
     let domSnapshot = null;
+    // Aktuelle Center-Ansicht zuerst ins Blatt schreiben, damit weder XML noch Snapshot einen älteren Stand enthalten.
+    try {
+        if (typeof currentPdfDoc !== 'undefined' && currentPdfDoc
+            && typeof activeCenterCardId !== 'undefined' && activeCenterCardId !== null
+            && typeof writeCenterSettingsToCardNode === 'function'
+            && settings.useZoomSettingsOnDrop) {
+            writeCenterSettingsToCardNode(activeCenterCardId);
+        }
+    } catch (err) {
+    }
     try {
         state = {
             savedAt: Date.now(),
+            audioAssistMode: (typeof audioAssistMode === 'number') ? audioAssistMode : 0,
             boardSnapshot: (typeof getBoardSnapshotForConfig === 'function')
                 ? getBoardSnapshotForConfig()
                 : null,
@@ -549,6 +601,9 @@ function openConfigPage() {
                 ? getCurrentCenterRuntimeState()
                 : null
         };
+        if (state.center) {
+            state.center.configuredPdfPageOverlapTop = loadUserConfig().pdfPageOverlapTop;
+        }
 
         if (typeof getCardLayoutSnapshotForConfig === 'function') {
             cardLayoutSnapshot = getCardLayoutSnapshotForConfig();
@@ -595,19 +650,22 @@ function openConfigPage() {
         }
     }
 
-    if (!savedToSession && state && state.boardSnapshot) {
+    if (!savedToSession && state) {
+        const boardSnapshot = state.boardSnapshot;
         const fallbackState = {
             savedAt: Date.now(),
-            boardSnapshot: {
-                xmlText: state.boardSnapshot.xmlText || '',
-                xmlFileName: state.boardSnapshot.xmlFileName || null,
-                quadrantOffsets: state.boardSnapshot.quadrantOffsets || { Q1: 0, Q2: 0, Q3: 0, Q4: 0 },
-                stackCount: Number.isFinite(Number(state.boardSnapshot.stackCount)) ? Number(state.boardSnapshot.stackCount) : 8,
-                lastCardIdFromCenter: state.boardSnapshot.lastCardIdFromCenter ?? null,
-                activeCenterCardId: state.boardSnapshot.activeCenterCardId ?? null,
-                overviewModeActive: !!state.boardSnapshot.overviewModeActive,
+            audioAssistMode: state.audioAssistMode,
+            boardSnapshot: boardSnapshot ? {
+                xmlText: boardSnapshot.xmlText || '',
+                xmlFileName: boardSnapshot.xmlFileName || null,
+                quadrantOffsets: boardSnapshot.quadrantOffsets || { Q1: 0, Q2: 0, Q3: 0, Q4: 0 },
+                stackCount: Number.isFinite(Number(boardSnapshot.stackCount)) ? Number(boardSnapshot.stackCount) : 8,
+                lastCardIdFromCenter: boardSnapshot.lastCardIdFromCenter ?? null,
+                activeCenterCardId: boardSnapshot.activeCenterCardId ?? null,
+                isPlayMode: !!boardSnapshot.isPlayMode,
+                overviewModeActive: !!boardSnapshot.overviewModeActive,
                 centerVisual: null
-            },
+            } : null,
             center: state.center || null
         };
 
@@ -624,11 +682,65 @@ function openConfigPage() {
     }
 
     try {
-        sessionStorage.setItem(BOARD_RETURN_FULLSCREEN_KEY, document.fullscreenElement ? '1' : '0');
+        sessionStorage.setItem(BOARD_RETURN_FULLSCREEN_KEY,
+            (document.fullscreenElement || (settings && settings.autoFullscreenOnStart)) ? '1' : '0');
     } catch (err) {
     }
 
     window.location.assign('config.html?v=20260429c');
+}
+
+// Sicherheitsnetz: Nach der Rückkehr aus der Config darf keine Karte "verschwinden".
+// Karte im Center ohne geladenes PDF -> PDF neu laden; gelingt das nicht -> Karte zurück in ihren Stapel.
+function verifyCenterCardAfterConfigReturn(retryCount = 0, pollCount = 0) {
+    try {
+        const markedCards = Array.from(document.querySelectorAll('.card-container.in-center[data-cardid]'));
+        const pdfRendered = !!(typeof currentPdfDoc !== 'undefined'
+            && currentPdfDoc
+            && document.querySelector('#center-pages-host canvas'));
+
+        if (markedCards.length > 1) {
+            const keepId = String(activeCenterCardId ?? '');
+            markedCards.forEach((el) => {
+                if (String(el.dataset.cardid) !== keepId) el.classList.remove('in-center');
+            });
+        }
+
+        const card = document.querySelector('.card-container.in-center[data-cardid]');
+
+        if (!card) {
+            if (pdfRendered && typeof activeCenterCardId !== 'undefined' && activeCenterCardId) {
+                const byId = document.querySelector('.card-container[data-cardid="' + String(activeCenterCardId) + '"]');
+                if (byId) byId.classList.add('in-center');
+            }
+            getRenderApi()?.updateStackLayout?.();
+            return;
+        }
+
+        if (pdfRendered) return;
+
+        const pdf = card.dataset.pdf;
+        if (pdf && typeof showPdfPages === 'function') {
+            const loadState = (typeof currentPdfLoadState !== 'undefined') ? currentPdfLoadState : 'idle';
+            if ((loadState === 'failed' || loadState === 'idle') && retryCount < 3) {
+                activeCenterCardId = String(card.dataset.cardid);
+                showPdfPages(pdf);
+                retryCount++;
+            }
+            if (pollCount < 40) {
+                setTimeout(() => verifyCenterCardAfterConfigReturn(retryCount, pollCount + 1), 800);
+            }
+            return;
+        }
+
+        card.classList.remove('in-center');
+        activeCenterCardId = null;
+        getRenderApi()?.updateStackLayout?.();
+        if (typeof setStatusText === 'function') {
+            setStatusText('Blatt ' + card.dataset.cardid + ' lag nach der Config im Stapel statt im Center.');
+        }
+    } catch (err) {
+    }
 }
 
 async function restoreBoardSessionState() {
@@ -704,7 +816,7 @@ async function restoreBoardSessionState() {
         return;
     }
 
-    if (parsed && !parsed.center && !parsed.boardSnapshot && !cardLayoutSnapshot && !domSnapshot) {
+    if (parsed && !parsed.center && !parsed.boardSnapshot && !parsed.audioAssistMode && !cardLayoutSnapshot && !domSnapshot) {
         sessionStorage.removeItem(BOARD_SESSION_STATE_KEY);
         localStorage.removeItem(BOARD_SESSION_FALLBACK_KEY);
         return;
@@ -740,10 +852,10 @@ async function restoreBoardSessionState() {
             if (handle) {
                 let permission = 'granted';
                 if (typeof handle.queryPermission === 'function') {
-                    permission = await handle.queryPermission({ mode: 'read' });
+                    permission = await handle.queryPermission({ mode: 'readwrite' });
                 }
                 if (permission === 'prompt' && typeof handle.requestPermission === 'function') {
-                    permission = await handle.requestPermission({ mode: 'read' });
+                    permission = await handle.requestPermission({ mode: 'readwrite' });
                 }
                 if (permission === 'granted') {
                     await openAndLoadXmlHandle(handle);
@@ -764,12 +876,38 @@ async function restoreBoardSessionState() {
     // und currentPdfDoc gesetzt wird. Ohne dies bricht queueZoomRender() mit
     // "if (!currentPdfDoc) return" ab und Zoom funktioniert nicht.
     if (parsed && parsed.center && typeof restoreCenterRuntimeState === 'function') {
-        restoreCenterRuntimeState(parsed.center, { preserveConfiguredFocus: true });
+        const centerState = { ...parsed.center };
+        const configuredOverlap = loadUserConfig().pdfPageOverlapTop;
+        const overlapChangedInConfig = (
+            (centerState.configuredPdfPageOverlapTop === 'left'
+                || centerState.configuredPdfPageOverlapTop === 'right')
+            && configuredOverlap !== centerState.configuredPdfPageOverlapTop
+        );
+        if (overlapChangedInConfig) {
+            centerState.pdfPageOverlapTop = configuredOverlap;
+        }
+
+        restoreCenterRuntimeState(centerState, { preserveConfiguredFocus: true });
+
+        if (overlapChangedInConfig
+            && activeCenterCardId !== null
+            && activeCenterCardId !== undefined
+            && typeof writeCenterPageGapToCardNode === 'function') {
+            if (writeCenterPageGapToCardNode(activeCenterCardId)) {
+                await saveXml(true);
+            }
+        }
+    }
+
+    if (parsed && typeof restoreAudioAssistMode === 'function') {
+        restoreAudioAssistMode(parsed.audioAssistMode);
     }
 
     if (cardLayoutSnapshot && typeof applyCardLayoutSnapshotFromConfig === 'function') {
         applyCardLayoutSnapshotFromConfig(cardLayoutSnapshot, { attempts: 20, retryDelayMs: 80 });
     }
+
+    setTimeout(verifyCenterCardAfterConfigReturn, 2200);
 
     if (source === 'session') {
         sessionStorage.removeItem(BOARD_SESSION_STATE_KEY);
@@ -843,6 +981,24 @@ function clearFullscreenRestoreState() {
     }
 }
 
+// Hinweis im Center nach Rückkehr aus der Config; verschwindet beim ersten Klick/Tastendruck.
+function showCenterClickHint(text) {
+    const center = document.getElementById('CENTER');
+    if (!center || document.getElementById('centerClickHint')) return;
+    const hint = document.createElement('div');
+    hint.id = 'centerClickHint';
+    hint.textContent = text;
+    hint.style.cssText = 'position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:50;'
+        + 'padding:8px 16px;border-radius:6px;background:rgba(0,0,0,0.8);color:#fff;font-weight:bold;pointer-events:none;';
+    center.appendChild(hint);
+    const types = ['pointerdown', 'click', 'touchend', 'keydown'];
+    const remove = () => {
+        types.forEach((type) => document.removeEventListener(type, remove, true));
+        hint.remove();
+    };
+    types.forEach((type) => document.addEventListener(type, remove, true));
+}
+
 function installFullscreenRestoreRetry() {
     if (fullscreenRestoreRetryInstalled || document.fullscreenElement) return;
     fullscreenRestoreRetryInstalled = true;
@@ -864,12 +1020,14 @@ function installFullscreenRestoreRetry() {
     };
 
     function removeRetryListeners() {
-        document.removeEventListener('pointerdown', retry, true);
-        document.removeEventListener('keydown', retry, true);
+        ['pointerdown', 'pointerup', 'click', 'touchend', 'keydown'].forEach((type) => {
+            document.removeEventListener(type, retry, true);
+        });
     }
 
-    document.addEventListener('pointerdown', retry, true);
-    document.addEventListener('keydown', retry, true);
+    ['pointerdown', 'pointerup', 'click', 'touchend', 'keydown'].forEach((type) => {
+        document.addEventListener(type, retry, true);
+    });
 }
 
 function restoreFullscreenAfterConfigReturn() {
@@ -894,6 +1052,8 @@ async function toggleFullscreenMode() {
                 await root.requestFullscreen();
             }
         } else if (document.exitFullscreen) {
+            // Markiert den Exit als gewollt, damit der Auto-Restore ihn nicht sofort rueckgaengig macht.
+            manualFullscreenExit = true;
             await document.exitFullscreen();
         }
     } catch (err) {
@@ -906,9 +1066,26 @@ async function toggleFullscreenMode() {
     }
 }
 
+function handleUnexpectedFullscreenExit() {
+    if (document.fullscreenElement) return;
+    if (manualFullscreenExit) {
+        manualFullscreenExit = false;
+        return;
+    }
+    if (!settings || !settings.autoFullscreenOnStart) return;
+    showFullscreenRestoreHint();
+    installFullscreenRestoreRetry();
+}
+
 async function requestShutdownAndExit() {
     const endBtn = document.getElementById('endBtn');
     const previousText = endBtn ? endBtn.textContent : '';
+
+    const restoreEndButton = () => {
+        if (!endBtn) return;
+        endBtn.disabled = false;
+        endBtn.textContent = previousText || 'Ende';
+    };
 
     if (endBtn) {
         endBtn.disabled = true;
@@ -950,6 +1127,9 @@ async function requestShutdownAndExit() {
         });
     } catch (err) {
         alert('Server konnte nicht sicher beendet werden. Bitte Fenster schließen oder Server manuell stoppen.');
+        console.error('Server konnte beim Beenden nicht sicher heruntergefahren werden:', err);
+        restoreEndButton();
+        return;
     }
 
     try {
@@ -960,13 +1140,6 @@ async function requestShutdownAndExit() {
     setTimeout(() => {
         window.location.href = 'about:blank';
     }, 180);
-
-    if (endBtn) {
-        setTimeout(() => {
-            endBtn.disabled = false;
-            endBtn.textContent = previousText || 'Ende';
-        }, 700);
-    }
 }
 
 const initialUserConfig = loadUserConfig();
@@ -991,6 +1164,8 @@ const settings = {
     centerZoomHoldDelayMs: initialUserConfig.centerZoomHoldDelayMs,
     centerZoomHoldIntervalMs: initialUserConfig.centerZoomHoldIntervalMs,
     centerCanvasExtraWidth: initialUserConfig.centerCanvasExtraWidth,
+    pdfPageGapPx: initialUserConfig.pdfPageGapPx,
+    pdfPageOverlapTop: initialUserConfig.pdfPageOverlapTop,
     centerFitMonitorPages: initialUserConfig.centerFitMonitorPages,
     centerSmoothScroll: initialUserConfig.centerSmoothScroll,
     useZoomSettingsOnDrop: initialUserConfig.useZoomSettingsOnDrop,
@@ -1051,6 +1226,10 @@ function initializeBoardUi() {
         }
     })();
 
+    if (isConfigHistoryReturn) {
+        safeRun(() => showCenterClickHint(MSG_TEXTS.centerRueckkehrKlick));
+    }
+
     if (shouldRestoreFullscreenOnConfigReturn) {
         setTimeout(() => {
             restoreFullscreenAfterConfigReturn();
@@ -1078,3 +1257,4 @@ if (document.readyState === 'loading') {
 }
 
 document.addEventListener('fullscreenchange', syncFullscreenButtonState);
+document.addEventListener('fullscreenchange', handleUnexpectedFullscreenExit);

@@ -1,4 +1,18 @@
-﻿async function uploadRecordedAudio(blob, filename) {
+// Dauerhafter Aufnahme-Status (Überschreib-Schalter); kurze Meldungen dürfen ihn zeitweise ersetzen
+function getAudioModeStatusText() {
+    if (audioAssistMode !== 2) return '';
+    return isReplaceAudioByTitleEnabled() ? MSG_TEXTS.aufnahmeAltLoeschen : MSG_TEXTS.aufnahmeAltBehalten;
+}
+
+function showAudioModeStatus() {
+    const statusEl = document.getElementById('commandStatus');
+    const msg = getAudioModeStatusText();
+    if (!statusEl || !msg) return;
+    statusEl.textContent = msg;
+    statusEl.title = msg;
+}
+
+async function uploadRecordedAudio(blob, filename) {
     let response;
     try {
         response = await fetch('/__audio_upload__?filename=' + encodeURIComponent(filename), {
@@ -308,7 +322,7 @@ function prepareAudioFingerprint(state) {
             cardId: String(state.cardId || ''),
             frameCount: Number(state.frameCount || 0)
         });
-        showAudioStatus('Zu wenig musikalisches Signal erkannt. Bitte lauter/sauberer einspielen.');
+        showAudioStatus(MSG_TEXTS.aufnahmeSchlecht);
         return null;
     }
     const fingerprint = normalizeBandVector(state.bandSums, state.frameCount);
@@ -447,9 +461,7 @@ async function startAudioRecordingForCenterCard(cardId) {
     const existingPrint = (cardNode.querySelector('AudioReferenz Fingerprint')?.textContent || '').trim();
     const baseTargetFrames = getAudioReferenceTargetFrames();
     const computedTargetFrameCount = existingPrint ? Math.round(baseTargetFrames * 1.5) : baseTargetFrames;
-    if (existingPrint) {
-        showAudioStatus('Neuaufnahme, etwas lÃ¤nger einspielen.');
-    }
+    showAudioModeStatus();
 
     const mimeType = getPreferredAudioMimeType();
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1493,13 +1505,64 @@ function toggleAudioAssistMode(event) {
 
     updateAudioAssistUi();
 
+    if (audioAssistMode === 2 && previousMode !== 2) {
+        showAudioModeStatus();
+    } else if (previousMode === 2 && audioAssistMode !== 2) {
+        const statusEl = document.getElementById('commandStatus');
+        if (statusEl && (statusEl.textContent === MSG_TEXTS.aufnahmeAltLoeschen || statusEl.textContent === MSG_TEXTS.aufnahmeAltBehalten)) {
+            statusEl.textContent = 'Bereit';
+            statusEl.title = 'Status';
+        }
+    }
+
     if (!audioAssistMonitorTimer) {
         audioAssistTick();
         audioAssistMonitorTimer = setInterval(audioAssistTick, AUDIO_MATCH_EVAL_INTERVAL_MS);
     }
 }
 
+function restoreAudioAssistMode(mode) {
+    const requestedMode = Number(mode);
+    if (requestedMode !== 1 && requestedMode !== 2) return false;
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+        showAudioStatus('Dieser Browser unterstützt die Audio-Funktion nicht vollständig.');
+        return false;
+    }
+
+    let restoredMode = requestedMode;
+    const fallbackMessage = requestedMode === 2 && typeof MediaRecorder === 'undefined'
+        ? 'Aufnahme ist in diesem Browser nicht verfügbar. Tonsuche bleibt aktiv.'
+        : '';
+    if (fallbackMessage) restoredMode = 1;
+
+    const previousMode = audioAssistMode;
+    audioAssistMode = restoredMode;
+    audioAssistDirection = 1;
+    audioWaitAfterMatchBlinkUntil = 0;
+    queueAudioDiagEvent('audio_mode_changed', {
+        fromMode: previousMode,
+        toMode: audioAssistMode,
+        direction: audioAssistDirection,
+        restoredAfterConfig: true
+    });
+    updateAudioAssistUi();
+
+    if (audioAssistMode === 2) {
+        showAudioModeStatus();
+    }
+    if (!audioAssistMonitorTimer) {
+        audioAssistTick();
+        audioAssistMonitorTimer = setInterval(audioAssistTick, AUDIO_MATCH_EVAL_INTERVAL_MS);
+    }
+    if (fallbackMessage) {
+        showAudioStatus(fallbackMessage);
+    }
+    return true;
+}
+
 window.toggleAudioAssistMode = toggleAudioAssistMode;
+window.restoreAudioAssistMode = restoreAudioAssistMode;
 window.saveAudioFingerprint = saveAudioFingerprint;
 
 if (document.readyState === 'loading') {
@@ -1536,4 +1599,3 @@ function collectCardIdsForTitle(title, sourceCardId = null) {
         return String(idx);
     }).filter(Boolean);
 }
-

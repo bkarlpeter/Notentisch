@@ -1,4 +1,4 @@
-﻿let xmlData = null;
+let xmlData = null;
 let xmlFileName = null;
 let xmlFileHandle = null;
 let xmlFolderHandle = null;
@@ -261,9 +261,7 @@ function showCardInCenterById(cardId) {
     lastCardIdFromCenter = cardIdStr;
     activeCenterCardId = cardIdStr;
 
-    if (shouldApplyStoredCenterView) {
-        applyCenterSettingsFromXml(cardIdStr);
-    }
+    applyCenterSettingsFromXml(cardIdStr, undefined, { applyView: shouldApplyStoredCenterView });
 
     if (typeof showPdfPages === 'function') {
         showPdfPages(cardEl.dataset.pdf);
@@ -277,12 +275,12 @@ function handleCardDoubleClick(event) {
     const cardEl = event?.currentTarget || null;
     const cardId = cardEl?.dataset?.cardid;
     if (!cardId) {
-        moveCardToQ2(event);
+        moveCardToConfiguredQuadrant(event);
         return;
     }
 
     if (!overviewModeActive) {
-        moveCardToQ2(event);
+        moveCardToConfiguredQuadrant(event);
         return;
     }
 
@@ -387,50 +385,7 @@ async function loadXmlDirectFileHandle() {
     }
 }
 
-async function ensureXmlFileHandle(options = {}) {
-    const allowPicker = options.allowPicker !== false;
-    const fileName = xmlFileName || 'Notentisch.xml';
-
-    if (xmlFileHandle) {
-        return xmlFileHandle;
-    }
-
-    let folderHandle = xmlFolderHandle;
-    if (!folderHandle) {
-        folderHandle = await loadFolderHandle();
-    }
-
-    if (folderHandle) {
-        try {
-            let permission = await folderHandle.queryPermission({ mode: 'readwrite' });
-            if (permission !== 'granted') {
-                permission = await folderHandle.requestPermission({ mode: 'readwrite' });
-            }
-
-            if (permission === 'granted') {
-                xmlFolderHandle = folderHandle;
-                xmlFileHandle = await folderHandle.getFileHandle(fileName, { create: false });
-                return xmlFileHandle;
-            }
-        } catch (err) {
-            console.warn('Gespeicherter Ordner/Datei nicht nutzbar, frage neu ab:', err);
-            xmlFileHandle = null;
-        }
-    }
-
-    if (!allowPicker) {
-        return null;
-    }
-
-    const pickedFolder = await window.showDirectoryPicker();
-    await saveFolderHandle(pickedFolder);
-
-    try {
-        xmlFileHandle = await pickedFolder.getFileHandle(fileName, { create: false });
-    } catch {
-        xmlFileHandle = await pickedFolder.getFileHandle(fileName, { create: true });
-    }
-
+function ensureXmlFileHandle() {
     return xmlFileHandle;
 }
 
@@ -521,9 +476,24 @@ function countIntersection(a, b) {
 async function ensureXmlMatchesBlaetterFolderOrAsk() {
     if (!xmlData) return true;
     if (!blaetterDirHandle) {
-        const statusEl = document.getElementById('commandStatus');
-        if (statusEl) {
-            statusEl.textContent = 'Blätterordner einstellen';
+        // Ordner gilt auch als aktiv, wenn der Server die Blätter ausliefert
+        let serverHasBlaetter = false;
+        const sample = Array.from(collectXmlPdfFileNames()).slice(0, 3);
+        for (const name of sample) {
+            for (const prefix of ['Blätter/', 'Noten/Blätter/', 'Noten/']) {
+                try {
+                    const url = prefix.split('/').filter(Boolean).map(encodeURIComponent).join('/') + '/' + encodeURIComponent(name);
+                    const res = await fetch(url, { method: 'HEAD' });
+                    if (res.ok) { serverHasBlaetter = true; break; }
+                } catch { /* nächster Versuch */ }
+            }
+            if (serverHasBlaetter) break;
+        }
+        if (!serverHasBlaetter) {
+            const statusEl = document.getElementById('commandStatus');
+            if (statusEl) {
+                statusEl.textContent = 'Blätterordner einstellen';
+            }
         }
         return true;
     }
@@ -612,9 +582,7 @@ async function pickBlaetterDir() {
         updateDirDisplay();
         const hint = document.getElementById('blaetterHint');
         if (hint) hint.style.display = 'none';
-        // Wenn noch keine XML-Einträge vorhanden, direkt aus diesem Ordner importieren
-        const entryCount = xmlData ? xmlData.querySelectorAll('NotenTisch, Notentisch').length : 0;
-        if (entryCount === 0) await importPdfsFromHandle(handle);
+        await importPdfsFromHandle(handle);
     } catch (err) {
         if (err && err.name !== 'AbortError') console.warn('Blätter-Verzeichnis Fehler:', err);
     }
@@ -696,8 +664,9 @@ async function importPdfsFromHandle(dirHandle) {
         xmlFileHandle = null;
     }
 
+    const cardNodes = Array.from(xmlData.querySelectorAll('NotenTisch, Notentisch'));
     const knownFileNames = new Set();
-    xmlData.querySelectorAll('NotenTisch, Notentisch').forEach(node => {
+    cardNodes.forEach(node => {
         const sp = node.querySelector('Speicherort')?.textContent || '';
         sp.split('#').forEach(part => {
             const p = part.trim();
@@ -708,14 +677,16 @@ async function importPdfsFromHandle(dirHandle) {
 
     const newEntries = [];
     let maxId = 0;
-    xmlData.querySelectorAll('NotenTisch, Notentisch').forEach(node => {
+    cardNodes.forEach(node => {
         const id = parseInt(node.querySelector('NotID')?.textContent || '0', 10);
         if (id > maxId) maxId = id;
     });
 
+    const exportedFileNames = new Set();
     for await (const entry of dirHandle.values()) {
         if (entry.kind !== 'file') continue;
         if (!entry.name.toLowerCase().endsWith('.pdf')) continue;
+        exportedFileNames.add(entry.name.toLowerCase().trim());
         if (knownFileNames.has(entry.name.toLowerCase().trim())) continue;
         const title = entry.name.replace(/\.pdf$/i, '');
         const speicherort = title + '#' + entry.name + '#';
@@ -726,17 +697,35 @@ async function importPdfsFromHandle(dirHandle) {
             '<Arbeitsstatus>zur\u00fcckgestellt</Arbeitsstatus>' +
             '<Titel>' + title.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</Titel>' +
             '<zuletztgespielt/>' +
-            '<Speicherort>' + speicherort.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</Speicherort>';
+            '<Speicherort>' + speicherort.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</Speicherort>' +
+            '<ImBoard>1</ImBoard>';
         newEntries.push(node);
     }
 
-    if (newEntries.length === 0) {
-        alert('Keine neuen PDFs gefunden \u2013 alle sind bereits in der XML enthalten.');
-        return;
-    }
+    let boardStatusChanges = 0;
+    cardNodes.forEach(node => {
+        const referencedFiles = (node.querySelector('Speicherort')?.textContent || '').split('#')
+            .map(part => part.trim().split(/[\\/]/).pop().toLowerCase())
+            .filter(name => name.endsWith('.pdf'));
+        const isInBoard = referencedFiles.some(name => exportedFileNames.has(name));
+        let flagNode = Array.from(node.children).find(child => child.tagName === 'ImBoard');
+        if (!flagNode) {
+            flagNode = xmlData.createElement('ImBoard');
+            node.appendChild(flagNode);
+        }
+        const nextValue = isInBoard ? '1' : '0';
+        if (flagNode.textContent !== nextValue) {
+            flagNode.textContent = nextValue;
+            boardStatusChanges++;
+        }
+    });
 
     const root = xmlData.documentElement;
     newEntries.forEach(n => root.appendChild(n));
+    if (newEntries.length === 0 && boardStatusChanges === 0) {
+        alert('Blätter-Abgleich: keine Änderungen.');
+        return;
+    }
     getRenderApi()?.resetCardRenderCache();
     getRenderApi()?.resetQuadrantOffsets();
     getRenderApi()?.renderBoard();
@@ -745,9 +734,9 @@ async function importPdfsFromHandle(dirHandle) {
     // Nach Import direkt Speichern versuchen, damit die neue XML auch wirklich als Datei entsteht.
     await saveXml(false);
     if (hasUnsavedChanges) {
-        alert(newEntries.length + ' neue Eintr\u00e4ge hinzugef\u00fcgt. Bitte XML speichern.');
+        alert('Blätter-Abgleich: ' + newEntries.length + ' neu, ' + boardStatusChanges + ' Markierungen geändert. Bitte XML speichern.');
     } else {
-        alert(newEntries.length + ' neue Eintr\u00e4ge hinzugef\u00fcgt und gespeichert.');
+        alert('Blätter-Abgleich: ' + newEntries.length + ' neu, ' + boardStatusChanges + ' Markierungen geändert und gespeichert.');
     }
 }
 
@@ -773,32 +762,7 @@ async function offerPdfImportIfMissing() {
 }
 
 async function handleLoadButton() {
-    const replaceLoadedXml = !!xmlData;
-
     if (window.showOpenFilePicker) {
-        if (!replaceLoadedXml) {
-            try {
-                const storedHandle = await loadXmlDirectFileHandle();
-                if (storedHandle) {
-                    const permission = await storedHandle.queryPermission({ mode: 'read' });
-                    if (permission === 'granted') {
-                        await openAndLoadXmlHandle(storedHandle);
-                        return;
-                    }
-
-                    if (permission === 'prompt') {
-                        const requested = await storedHandle.requestPermission({ mode: 'read' });
-                        if (requested === 'granted') {
-                            await openAndLoadXmlHandle(storedHandle);
-                            return;
-                        }
-                    }
-                }
-            } catch (err) {
-                console.warn('Gespeicherte XML-Datei nicht nutzbar, öffne Explorer:', err);
-            }
-        }
-
         try {
             const [pickedHandle] = await window.showOpenFilePicker({
                 multiple: false,
@@ -816,9 +780,9 @@ async function handleLoadButton() {
             }
             return;
         } catch (err) {
-            if (err && err.name !== 'AbortError') {
-                console.error('Fehler beim XML-Laden:', err);
-            }
+            if (err && err.name === 'AbortError') return;
+            console.warn('XML-Dateiauswahl mit Schreibzugriff fehlgeschlagen:', err);
+            alert('Die XML-Datei konnte nicht mit Schreibzugriff geöffnet werden. Bitte erneut auf „Laden“ klicken und die XML-Datei auswählen.');
             return;
         }
     }
@@ -840,11 +804,24 @@ function getCardNodeById(cardId) {
     return getRenderApi()?.getCardNodeById(cardId) || null;
 }
 
-function readCenterSettingsFromXml(cardId) {
+function getCenterAnsichtTagForMode(mode) {
+    if (mode === 'wide') return 'CenterAnsichtWeit';
+    if (mode === 'full') return 'CenterAnsichtFull';
+    return 'CenterAnsicht';
+}
+
+function resolveCenterModeForXml(mode) {
+    if (mode) return mode;
+    return typeof getCenterDisplayMode === 'function' ? getCenterDisplayMode() : 'normal';
+}
+
+function readCenterSettingsFromXml(cardId, mode) {
     const cardNode = getCardNodeById(cardId);
     if (!cardNode) return null;
 
-    const centerNode = cardNode.querySelector('CenterAnsicht');
+    const tagName = getCenterAnsichtTagForMode(resolveCenterModeForXml(mode));
+    // Kein Fallback auf eine andere Weiten-Ansicht: Zoom/Position gelten nur für ihren Modus.
+    const centerNode = cardNode.querySelector(tagName);
     if (!centerNode) return null;
 
     const zoomText = centerNode.querySelector('Zoom')?.textContent || '';
@@ -866,6 +843,7 @@ function readCenterSettingsFromXml(cardId) {
 
     return {
         zoom: Number.isFinite(zoom) ? zoom : null,
+        pdfPageGapPx: readCenterPageGapFromXml(cardNode, centerNode),
         align: alignText || null,
         zoomFocus: focusText || null,
         posRelX: Number.isFinite(posRelX) ? Math.max(0, Math.min(1, posRelX)) : null,
@@ -877,19 +855,53 @@ function readCenterSettingsFromXml(cardId) {
     };
 }
 
-function applyCenterSettingsFromXml(cardId) {
+function readCenterOverlapTopFromXml(cardNode) {
+    const node = Array.from(cardNode.children).find((child) => child.tagName === 'PdfPageOverlapTop');
+    const text = node?.textContent?.trim() || '';
+    return text === 'left' || text === 'right' ? text : null;
+}
+
+function readCenterPageGapFromXml(cardNode, centerNode) {
+    const cardPageGapNode = Array.from(cardNode.children).find((child) => child.tagName === 'PdfPageGapPx');
+    const pageGapText = (
+        cardPageGapNode
+        || centerNode?.querySelector('PdfPageGapPx')
+    )?.textContent?.trim() || '';
+    if (!pageGapText) return null;
+
+    const pageGap = Number(pageGapText);
+    return Number.isFinite(pageGap) ? Math.max(-20, Math.min(20, pageGap)) : null;
+}
+
+function applyCenterSettingsFromXml(cardId, mode, options = {}) {
     try {
-        const settingsFromXml = readCenterSettingsFromXml(cardId);
-        if (!settingsFromXml) return;
-        if (typeof applyCenterViewSettings === 'function') {
-            applyCenterViewSettings(settingsFromXml, { rerender: false });
+        const cardNode = getCardNodeById(cardId);
+        const tagName = getCenterAnsichtTagForMode(resolveCenterModeForXml(mode));
+        const centerNode = cardNode
+            ? (cardNode.querySelector(tagName) || cardNode.querySelector('CenterAnsicht'))
+            : null;
+        const savedPageGap = cardNode ? readCenterPageGapFromXml(cardNode, centerNode) : null;
+        setPdfPageGapConfigValue(savedPageGap);
+        setPdfPageOverlapConfigValue(cardNode ? readCenterOverlapTopFromXml(cardNode) : null);
+
+        const settingsFromXml = readCenterSettingsFromXml(cardId, mode);
+        const savedAlign = String(settingsFromXml?.align || '').trim().toLowerCase();
+        const hasSavedAlign = ['left', 'middle', 'right'].includes(savedAlign);
+        if ((options.applyView !== false || !hasSavedAlign)
+            && typeof applyCenterViewSettings === 'function') {
+            applyCenterViewSettings({
+                ...(options.applyView !== false ? (settingsFromXml || {}) : {}),
+                align: hasSavedAlign ? savedAlign : 'middle'
+            }, { rerender: false });
         }
+        return !!settingsFromXml;
     } catch (err) {
         console.warn('Center-Einstellungen aus XML konnten nicht angewendet werden:', err);
+        return false;
     }
 }
 
-function writeCenterSettingsToCardNode(cardId) {
+function writeCenterSettingsToCardNode(cardId, mode) {
     if (!xmlData) return false;
     if (typeof getCurrentCenterViewSettings !== 'function') return false;
 
@@ -897,10 +909,11 @@ function writeCenterSettingsToCardNode(cardId) {
     if (!cardNode) return false;
 
     const currentView = getCurrentCenterViewSettings();
+    const tagName = getCenterAnsichtTagForMode(resolveCenterModeForXml(mode));
 
-    let centerNode = cardNode.querySelector('CenterAnsicht');
+    let centerNode = cardNode.querySelector(tagName);
     if (!centerNode) {
-        centerNode = xmlData.createElement('CenterAnsicht');
+        centerNode = xmlData.createElement(tagName);
         cardNode.appendChild(centerNode);
     }
 
@@ -914,7 +927,7 @@ function writeCenterSettingsToCardNode(cardId) {
     }
 
     function upsertCardChild(tagName, value) {
-        let child = cardNode.querySelector(tagName);
+        let child = Array.from(cardNode.children).find((candidate) => candidate.tagName === tagName);
         if (!child) {
             child = xmlData.createElement(tagName);
             cardNode.appendChild(child);
@@ -923,7 +936,7 @@ function writeCenterSettingsToCardNode(cardId) {
     }
 
     upsertCenterChild('Zoom', Number(currentView.zoom || 1).toFixed(3));
-    upsertCenterChild('Align', currentView.align || 'left');
+    upsertCenterChild('Align', currentView.align || 'middle');
     upsertCenterChild('ZoomFokus', currentView.zoomFocus || 'left-top');
     upsertCenterChild('PosRelX', Number(currentView.posRelX ?? 0).toFixed(4));
     upsertCenterChild('PosRelY', Number(currentView.posRelY ?? 0).toFixed(4));
@@ -932,9 +945,43 @@ function writeCenterSettingsToCardNode(cardId) {
     upsertCenterChild('ScreenWidth', Number(currentView.screenWidth ?? 0));
     upsertCenterChild('ScreenHeight', Number(currentView.screenHeight ?? 0));
 
+    upsertCardChild('PdfPageGapPx', Number(currentView.pdfPageGapPx ?? settings.configuredPdfPageGapPx ?? 2));
+    upsertCardChild('PdfPageOverlapTop', settings.pdfPageOverlapTop === 'left' ? 'left' : 'right');
     upsertCardChild('CenterAnsichtChanged', '1');
     markUnsavedChange();
     return true;
+}
+
+function writeCenterPageGapToCardNode(cardId) {
+    if (!xmlData) return false;
+    const cardNode = getCardNodeById(cardId);
+    if (!cardNode) return false;
+
+    let pageGapNode = Array.from(cardNode.children).find((child) => child.tagName === 'PdfPageGapPx');
+    if (!pageGapNode) {
+        pageGapNode = xmlData.createElement('PdfPageGapPx');
+        cardNode.appendChild(pageGapNode);
+    }
+
+    const configuredPageGap = Number(settings.pdfPageGapPx);
+    const pageGap = Number.isFinite(configuredPageGap)
+        ? Math.max(-20, Math.min(20, configuredPageGap))
+        : 2;
+    pageGapNode.textContent = String(pageGap);
+
+    let overlapNode = Array.from(cardNode.children).find((child) => child.tagName === 'PdfPageOverlapTop');
+    if (!overlapNode) {
+        overlapNode = xmlData.createElement('PdfPageOverlapTop');
+        cardNode.appendChild(overlapNode);
+    }
+    overlapNode.textContent = settings.pdfPageOverlapTop === 'left' ? 'left' : 'right';
+    markUnsavedChange();
+    return true;
+}
+
+function resetPdfPageGapConfigAfterCardExit() {
+    setPdfPageGapConfigValue();
+    setPdfPageOverlapConfigValue();
 }
 
 function setStatusText(text) {
@@ -1335,9 +1382,7 @@ function executeSearchDrop(match) {
         cardEl.classList.add('in-center');
         lastCardIdFromCenter = cardEl.dataset.cardid;
         activeCenterCardId   = cardEl.dataset.cardid;
-        if (shouldApplyStoredCenterView) {
-            applyCenterSettingsFromXml(cardEl.dataset.cardid);
-        }
+        applyCenterSettingsFromXml(cardEl.dataset.cardid, undefined, { applyView: shouldApplyStoredCenterView });
         if (typeof showPdfPages === 'function') {
             showPdfPages(cardEl.dataset.pdf);
         }
@@ -1359,7 +1404,8 @@ function drag(event) {
 function getDefaultDropBehaviorConfig() {
     return {
         useZoomSettingsOnDrop: true,
-        dropGlowDurationMs: 1400
+        dropGlowDurationMs: 1400,
+        doubleClickReturnQuadrant: 'Q2'
     };
 }
 
@@ -1372,7 +1418,10 @@ function getUserConfigForDropBehavior() {
                 useZoomSettingsOnDrop: loaded?.useZoomSettingsOnDrop !== false,
                 dropGlowDurationMs: Number.isFinite(Number(loaded?.dropGlowDurationMs))
                     ? Number(loaded.dropGlowDurationMs)
-                    : fallback.dropGlowDurationMs
+                    : fallback.dropGlowDurationMs,
+                doubleClickReturnQuadrant: ['Q1', 'Q2', 'Q3', 'Q4'].includes(String(loaded?.doubleClickReturnQuadrant || '').toUpperCase())
+                    ? String(loaded.doubleClickReturnQuadrant).toUpperCase()
+                    : fallback.doubleClickReturnQuadrant
             };
         } catch (err) {
             console.warn('Benutzerkonfiguration für Drop-Verhalten konnte nicht geladen werden:', err);
@@ -1450,6 +1499,7 @@ function clearCenterAfterCardExit() {
     if (typeof currentPdfPath !== 'undefined') currentPdfPath = '';
     if (typeof totalPages !== 'undefined') totalPages = 0;
     if (typeof currentPageOffset !== 'undefined') currentPageOffset = 0;
+    resetPdfPageGapConfigAfterCardExit();
     if (typeof discardCenterPendingScrollState === 'function') {
         discardCenterPendingScrollState();
     }
@@ -1766,9 +1816,7 @@ function drop(event) {
             card.classList.add('in-center');
             lastCardIdFromCenter = card.dataset.cardid;  // Merke für saveDate
             activeCenterCardId = card.dataset.cardid;
-            if (shouldApplyStoredCenterView) {
-                applyCenterSettingsFromXml(card.dataset.cardid);
-            }
+            applyCenterSettingsFromXml(card.dataset.cardid, undefined, { applyView: shouldApplyStoredCenterView });
             showPdfPages(card.dataset.pdf);
             // Reset Button wenn neue Karte ins CENTER kommt
             setSaveDateState(false, getModeHintText());
@@ -1776,9 +1824,8 @@ function drop(event) {
         }
     } else if (isQuadrant) {
         const userConfig = getUserConfigForDropBehavior();
-        const shouldPersistCenterView = !!userConfig.useZoomSettingsOnDrop;
         const cameFromCenter = card.classList.contains('in-center');
-        if (cameFromCenter && shouldPersistCenterView) {
+        if (cameFromCenter) {
             writeCenterSettingsToCardNode(card.dataset.cardid);
         }
         placeCardAtTopOfQuadrant(event.currentTarget, card);
@@ -1795,7 +1842,7 @@ function drop(event) {
         if (isPlayMode) {
             savePlayedDateToXml(card.dataset.cardid);
         }
-        saveXml(true, { allowPicker: false });
+        saveXml(true);
         console.log('Moved to quadrant: ' + targetId + ', lastCardIdFromCenter = ' + lastCardIdFromCenter);
         getRenderApi()?.updateStackLayout();
     }
@@ -1947,9 +1994,8 @@ async function syncCanonicalXmlAndCleanupVariants(serializedXml) {
     }
 }
 
-async function saveXml(silent = true, options = {}) {
-    if (!xmlData) return;
-    const allowPicker = options.allowPicker !== false;
+async function saveXml(silent = true) {
+    if (!xmlData) return false;
     
     const saveBtn = document.getElementById('modeToggleBtn');
     const originalText = saveBtn ? saveBtn.textContent : '';
@@ -1962,15 +2008,42 @@ async function saveXml(silent = true, options = {}) {
             saveBtn.disabled = true;
         }
         
-        // Wiederverwendung des gespeicherten Ordners; neue Abfrage nur bei fehlender XML/Berechtigung
-        const ensuredHandle = await ensureXmlFileHandle({ allowPicker });
+        // Nach der Rückkehr aus der Config wird die XML nur aus dem Snapshot wiederhergestellt;
+        // das Datei-Handle fehlt dann und wird hier aus IndexedDB nachgeladen.
+        if (!xmlFileHandle) {
+            const storedHandle = await loadXmlDirectFileHandle();
+            if (storedHandle) {
+                xmlFileHandle = storedHandle;
+                if (storedHandle.name) xmlFileName = storedHandle.name;
+            }
+        }
+
+        // Nur den Handle der tatsächlich geladenen XML-Datei verwenden.
+        const ensuredHandle = ensureXmlFileHandle();
         if (!ensuredHandle || !xmlFileHandle) {
             markUnsavedChange();
-            return;
+            if (!silent && saveBtn) {
+                saveBtn.textContent = originalText;
+                applyModeButtonState();
+                saveBtn.disabled = false;
+            }
+            return false;
         }
         
         // Direkt in die Datei schreiben (überschreibt)
         const serializedXml = new XMLSerializer().serializeToString(xmlData);
+        // Der Auto-Load fragt nur Leserechte ab; ohne Schreibrecht würde createWritable still scheitern.
+        if (typeof xmlFileHandle.queryPermission === 'function') {
+            let writePermission = await xmlFileHandle.queryPermission({ mode: 'readwrite' });
+            if (writePermission === 'prompt' && typeof xmlFileHandle.requestPermission === 'function') {
+                writePermission = await xmlFileHandle.requestPermission({ mode: 'readwrite' });
+            }
+            if (writePermission !== 'granted') {
+                markUnsavedChange();
+                setSaveWarningState(true, 'Kein Schreibrecht für die XML – bitte "Speichern" klicken');
+                return false;
+            }
+        }
         const writable = await xmlFileHandle.createWritable();
         await writable.write(serializedXml);
         await writable.close();
@@ -1990,6 +2063,7 @@ async function saveXml(silent = true, options = {}) {
                 saveBtn.disabled = false;
             }, 2000);
         }
+        return true;
     } catch (err) {
         // User hat abgebrochen oder API nicht unterstützt
         if (err.name !== 'AbortError') {
@@ -2012,6 +2086,7 @@ async function saveXml(silent = true, options = {}) {
                 saveBtn.disabled = false;
             }
         }
+        return false;
     }
 }
 
@@ -2042,10 +2117,10 @@ async function autoLoadLastXmlFileIfNeeded() {
         if (directHandle) {
             let permission = 'granted';
             if (typeof directHandle.queryPermission === 'function') {
-                permission = await directHandle.queryPermission({ mode: 'read' });
+                permission = await directHandle.queryPermission({ mode: 'readwrite' });
             }
             if (permission === 'prompt' && typeof directHandle.requestPermission === 'function') {
-                permission = await directHandle.requestPermission({ mode: 'read' });
+                permission = await directHandle.requestPermission({ mode: 'readwrite' });
             }
             if (permission === 'granted') {
                 await openAndLoadXmlHandle(directHandle);
@@ -2150,19 +2225,16 @@ function moveCardFromCenterTo(quadrantId) {
     const targetQuadrant = document.getElementById(quadrantId);
     if (card && targetQuadrant) {
         const userConfig = getUserConfigForDropBehavior();
-        const shouldPersistCenterView = !!userConfig.useZoomSettingsOnDrop;
         placeCardAtTopOfQuadrant(targetQuadrant, card);
         normalizeCardStackStyle(card);
         if (!overviewModeActive) {
             applyDropGlow(card, userConfig.dropGlowDurationMs);
         }
 
-        if (shouldPersistCenterView) {
-            try {
-                writeCenterSettingsToCardNode(card.dataset.cardid);
-            } catch (err) {
-                console.warn('Center-Settings konnten beim Zurücklegen nicht gespeichert werden:', err);
-            }
+        try {
+            writeCenterSettingsToCardNode(card.dataset.cardid);
+        } catch (err) {
+            console.warn('Center-Settings konnten beim Zurücklegen nicht gespeichert werden:', err);
         }
 
         activeCenterCardId = null;
@@ -2173,17 +2245,19 @@ function moveCardFromCenterTo(quadrantId) {
             if (isPlayMode) {
                 savePlayedDateToXml(card.dataset.cardid);
             }
-            saveXml(true, { allowPicker: false });
+            saveXml(true);
         } catch (err) {
             console.warn('Metadaten konnten beim Zurücklegen nicht vollständig gespeichert werden:', err);
         }
 
         getRenderApi()?.updateStackLayout();
+        requestAnimationFrame(() => requestAnimationFrame(() => getRenderApi()?.updateStackLayout()));
     }
 }
 
-function moveCardToQ2(event) {
-    moveCardFromCenterTo('Q2');
+function moveCardToConfiguredQuadrant(event) {
+    const targetQuadrant = getUserConfigForDropBehavior().doubleClickReturnQuadrant;
+    moveCardFromCenterTo(targetQuadrant);
 }
 
 function scrollQuadrant(id, direction) {

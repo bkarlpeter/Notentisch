@@ -205,9 +205,7 @@ function executeSearchDrop(match) {
     cardEl.classList.add('in-center');
     lastCardIdFromCenter = cardEl.dataset.cardid;
     activeCenterCardId = cardEl.dataset.cardid;
-    if (shouldApplyStoredCenterView) {
-        applyCenterSettingsFromXml(cardEl.dataset.cardid);
-    }
+    applyCenterSettingsFromXml(cardEl.dataset.cardid, undefined, { applyView: shouldApplyStoredCenterView });
     showPdfPages(cardEl.dataset.pdf);
     setSaveDateState(false, getModeHintText());
 }
